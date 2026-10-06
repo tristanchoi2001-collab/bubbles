@@ -137,6 +137,33 @@ SHAPE_AREA_REF = 300.0       # 面積がこれより小さい気泡では重な�
 # --- 速度未知トラックの初速度の推定 ---
 USE_FLOW_PRIOR = True        # 新しく現れた気泡は「静止」と「周りの気泡と同じ速度で移動」の2仮説で次の位置を探す (False なら静止のみ)
 FLOW_PRIOR_RADIUS = 150.0    # 「周り」とみなす半径 (px)
+PRIOR_AREA_RATIO = 3.0       # 「周りの気泡」は面積比がこれ以内の気泡だけ (大きさで速度が違う流れで、スラグの速度を
+                             # 小さい気泡に当てはめないため)。周りに該当がなければ 0 (静止のみ)。0 なら大きさを問わない (旧動作)
+
+# --- PIV 速度場による初速度の推定 (docs/PIV_TASK.md, piv_field.py) ---
+# 新しく現れた気泡の初速度を、フレーム t と t+1 の「同じ大きさ区分の気泡だけの画像」の相互相関 (PIV) で求める。
+# 追跡の履歴を使わないので、速い気泡が新しく現れても その場所・その大きさの気泡の速度で次の位置を予測できる。
+# 速度場は予測専用。CSV の速度 (計測値) は従来どおり個々の追跡だけから出す。
+USE_PIV_PRIOR = True         # 沸騰 (加熱) 実験では核生成気泡が静止から動き出し PIV の初速度が外れるので False にすること
+                             # TODO: 同じ位置で繰り返し発生する気泡 (核生成点) は初速度 0 にする
+PIV_GATE = 10.0              # PIV で初速度が分かった新規トラック: 予測位置からのずれの許容 (px)。+ 等価直径 × POS_GATE_SIZE_FRAC。
+                             # 速度未知トラックの MAX_SPEED より狭い。PIV が外れたときは「つながずに途切れさせる」
+                             # (途切れ = 標本が減るだけ、誤接続 = 誤った速度が混入する)。ブートストラップで自動算出できる
+PIV_GATE_HARD = True         # True: PIV_GATE の外の候補はつながない (誤接続より途切れ)。
+                             # False: MAX_SPEED までは認めるが W_PIV_OUTSIDE のペナルティを足す
+PIV_STATIC_SPEED = 3.0       # PIV の移動量がこれ未満 (px/frame) の場所では PIV_GATE_HARD でもペナルティ付きで MAX_SPEED まで認める。
+                             # 止まった気泡が大半の窓では、少数の速い気泡の動きが相関に現れず PIV が ≈0 になるため
+                             # (合成データで確認: ここを硬いゲートにすると途切れだけが増え、誤連結は減らなかった)。0 で無効
+W_PIV_OUTSIDE = 1.0          # PIV の予測から外れた候補 (上の2つで認める場合) に足すコスト
+PIV_KEEP_STATIC = True       # PIV の予測に加えて「静止」も候補にする (壁に付いて止まっている気泡が多い視野向け)。
+                             # どちらの候補も PIV_GATE で絞る
+PIV_USE_DX = True            # PIV の横方向 (x) の移動量も使う (False なら縦だけ)
+PIV_MODE = "improved"        # "improved" (piv_field.py の変更1〜4 あり) / "faithful" (reference/piv_prior.py と同じ計算)
+PIV_RASTER = "outline"       # 相関に使う画像: "outline" (気泡マスクの輪郭) / "filled" (塗りつぶし。大きい気泡で無効になりやすい)
+PIV_SIZE_CLASSES = (50, 500) # 大きさ区分の境界 (面積 px): tiny < 50 <= small < 500 <= large (QC と同じ)
+PIV_WINDOWS = {              # 区分ごとの窓 (1パス目の窓, 間隔, 2パス目の窓, 間隔) [px]
+    "tiny": (256, 128, 128, 64), "small": (256, 128, 128, 64), "large": (256, 128, 128, 64)}
+SAVE_PIV_DEBUG = False       # True なら速度場のベクトル図を OUTPUT_FOLDER/piv/ に保存 (黄 = 実測, 赤 = 周りから補間)
 
 # --- 合体/分裂 ---
 EVENT_OVERLAP_MIN = 0.3      # 候補条件: 吸収される側/分裂した子 の面積のうち、相手(の予測マスク)と重なっている割合の下限
@@ -174,12 +201,18 @@ import os
 import glob
 import csv
 import json
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Tuple
 from scipy import ndimage
 from scipy.optimize import linear_sum_assignment
 from skimage.segmentation import watershed
+
+try:   # piv_field.py はこのファイルと同じフォルダに置く
+    import piv_field
+except ImportError:
+    piv_field = None
 
 Shape = Tuple[np.ndarray, int, int]   # (bboxで切り出したboolマスク, x0, y0)
 
@@ -571,8 +604,9 @@ class Track:
     vx: float = 0.0                # 速度 (px/frame)。v_known が False の間は使わない
     vy: float = 0.0
     v_known: bool = False          # 2回以上観測して速度を実測したか
-    prior_vx: float = 0.0          # 速度未知の間に使う「周りの流れ」(分裂の子なら親の速度)
+    prior_vx: float = 0.0          # 速度未知の間に使う初速度の推定 (PIV / 周りの流れ / 分裂の子なら親の速度)
     prior_vy: float = 0.0
+    prior_src: str = ""            # 初速度の出どころ: "piv" (PIV 速度場) / "" (それ以外)
     hits: int = 1
     time_since_update: int = 0
     first_frame: int = 0
@@ -584,9 +618,15 @@ class Track:
     pre_merge: Optional["Track"] = None                     # 合体直前の自分自身
 
     def motion_hypotheses(self, k: int) -> List[Tuple[float, float]]:
-        """k フレーム後までの移動量の仮説。速度既知なら1つ、未知なら「静止」と「周りの流れ」の2つ"""
+        """k フレーム後までの移動量の仮説。速度既知なら1つ、未知なら「静止」と「周りの流れ」の2つ
+        (PIV で初速度が分かったトラックは「PIV」、PIV_KEEP_STATIC なら + 「静止」)"""
         if self.v_known:
             return [(self.vx * k, self.vy * k)]
+        if self.prior_src == "piv":
+            hyps = [(self.prior_vx * k, self.prior_vy * k)]
+            if PIV_KEEP_STATIC:
+                hyps.append((0.0, 0.0))
+            return hyps
         hyps = [(0.0, 0.0)]
         if USE_FLOW_PRIOR and (self.prior_vx or self.prior_vy):
             hyps.append((self.prior_vx * k, self.prior_vy * k))
@@ -630,6 +670,7 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
       重なり: 予測マスクとの素の IoU (位置と形を同時に見る)。小さい気泡では重みを下げる
       形状 : 重心を合わせた IoU (形だけを見る)。小さい気泡では重みを下げる"""
     k = max(1, frame_idx - t.last_frame)
+    extra = 0.0
     touching = any(t.touch) or any(d.touch)
     area_gate = AREA_RATIO_GATE * (2.0 if touching else 1.0)
     area_ratio = max(t.area, d.area) / max(1.0, min(t.area, d.area))
@@ -638,10 +679,19 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
         return None
     dx, dy, loose = displacement(t, d)
     resid = min(math.hypot(dx - hx, dy - hy) for hx, hy in t.motion_hypotheses(k))
-    slack = POS_GATE + POS_GATE_SIZE_FRAC * eq_diameter(max(t.area, d.area))
+    size_slack = POS_GATE_SIZE_FRAC * eq_diameter(max(t.area, d.area))
+    slack = POS_GATE + size_slack
     if t.v_known:
         radius = slack * (1.0 + COAST_GATE_GROWTH * (k - 1))
         gate_dist = resid
+    elif t.prior_src == "piv":   # PIV で初速度が分かっている: 予測 (と静止) の周りだけ。MAX_SPEED の円より広げない
+        radius = min((PIV_GATE + size_slack) * (1.0 + COAST_GATE_GROWTH * (k - 1)), MAX_SPEED * k + slack)
+        gate_dist = resid
+        hard = PIV_GATE_HARD and math.hypot(t.prior_vx, t.prior_vy) >= PIV_STATIC_SPEED
+        if resid > radius and not hard:   # PIV の予測から外れる: 速度未知と同じ広さまで、ペナルティ付き
+            radius = MAX_SPEED * k + slack
+            gate_dist = math.hypot(dx, dy)
+            extra = W_PIV_OUTSIDE
     else:   # 速度未知: 物理的に動ける距離までは候補にする (コストは2仮説の近い方で評価)
         radius = MAX_SPEED * k + slack
         gate_dist = math.hypot(dx, dy)
@@ -660,7 +710,8 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
             + W_AREA * c_area
             + size_w * (W_OVERLAP * (1.0 - iou_pred) + W_SHAPE * c_shape)
             + W_COAST * (k - 1)
-            + (0.0 if t.v_known else W_UNKNOWN_V))
+            + (0.0 if t.v_known else W_UNKNOWN_V)
+            + extra)
 
 
 def _area_tol(touching: bool) -> float:
@@ -696,13 +747,16 @@ class LeadingEdgeLapTracker:
         self.tracks: List[Track] = []
         self._next_id = 1
         self.restores: List[Tuple[int, int, int, int]] = []   # (合体フレーム, 復帰フレーム, ホストID, 戻したID)
+        self.prior_counts: Dict[str, int] = defaultdict(int)  # 新規トラックの初速度の出どころ (piv / flow / zero)
 
     def _new_id(self) -> int:
         tid = self._next_id
         self._next_id += 1
         return tid
 
-    def update(self, detections: List[Detection], frame_idx: int) -> List[dict]:
+    def update(self, detections: List[Detection], frame_idx: int, piv=None) -> List[dict]:
+        """piv: フレーム frame_idx -> frame_idx+1 の大きさ区分ごとの速度場 {区分: DisplacementField or None}。
+        新しく現れた気泡の初速度にだけ使う (None なら従来どおり)"""
         det_ids = [j for j, d in enumerate(detections) if d.area >= MIN_TRACK_AREA]   # 元の検出番号
         dets = [detections[j] for j in det_ids]
         self.tracks = [t for t in self.tracks
@@ -962,25 +1016,44 @@ class LeadingEdgeLapTracker:
 
         # 周りで追跡中の「動いている」気泡の速度 (今フレームで対応が取れ、3回以上観測されたトラック)。
         # 静止した気泡が大半の視野では全体の中央値が 0 になり、速い気泡の初速度推定に使えないため
-        movers = [(t.cx, t.cy, t.vx, t.vy) for t in self.tracks
+        movers = [(t.cx, t.cy, t.vx, t.vy, t.area) for t in self.tracks
                   if t.v_known and t.last_frame == frame_idx and t.hits >= 3
                   and math.hypot(t.vx, t.vy) >= POS_GATE]
 
-        def flow_prior(x, y):
+        def flow_prior(x, y, area):
             if not USE_FLOW_PRIOR or not movers:
                 return 0.0, 0.0
-            near = [m for m in movers if math.hypot(m[0] - x, m[1] - y) <= FLOW_PRIOR_RADIUS] or movers
+            if PRIOR_AREA_RATIO > 0:   # 大きさの近い周りの気泡だけ。いなければ 0
+                near = [m for m in movers if math.hypot(m[0] - x, m[1] - y) <= FLOW_PRIOR_RADIUS
+                        and max(m[4], area) / max(1.0, min(m[4], area)) <= PRIOR_AREA_RATIO]
+                if not near:
+                    return 0.0, 0.0
+            else:                      # 旧動作: 大きさを問わず、周りにいなければ画面全体
+                near = [m for m in movers if math.hypot(m[0] - x, m[1] - y) <= FLOW_PRIOR_RADIUS] or movers
             return float(np.median([m[2] for m in near])), float(np.median([m[3] for m in near]))
+
+        def initial_velocity(d):
+            """新しく現れた気泡の初速度: 同じ大きさ区分の PIV 速度場 -> 大きさの近い周りの気泡の速度 -> 0"""
+            if piv:
+                fld = piv.get(piv_field.size_class(d.area, PIV_SIZE_CLASSES))
+                if fld is not None:
+                    pdy, pdx, ok = fld.sample(d.cx, d.cy)
+                    if ok:
+                        self.prior_counts["piv"] += 1
+                        return (pdx if PIV_USE_DX else 0.0), pdy, "piv"
+            pvx, pvy = flow_prior(d.cx, d.cy, d.area)
+            self.prior_counts["flow" if (pvx or pvy) else "zero"] += 1
+            return pvx, pvy, ""
 
         claimed_d = set(det_to_track) | set(split_map) | set(restored)
         for j, d in enumerate(dets):
             if j in claimed_d:
                 continue
-            pvx, pvy = flow_prior(d.cx, d.cy)
+            pvx, pvy, src = initial_velocity(d)
             new_track = Track(
                 track_id=self._new_id(), leading_x=d.leading_x, leading_y=d.leading_y,
                 cx=d.cx, cy=d.cy, area=d.area, shape=d.shape, touch=d.touch,
-                prior_vx=pvx, prior_vy=pvy,
+                prior_vx=pvx, prior_vy=pvy, prior_src=src,
                 hits=1, time_since_update=0, first_frame=frame_idx, last_frame=frame_idx,
             )
             self.tracks.append(new_track)
@@ -1024,15 +1097,132 @@ def suppress_transient_merges(rows_by_frame: Dict[int, List[dict]], restores) ->
     return len(restores)
 
 
-def run_laptrack(detections_per_frame: List[List[Detection]]) -> Dict[int, List[dict]]:
+def infer_image_size(detections_per_frame: List[List[Detection]]) -> Optional[Tuple[int, int]]:
+    """画像サイズが渡されないときの推定: 下端/右端に接する検出の端、なければ検出の外接矩形の最大"""
+    H = W = 0
+    Hs, Ws = [], []
+    for dets in detections_per_frame:
+        for d in dets:
+            m, x0, y0 = d.shape
+            y1, x1 = y0 + m.shape[0], x0 + m.shape[1]
+            H, W = max(H, y1), max(W, x1)
+            if d.touch[1]:
+                Hs.append(y1)
+            if d.touch[3]:
+                Ws.append(x1)
+    if not H:
+        return None
+    return (max(Hs) if Hs else H, max(Ws) if Ws else W)
+
+
+def piv_settings():
+    """tracker3 の設定から piv_field の設定を作る"""
+    kw = dict(size_bounds=tuple(PIV_SIZE_CLASSES), windows=dict(PIV_WINDOWS), raster=PIV_RASTER,
+              min_area=MIN_TRACK_AREA)
+    return piv_field.PIVSettings.faithful(**kw) if PIV_MODE == "faithful" else piv_field.PIVSettings(**kw)
+
+
+class _LazyFields:
+    """{区分: DisplacementField or None} を、その区分が初めて必要になったときに計算する
+    (新しく現れた気泡がない区分は計算しない)"""
+
+    def __init__(self, seq, f):
+        self.seq, self.f, self._d = seq, f, {}
+
+    def get(self, c):
+        if c not in self._d:
+            self._d[c] = self.seq.field(self.f, c)
+        return self._d[c]
+
+    def __bool__(self):
+        return True
+
+
+class PIVSequence:
+    """フレームの組 (t, t+1) ごとの大きさ区分別の速度場。各フレームの画像は1回だけ作る"""
+
+    def __init__(self, detections_per_frame, image_size):
+        self.dets = detections_per_frame
+        self.hw = image_size
+        self.s = piv_settings()
+        self._raster = {}
+        self.time_s = 0.0
+        self.n_fields = 0
+
+    def _r(self, f):
+        if f not in self._raster:
+            self._raster = {k: v for k, v in self._raster.items() if k >= f - 1}   # 古いフレームは捨てる
+            self._raster[f] = piv_field.rasterize(self.dets[f], self.hw, self.s)
+        return self._raster[f]
+
+    def field(self, f, c):
+        """フレーム f -> f+1、区分 c の速度場 (どちらかのフレームにその区分の気泡がなければ None)"""
+        t0 = time.perf_counter()
+        a, b = self._r(f)[c], self._r(f + 1)[c]
+        out = piv_field.DisplacementField(a, b, *self.s.windows[c], s=self.s) if a.any() and b.any() else None
+        self.time_s += time.perf_counter() - t0
+        self.n_fields += 1
+        return out
+
+    def fields(self, f):
+        """フレーム f -> f+1 の速度場 (区分ごとに必要になったとき計算)。最後のフレームなら None"""
+        if f + 1 >= len(self.dets):
+            return None
+        return _LazyFields(self, f)
+
+
+def make_piv_sequence(detections_per_frame, image_size=None) -> Optional[PIVSequence]:
+    """USE_PIV_PRIOR が有効で piv_field.py が読み込めれば PIVSequence、そうでなければ None"""
+    if not USE_PIV_PRIOR:
+        return None
+    if piv_field is None:
+        print("  ※ piv_field.py が見つからないため PIV による初速度推定を使いません (同じフォルダに置いてください)")
+        return None
+    hw = image_size or infer_image_size(detections_per_frame)
+    if hw is None:
+        return None
+    return PIVSequence(detections_per_frame, tuple(int(v) for v in hw))
+
+
+def run_laptrack(detections_per_frame: List[List[Detection]], image_size=None,
+                 piv_debug_dir: Optional[str] = None) -> Dict[int, List[dict]]:
+    """image_size = (高さ, 幅)。PIV の画像を作るのに使う (None なら検出から推定)"""
     tracker = LeadingEdgeLapTracker()
+    seq = make_piv_sequence(detections_per_frame, image_size)
     rows_by_frame: Dict[int, List[dict]] = {}
+    t_track = 0.0
     for frame_idx, dets in enumerate(detections_per_frame):
-        rows_by_frame[frame_idx] = tracker.update(dets, frame_idx)
+        piv = seq.fields(frame_idx) if seq is not None else None
+        if piv is not None and piv_debug_dir:
+            save_piv_debug(piv_debug_dir, frame_idx, piv, seq)
+        t0, p0 = time.perf_counter(), (seq.time_s if seq is not None else 0.0)
+        rows_by_frame[frame_idx] = tracker.update(dets, frame_idx, piv)
+        t_track += time.perf_counter() - t0 - ((seq.time_s - p0) if seq is not None else 0.0)   # PIV の分は除く
     n = suppress_transient_merges(rows_by_frame, tracker.restores)
     if n:
         print(f"  合体直後に分かれ直した {n} 組を「接触」として元のIDに戻しました")
+    nf = max(1, len(detections_per_frame))
+    pc = tracker.prior_counts
+    if seq is not None:
+        print(f"  新規トラックの初速度: PIV {pc['piv']}件 / 周りの気泡 {pc['flow']}件 / 0 {pc['zero']}件")
+        print(f"  計算時間: PIV {1000 * seq.time_s / nf:.0f} ms/フレーム (区分ごとの速度場 {seq.n_fields}個), "
+              f"対応付け {1000 * t_track / nf:.0f} ms/フレーム")
+    run_laptrack.last_stats = {"prior_counts": dict(pc), "piv_ms_per_frame": 1000 * seq.time_s / nf if seq else 0.0,
+                               "piv_fields": seq.n_fields if seq else 0, "track_ms_per_frame": 1000 * t_track / nf}
     return rows_by_frame
+
+
+def save_piv_debug(out_dir: str, frame_idx: int, piv, seq: PIVSequence):
+    """速度場のベクトル図 (区分ごとに横に並べる)。黄 = 実測, 赤 = 周りから補間"""
+    os.makedirs(out_dir, exist_ok=True)
+    panels = []
+    for c in piv_field.CLASS_NAMES:
+        base = seq._r(frame_idx)[c]
+        fld = piv.get(c)
+        img = piv_field.draw(base, fld) if fld is not None else cv2.cvtColor(base, cv2.COLOR_GRAY2BGR)
+        cv2.putText(img, c, (8, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        panels.append(np.pad(img, ((0, 0), (0, 6), (0, 0)), constant_values=255))
+    cv2.imwrite(os.path.join(out_dir, f"piv_{frame_idx:05d}.png"), np.hstack(panels))
 
 
 # ==============================================================
@@ -1187,7 +1377,7 @@ def draw_overlays(cache_dir: str, output_dir: str, rows_by_frame: Dict[int, List
 # ==============================================================
 # 9. 自動ブートストラップキャリブレーション
 # ==============================================================
-BOOTSTRAP_PARAM_NAMES = ("MAX_SPEED", "POS_GATE", "AREA_RATIO_GATE")
+BOOTSTRAP_PARAM_NAMES = ("MAX_SPEED", "POS_GATE", "AREA_RATIO_GATE", "PIV_GATE")
 
 
 def _bootstrap_confident_pairs(dets_a: List[Detection], dets_b: List[Detection]) -> Dict[int, int]:
@@ -1230,17 +1420,21 @@ def _bootstrap_confident_pairs(dets_a: List[Detection], dets_b: List[Detection])
     return pairs
 
 
-def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]]):
+def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]], image_size=None):
     """映像全体から均等に抽出した隣接フレームで確実な対応だけを集め、
       speed_list      : 1フレームの移動量 |d|            -> MAX_SPEED (速度未知のトラックの探索半径)
       resid_list      : 3フレーム連続の対応で「前フレームと同じ速度」と仮定した予測からのずれ
                         (等価直径に比例する分 POS_GATE_SIZE_FRAC × 直径 を差し引いたもの) -> POS_GATE
       area_ratio_list : 面積比                             -> AREA_RATIO_GATE
+      piv_resid_list  : PIV 速度場 (同じ大きさ区分) で予測した位置からのずれ (同じく直径分を差し引く) -> PIV_GATE
+                        (USE_PIV_PRIOR のときだけ。速度場が有効な場所の気泡だけ)
     を返す。静止した気泡が大半でも、少数の速い気泡の移動量が MAX_SPEED に反映されるよう高いパーセンタイルを使う。"""
     total_frames = len(detections_per_frame)
     quality = {"pairs": 0, "chains": 0, "match_fail_rate": 0.0}
     if total_frames < 2:
-        return [], [], [], quality
+        return [], [], [], quality, []
+    seq = make_piv_sequence(detections_per_frame, image_size)
+    piv_resid_list = []
 
     n_seg = min(BOOTSTRAP_NUM_SEGMENTS, total_frames - 1)
     sample_frames = sorted(set(
@@ -1260,11 +1454,18 @@ def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]]):
         A, B = detections_per_frame[f], detections_per_frame[f + 1]
         p = pairs_of(f)
         total_candidates += sum(1 for a in A if a.area >= MIN_TRACK_AREA)
+        fields = seq.fields(f) if (seq is not None and p) else None
         for i, j in p.items():
             a, b = A[i], B[j]
             dx, dy, _ = displacement(a, b)
             speed_list.append(math.hypot(dx, dy))
             area_ratio_list.append(max(a.area, b.area) / max(1.0, min(a.area, b.area)))
+            fld = fields.get(piv_field.size_class(a.area, PIV_SIZE_CLASSES)) if fields else None
+            if fld is not None:
+                pdy, pdx, ok = fld.sample(a.cx, a.cy)
+                if ok:
+                    res = math.hypot(dx - (pdx if PIV_USE_DX else 0.0), dy - pdy)
+                    piv_resid_list.append(max(0.0, res - POS_GATE_SIZE_FRAC * eq_diameter(a.area)))
         if f + 2 < total_frames:
             p2 = pairs_of(f + 1)
             C = detections_per_frame[f + 2]
@@ -1282,11 +1483,12 @@ def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]]):
         "chains": len(resid_list),
         "match_fail_rate": (1.0 - len(speed_list) / total_candidates) if total_candidates else 0.0,
     }
-    return speed_list, resid_list, area_ratio_list, quality
+    return speed_list, resid_list, area_ratio_list, quality, piv_resid_list
 
 
-def _bootstrap_compute_params(speed_list, resid_list, area_ratio_list):
-    """収集した分布からゲートパラメータを算出する(パーセンタイル × 安全係数)。"""
+def _bootstrap_compute_params(speed_list, resid_list, area_ratio_list, piv_resid_list=None):
+    """収集した分布からゲートパラメータを算出する(パーセンタイル × 安全係数)。
+    PIV_GATE は POS_GATE 〜 MAX_SPEED の範囲 (PIV の予測は速度既知のトラックの予測より粗いので POS_GATE より狭くしない)"""
     if not speed_list:
         return None
     if len(resid_list) >= 10:
@@ -1297,28 +1499,36 @@ def _bootstrap_compute_params(speed_list, resid_list, area_ratio_list):
     max_speed = max(2.0 * pos_gate,
                     float(np.percentile(speed_list, BOOTSTRAP_SPEED_PERCENTILE)) * BOOTSTRAP_JUMP_MARGIN)
     area_gate = float(np.percentile(area_ratio_list, BOOTSTRAP_AREA_PERCENTILE)) * BOOTSTRAP_AREA_MARGIN
+    if piv_resid_list is not None and len(piv_resid_list) >= 10:
+        piv_gate = float(np.percentile(piv_resid_list, BOOTSTRAP_RESID_PERCENTILE)) * BOOTSTRAP_JUMP_MARGIN
+        piv_gate = min(max(piv_gate, pos_gate), max_speed)
+    else:   # PIV を使わない / 有効な場所の対応が少なすぎる -> 現在値を維持
+        piv_gate = PIV_GATE
     return {
         "MAX_SPEED": round(max_speed, 1),
         "POS_GATE": round(pos_gate, 1),
         "AREA_RATIO_GATE": round(min(3.0, max(1.3, area_gate)), 2),
+        "PIV_GATE": round(piv_gate, 1),
     }
 
 
 def _apply_params(params: dict):
-    global MAX_SPEED, POS_GATE, AREA_RATIO_GATE
+    global MAX_SPEED, POS_GATE, AREA_RATIO_GATE, PIV_GATE
     MAX_SPEED = params["MAX_SPEED"]
     POS_GATE = params["POS_GATE"]
     AREA_RATIO_GATE = params["AREA_RATIO_GATE"]
+    PIV_GATE = params.get("PIV_GATE", PIV_GATE)
 
 
 def _current_params() -> dict:
-    return {"MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "AREA_RATIO_GATE": AREA_RATIO_GATE}
+    return {"MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "AREA_RATIO_GATE": AREA_RATIO_GATE, "PIV_GATE": PIV_GATE}
 
 
-def _bootstrap_preview_overlays(detections_per_frame, filenames, cache_dir, auto_params):
+def _bootstrap_preview_overlays(detections_per_frame, filenames, cache_dir, auto_params, image_size=None):
     """自動パラメータでサンプル区間を実際にトラッキングし、オーバーレイ画像数枚を返す。"""
     saved = _current_params()
     _apply_params(auto_params)
+    seq = make_piv_sequence(detections_per_frame, image_size)
 
     total_frames = len(detections_per_frame)
     start = max(0, total_frames // 2 - BOOTSTRAP_PREVIEW_FRAMES // 2)
@@ -1329,7 +1539,7 @@ def _bootstrap_preview_overlays(detections_per_frame, filenames, cache_dir, auto
         overlays = []
         warmup_start = max(0, start - 3)   # 少し手前からウォームアップしてIDを安定させる
         for f in range(warmup_start, min(total_frames, start + BOOTSTRAP_PREVIEW_FRAMES)):
-            rows = tracker.update(detections_per_frame[f], f)
+            rows = tracker.update(detections_per_frame[f], f, seq.fields(f) if seq is not None else None)
             if f not in preview_range:
                 continue
             img = cv2.imread(os.path.join(cache_dir, filenames[f]))
@@ -1348,7 +1558,8 @@ def _bootstrap_preview_overlays(detections_per_frame, filenames, cache_dir, auto
         _apply_params(saved)
 
 
-def _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, auto_params, quality, overlays):
+def _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, auto_params, quality, overlays,
+                                    piv_resid_list=None):
     """ヒストグラム + サンプルオーバーレイを一つのウィンドウにまとめて表示する。
     matplotlibがない、またはGUIが使えない環境ではコンソール出力にフォールバックする。"""
     try:
@@ -1357,27 +1568,29 @@ def _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, aut
         print("  [bootstrap] matplotlibを読み込めないためグラフプレビューをスキップします(コンソール値のみ表示)。")
         return
 
-    fig = plt.figure(figsize=(19, 10))
-    fig.suptitle("Bootstrap Calibration - Review (close window to continue)", fontsize=14)
-    gs = fig.add_gridspec(3, 3, width_ratios=[0.7, 1.4, 1.4], hspace=0.45, wspace=0.15)
-
     specs = [
         ("Displacement per frame |d| (MAX_SPEED)", speed_list, auto_params["MAX_SPEED"]),
         ("Prediction residual (POS_GATE)", resid_list, auto_params["POS_GATE"]),
         ("Area ratio", area_ratio_list, auto_params["AREA_RATIO_GATE"]),
     ]
+    if piv_resid_list:
+        specs.append(("PIV prediction residual (PIV_GATE)", piv_resid_list, auto_params["PIV_GATE"]))
+    n_rows = len(specs)
+    fig = plt.figure(figsize=(19, 10))
+    fig.suptitle("Bootstrap Calibration - Review (close window to continue)", fontsize=14)
+    gs = fig.add_gridspec(n_rows, 3, width_ratios=[0.7, 1.4, 1.4], hspace=0.6, wspace=0.15)
     for k, (title, data, cutoff) in enumerate(specs):
         ax = fig.add_subplot(gs[k, 0])
         if data:
             ax.hist(data, bins=30, color="#5B8FF9", edgecolor="white")
             ax.axvline(cutoff, color="#E24B4A", linestyle="--", linewidth=2, label=f"gate = {cutoff}")
             ax.legend(fontsize=9)
-            if k < 2:
+            if k != 2:
                 ax.set_yscale("log")   # 静止気泡が大半でも速い気泡の山が見えるように
         ax.set_title(title, fontsize=10)
         ax.tick_params(labelsize=8)
 
-    sub = gs[0:3, 1:3].subgridspec(2, 2, hspace=0.15, wspace=0.08)
+    sub = gs[0:n_rows, 1:3].subgridspec(2, 2, hspace=0.15, wspace=0.08)
     for k, (f_idx, img) in enumerate(overlays[:4]):
         ax = fig.add_subplot(sub[k // 2, k % 2])
         ax.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -1392,11 +1605,12 @@ def _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, aut
     plt.show()
 
 
-def run_bootstrap_calibration(detections_per_frame, filenames, cache_dir):
+def run_bootstrap_calibration(detections_per_frame, filenames, cache_dir, image_size=None):
     """統計収集 -> パラメータ算出 -> 確認ウィンドウ -> コンソール承認/修正 -> 確定パラメータをグローバルに反映。"""
     print("\n[ブートストラップ] 映像全体の均等サンプルから移動量/予測ずれ/面積比の統計を収集します...")
-    speed_list, resid_list, area_ratio_list, quality = _bootstrap_collect_stats(detections_per_frame)
-    auto_params = _bootstrap_compute_params(speed_list, resid_list, area_ratio_list)
+    speed_list, resid_list, area_ratio_list, quality, piv_resid_list = _bootstrap_collect_stats(
+        detections_per_frame, image_size)
+    auto_params = _bootstrap_compute_params(speed_list, resid_list, area_ratio_list, piv_resid_list)
 
     if auto_params is None:
         print("  [ブートストラップ] 有効なマッチングサンプルがないため自動算出をスキップします。現在の手動値を維持します。")
@@ -1404,16 +1618,21 @@ def run_bootstrap_calibration(detections_per_frame, filenames, cache_dir):
 
     print(f"  確実な対応ペア: {quality['pairs']}個, 3フレーム連続: {quality['chains']}個, "
           f"対応なし率: {quality['match_fail_rate']*100:.0f}%")
+    if piv_resid_list:
+        print(f"  PIV 予測のずれ (直径分を除く): 中央値 {np.median(piv_resid_list):.1f}px, "
+              f"95%値 {np.percentile(piv_resid_list, 95):.1f}px ({len(piv_resid_list)}個)")
+    names = [n for n in BOOTSTRAP_PARAM_NAMES if n != "PIV_GATE" or USE_PIV_PRIOR]
 
     while True:
         current = _current_params()
         print("\n=== 自動ブートストラップ結果 ===")
         print(f"{'パラメータ':<26}{'現在の手動値':>12}{'自動計算値':>14}")
-        for name in BOOTSTRAP_PARAM_NAMES:
+        for name in names:
             print(f"{name:<26}{current[name]:>12}{auto_params[name]:>14}")
 
-        overlays = _bootstrap_preview_overlays(detections_per_frame, filenames, cache_dir, auto_params)
-        _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, auto_params, quality, overlays)
+        overlays = _bootstrap_preview_overlays(detections_per_frame, filenames, cache_dir, auto_params, image_size)
+        _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, auto_params, quality, overlays,
+                                        piv_resid_list)
 
         choice = input("\n[Enter] 自動値を使用 / [m] 手動値を維持 / [e] 直接入力 / [r] プレビューを再表示: ").strip().lower()
         if choice == "":
@@ -1426,7 +1645,7 @@ def run_bootstrap_calibration(detections_per_frame, filenames, cache_dir):
         elif choice == "e":
             try:
                 vals = {}
-                for name in BOOTSTRAP_PARAM_NAMES:
+                for name in names:
                     v = input(f"  {name} (Enter=自動 {auto_params[name]}): ").strip()
                     vals[name] = float(v) if v else auto_params[name]
                 _apply_params(vals)
@@ -1442,7 +1661,7 @@ def run_bootstrap_calibration(detections_per_frame, filenames, cache_dir):
             continue
 
     print(f"  [ブートストラップ] 確定ゲート: MAX_SPEED={MAX_SPEED}, "
-          f"POS_GATE={POS_GATE}, AREA={AREA_RATIO_GATE}\n")
+          f"POS_GATE={POS_GATE}, AREA={AREA_RATIO_GATE}" + (f", PIV_GATE={PIV_GATE}" if USE_PIV_PRIOR else "") + "\n")
 
 
 # ==============================================================
@@ -1646,10 +1865,11 @@ def main():
     total_frames = len(filenames)
 
     if ENABLE_BOOTSTRAP:
-        run_bootstrap_calibration(detections_per_frame, filenames, cache_dir)
+        run_bootstrap_calibration(detections_per_frame, filenames, cache_dir, image_size)
 
     print("\n[LAPトラッカー] 実行中...")
-    rows = run_laptrack(detections_per_frame)
+    rows = run_laptrack(detections_per_frame, image_size,
+                        piv_debug_dir=os.path.join(OUTPUT_FOLDER, "piv") if SAVE_PIV_DEBUG else None)
     rows = compute_velocity_ema(rows, total_frames)
 
     tracking_csv_path = os.path.join(OUTPUT_FOLDER, "result_tracking.csv")
@@ -1671,7 +1891,13 @@ def main():
         "weights": {"pos": W_POS, "area": W_AREA, "overlap": W_OVERLAP, "shape": W_SHAPE,
                     "coast": W_COAST, "unknown_v": W_UNKNOWN_V},
         "SHAPE_AREA_REF": SHAPE_AREA_REF,
-        "USE_FLOW_PRIOR": USE_FLOW_PRIOR,
+        "USE_FLOW_PRIOR": USE_FLOW_PRIOR, "PRIOR_AREA_RATIO": PRIOR_AREA_RATIO,
+        "USE_PIV_PRIOR": USE_PIV_PRIOR and piv_field is not None, "PIV_GATE": PIV_GATE,
+        "PIV_GATE_HARD": PIV_GATE_HARD, "PIV_STATIC_SPEED": PIV_STATIC_SPEED, "W_PIV_OUTSIDE": W_PIV_OUTSIDE,
+        "PIV_KEEP_STATIC": PIV_KEEP_STATIC, "PIV_USE_DX": PIV_USE_DX, "PIV_MODE": PIV_MODE,
+        "PIV_RASTER": PIV_RASTER, "PIV_SIZE_CLASSES": list(PIV_SIZE_CLASSES),
+        "PIV_WINDOWS": {k: list(v) for k, v in PIV_WINDOWS.items()},
+        "piv_stats": getattr(run_laptrack, "last_stats", None),
         "EVENT_OVERLAP_MIN": EVENT_OVERLAP_MIN, "EVENT_MARGIN": EVENT_MARGIN,
         "EVENT_AREA_TOL": EVENT_AREA_TOL, "EVENT_MINOR_FRAC": EVENT_MINOR_FRAC,
         "EVENT_MINOR_OVERLAP": EVENT_MINOR_OVERLAP, "TRANSIENT_MERGE_FRAMES": TRANSIENT_MERGE_FRAMES,

@@ -233,7 +233,7 @@ def run_tracker(module_name: str, frames, bootstrap: bool = True):
     params = None
     if bootstrap:   # ユーザーが [Enter] で自動値を採用した場合と同じ
         stats = T._bootstrap_collect_stats(dets_pf)
-        params = T._bootstrap_compute_params(*stats[:3])
+        params = T._bootstrap_compute_params(*stats[:3], *stats[4:5])   # tracker3: PIV 予測のずれ (5番目) も渡す
         if params:
             for k, v in params.items():
                 setattr(T, k, v)
