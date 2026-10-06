@@ -1,10 +1,25 @@
 """
-追跡精度の自動チェック v2 (2_unet_tracker.py / microgaptracker3.py の出力CSVを解析)
+追跡精度の自動チェック v3 (tracker2.py / tracker3.py の出力CSVを解析)
 =====================================================================
 トラッカーはそのまま使い、出力された result_tracking.csv だけを読んで
 「追跡ミスの疑いがある箇所」を洗い出す。全部を目で数える代わりに、疑わしい箇所だけ確認すればよい。
+同じフォルダの qc_report.json (トラッカーの used_params) があれば、ROI・ゲート・MAX_AGE もそこから読む。
+tracker2.py (MAX_LEADING_EDGE_JUMP 等) と tracker3.py (MAX_SPEED / POS_GATE / USE_PIV_PRIOR 等) のどちらの形式も読める。
 
-v1 からの変更
+v2 からの変更 (v3)
+  - SWAP_LIKELY の相手候補を絞り込み
+      実際の高速条件のデータで large の相手候補が中央値 9件・最大 126件と過大だったため (docs/PIV_TASK.md 5-3)
+      相手は面積比 ≤ SWAP_PARTNER_AREA_RATIO の気泡だけ (実際に取り違えうる大きさのもの)
+      探索半径 = min(SWAP_RADIUS_FACTOR × max(等価直径, 10px), SWAP_RADIUS_MAX_PX)
+      自分自身のトラックの発生・消失は相手に数えない (「別トラック」の条件)
+  - 詳細の文字列は相手のIDごとに1件 (理由はまとめる 例: ID303(新規発生・消失))、近い順に最大 SWAP_DETAIL_MAX 件 + 「他N件」
+      同じ気泡・同じフレームに POS_JUMP と AREA_JUMP の両方があるときは、相手候補を合わせてから1件の SWAP_LIKELY にする
+  - qc_summary.json に SWAP_LIKELY の相手候補数 (サイズ別の件数・中央値・最大) を追加 (qc_flags.csv の列は変更なし)
+  - tracker3.py の qc_report.json に対応 (MAX_SPEED / POS_GATE / MAX_AGE / USE_PIV_PRIOR)
+      MAX_AGE は qc_report.json の値を優先し、なければ下の設定値を使う
+      tracker3 の結果には tracker2 用の助言 (SPACING_GATE_FRAC / USE_FLOW_PRIOR) を出さない
+
+v1 からの変更 (v2)
   - 位置ジャンプの基準を「データの分布」から「気泡自身の大きさ」に変更
       v1 は (中央値 + Z×MAD) で自動決定していたが、ずれの大きいステップが多いデータでは
       基準が一緒に大きくなり、検出できなくなっていた
@@ -17,7 +32,7 @@ v1 からの変更
   - 確認用画像を見やすく作り直し (拡大・前/今の位置・予測位置・移動の矢印・説明文)
 
 検出する項目
-  SWAP_LIKELY    ID乗り移り   : 位置/面積の急変 + 近くで別トラックが消失・発生、または2本が同時に互いの位置へ
+  SWAP_LIKELY    ID乗り移り   : 位置/面積の急変 + 近くで (面積の近い) 別トラックが消失・発生、または2本が同時に互いの位置へ
   POS_JUMP       位置ジャンプ : 直前の速度から予測した位置から、自分の大きさの JUMP_REL 倍以上ずれた
   AREA_JUMP      面積急変     : 合体/分裂なしで面積が AREA_JUMP_FACTOR 倍以上変わった
   INTERIOR_NEW   内部で発生   : 画面端でも分裂でもないのに、画面の内側で新しいトラックが始まった
@@ -38,7 +53,7 @@ v1 からの変更
 TRACKING_CSV = r"C:\Users\inoue-2024-01\Desktop\ams\output_unet\result_tracking.csv"  # トラッカーの出力CSV
 REVIEW_IMAGE_DIR = None  # 確認画像の元。None なら CSVフォルダの _cache_processed (2値化画像。見やすい)、
                          # なければ CSV と同じフォルダ (トラッカーのオーバーレイ画像)
-QC_REPORT = None     # トラッカーの qc_report.json (ROI取得用)。None なら CSV と同じフォルダ
+QC_REPORT = None     # トラッカーの qc_report.json (ROI・ゲート・MAX_AGE の取得用)。None なら CSV と同じフォルダ
 OUT_DIR = None       # 結果の保存先。None なら CSV と同じフォルダの qc_tracking/
 
 JUMP_REL = 0.5                # 予測位置からのずれ > 等価直径 × この値 → 位置ジャンプ
@@ -48,7 +63,11 @@ MIN_AREA_FOR_AREA_CHECK = 50  # これより小さい気泡は面積チェック
 AREA_CONSERVATION_TOL = 0.3   # 合体・分裂の面積保存の許容差 (±30%)
 MERGE_SPLIT_WINDOW = 5        # 合体後このフレーム数以内の分裂を MERGE_SPLIT とする
 SWAP_RADIUS_FACTOR = 2.0      # 急変地点から (等価直径 × この値) 以内の発生/消失を乗り移りの相手とみなす
-MAX_AGE = 3                   # トラッカーの MAX_AGE と同じ値
+                              #   等価直径には 10px の下限あり (tiny 気泡は1フレームで自分の大きさ以上動くので、最低 2×10=20px は探す)
+SWAP_RADIUS_MAX_PX = 200.0    # 相手を探す半径の上限 (px)。大きいスラグで半径が画面の大部分に広がり、相手候補が数十件になるのを防ぐ
+SWAP_PARTNER_AREA_RATIO = 3.0 # 相手候補は 面積比 (大きい方 / 小さい方) がこの値以下の気泡だけ (大きさが全く違う気泡とは取り違えない)
+SWAP_DETAIL_MAX = 5           # 詳細の文字列に載せる相手IDの数 (近い順)。残りは「他N件」とだけ書く
+MAX_AGE = 3                   # トラッカーの MAX_AGE と同じ値 (qc_report.json に MAX_AGE があればそちらを使う)
 EDGE_MARGIN_PX = 2            # (旧形式CSVのみ) 画面端接触の判定余白
 
 # 気泡サイズの区分 (面積 px)。自分の画像に合わせて調整してよい
@@ -93,6 +112,38 @@ def size_class(area):
 
 def eq_diam(area):
     return 2.0 * math.sqrt(max(area, 1.0) / math.pi)
+
+
+def swap_radius(area):
+    """乗り移りの相手を探す半径 (px) = min(SWAP_RADIUS_FACTOR × max(等価直径, 10px), SWAP_RADIUS_MAX_PX)
+    10px の下限: 等価直径が数px の tiny 気泡も1フレームで自分の大きさ以上動くため、最低 SWAP_RADIUS_FACTOR × 10px は探す。
+    上限: 大きいスラグでは等価直径の2倍が数百px になり、無関係な発生・消失まで相手に数えてしまうため。"""
+    return min(SWAP_RADIUS_FACTOR * max(eq_diam(area), 10.0), SWAP_RADIUS_MAX_PX)
+
+
+def area_ratio(a, b):
+    """面積比 (大きい方 / 小さい方)。1px 未満は 1px とみなす"""
+    return max(a, b) / max(1.0, min(a, b))
+
+
+# 乗り移り相手の理由 (詳細文字列での表記順): (日本語, ASCII)
+SWAP_REASON_TEXT = {"new": ("新規発生", "appeared"), "lost": ("消失", "lost"), "jump": ("同時ジャンプ", "jumped")}
+
+
+def format_swap_partners(partners, max_n=None):
+    """相手候補 {トラックID: {"reasons": {"new","lost","jump"}, "dist": 距離px}} -> (日本語, ASCII) の詳細文字列
+    IDごとに1件 (理由はまとめる)、急変地点から近い順に最大 max_n 件 (既定 SWAP_DETAIL_MAX)、残りは「他N件」"""
+    max_n = SWAP_DETAIL_MAX if max_n is None else max(0, int(max_n))
+    order = sorted(partners.items(), key=lambda kv: (kv[1]["dist"], kv[0]))
+    shown, rest = order[:max_n], len(order) - min(len(order), max_n)
+    jp = "、".join(f"ID{t}({'・'.join(v[0] for k, v in SWAP_REASON_TEXT.items() if k in p['reasons'])})"
+                   for t, p in shown)
+    en = ", ".join(f"ID{t}({'/'.join(v[1] for k, v in SWAP_REASON_TEXT.items() if k in p['reasons'])})"
+                   for t, p in shown)
+    if rest:
+        jp = f"{jp} 他{rest}件" if jp else f"他{rest}件"
+        en = f"{en} +{rest} more" if en else f"+{rest} more"
+    return "相手候補: " + jp, "partners: " + en
 
 
 # ==============================================================
@@ -167,7 +218,9 @@ def _dist(a, b):
     return math.hypot(a["x"] - b["x"], a["y"] - b["y"])
 
 
-def analyze(rows, frame_files, has_touch, img_hw):
+def analyze(rows, frame_files, has_touch, img_hw, max_age=None):
+    """max_age: トラッカーの MAX_AGE (qc_report.json の値)。None なら設定値 MAX_AGE"""
+    max_age = MAX_AGE if max_age is None else max_age
     first_frame, last_frame = min(frame_files), max(frame_files)
 
     def touches(r):
@@ -243,7 +296,7 @@ def analyze(rows, frame_files, has_touch, img_hw):
             dt = b["frame"] - a["frame"]
             if dt > 1:
                 flags.append(_flag("GAP", b, f"{dt - 1}フレーム未検出の後に復帰", f"missing {dt - 1} frame(s), then back", prev=a))
-            ok = (dt <= MAX_AGE + 1 and (tid, a["frame"]) not in affected and (tid, b["frame"]) not in affected
+            ok = (dt <= max_age + 1 and (tid, a["frame"]) not in affected and (tid, b["frame"]) not in affected
                   and not touches(a) and not touches(b))
             if not ok:
                 v_ref, v_jump = None, None
@@ -282,38 +335,53 @@ def analyze(rows, frame_files, has_touch, img_hw):
         if r0["event"] == "new" and r0["frame"] > first_frame and not touches(r0):
             births.append(_flag("INTERIOR_NEW", r0, "画面端・分裂以外での新規トラック", "new track appeared inside the frame",
                                 prev_file=frame_files.get(r0["frame"] - 1)))
-        if tid not in merged_into and r1["frame"] < last_frame - MAX_AGE and not touches(r1):
+        if tid not in merged_into and r1["frame"] < last_frame - max_age and not touches(r1):
             deaths.append(_flag("INTERIOR_LOST", r1, "画面端・合体以外でのトラック終了", "track ended inside the frame",
                                 next_file=frame_files.get(r1["frame"] + 1)))
     flags += births + deaths
 
     # ---- ID乗り移り ----
-    swaps = {}
+    # 相手候補 = 急変地点から swap_radius() 以内で、面積比 ≤ SWAP_PARTNER_AREA_RATIO の「別の」トラックの
+    #   新規発生 (前後1フレーム) / 消失 (2フレーム前〜同じフレーム) / 同じフレームの位置ジャンプ
+    # 同じ (トラックID, フレーム) に POS_JUMP と AREA_JUMP があるときは相手候補を合わせて1件の SWAP_LIKELY にする
+    births_at, deaths_at, pos_jumps_at = defaultdict(list), defaultdict(list), defaultdict(list)
+    for b in births:
+        births_at[b["frame"]].append(b)
+    for d in deaths:
+        deaths_at[d["frame"]].append(d)
+    for o in jump_flags:
+        if o["type"] == "POS_JUMP":
+            pos_jumps_at[o["frame"]].append(o)
+    groups = {}                       # (tid, frame) -> {"flags": [急変フラグ], "partners": {相手ID: {"reasons", "dist"}}}
     for fl in jump_flags:
-        rad = SWAP_RADIUS_FACTOR * max(eq_diam(fl["area"]), 10.0)
-        partners = []
-        for b in births:
-            if abs(b["frame"] - fl["frame"]) <= 1 and _dist(b, fl) <= rad:
-                partners.append(("ID{}が近くで新規発生", "ID{} appeared nearby", b["tid"]))
-        for d in deaths:
-            if fl["frame"] - 2 <= d["frame"] <= fl["frame"] and _dist(d, fl) <= rad:
-                partners.append(("ID{}が近くで消失", "ID{} lost nearby", d["tid"]))
-        for o in jump_flags:
-            if (o is not fl and o["type"] == "POS_JUMP" and o["frame"] == fl["frame"]
-                    and o["tid"] != fl["tid"] and _dist(o, fl) <= rad):
-                partners.append(("ID{}も同時にジャンプ", "ID{} jumped at same time", o["tid"]))
-        if not partners:
+        g = groups.setdefault((fl["tid"], fl["frame"]), {"flags": [], "partners": {}})
+        g["flags"].append(fl)
+        rad, f = swap_radius(fl["area"]), fl["frame"]
+        cands = ([("new", b) for ff in (f - 1, f, f + 1) for b in births_at.get(ff, [])]
+                 + [("lost", d) for ff in (f - 2, f - 1, f) for d in deaths_at.get(ff, [])]
+                 + [("jump", o) for o in pos_jumps_at.get(f, [])])
+        for kind, o in cands:
+            if o["tid"] == fl["tid"]:
+                continue              # 自分自身の発生・消失・ジャンプは相手ではない
+            dd = _dist(o, fl)
+            if dd > rad or area_ratio(fl["area"], o["area"]) > SWAP_PARTNER_AREA_RATIO:
+                continue
+            p = g["partners"].setdefault(o["tid"], {"reasons": set(), "dist": dd})
+            p["reasons"].add(kind)
+            p["dist"] = min(p["dist"], dd)
+    swaps = []
+    for g in groups.values():
+        if not g["partners"]:
             continue
-        jp = "・".join(sorted({p[0].format(p[2]) for p in partners}))
-        en = "; ".join(sorted({p[1].format(p[2]) for p in partners}))
-        key = (fl["tid"], fl["frame"])
-        if key in swaps:
-            swaps[key]["detail"] += " / " + fl["detail"]
-        else:
-            sw = dict(fl)
-            sw.update(type="SWAP_LIKELY", detail=jp + " / " + fl["detail"], ascii=en + " | " + fl["ascii"])
-            swaps[key] = sw
-    flags += list(swaps.values())
+        jp, en = format_swap_partners(g["partners"])
+        sw = dict(g["flags"][0])      # 位置ジャンプ (予測位置つき) があればそちらが先頭
+        sw.update(type="SWAP_LIKELY",
+                  detail=" / ".join([jp] + [x["detail"] for x in g["flags"]]),
+                  ascii=" | ".join([en] + [x["ascii"] for x in g["flags"]]),
+                  n_partners=len(g["partners"]),   # 内部用 (qc_flags.csv には出さない。qc_summary.json の集計用)
+                  partner_ids=[t for t, _ in sorted(g["partners"].items(), key=lambda kv: (kv[1]["dist"], kv[0]))])
+        swaps.append(sw)
+    flags += swaps
 
     # ---- 合体・分裂の面積保存 / 合体直後の分裂 ----
     merges = []
@@ -352,7 +420,8 @@ def analyze(rows, frame_files, has_touch, img_hw):
         fl["file"] = fl["file"] or frame_files.get(fl["frame"], "")
 
     all_obs = [r for t in obs for r in obs[t]]
-    return flags, {"obs": all_obs, "n_tracks": len(obs), "n_steps": n_steps, "dist": dist, "motion": motion}
+    return flags, {"obs": all_obs, "n_tracks": len(obs), "n_steps": n_steps, "dist": dist, "motion": motion,
+                   "max_age": max_age}
 
 
 def in_roi(fl, roi):
@@ -407,6 +476,12 @@ def summarize(flags, info, roi):
                                "median_neighbor_px": round(float(np.median(nd)), 2),
                                "median_ratio": round(float(np.median(ratio)), 3),
                                "frac_ratio_over_half": round(float(np.mean(ratio > 0.5)), 4)}
+    swap_partners = {}                # SWAP_LIKELY 1件あたりの相手候補数 (ID重複なし)
+    for c in CLASS_NAMES:
+        v = [f.get("n_partners", 0) for f in flags if f["type"] == "SWAP_LIKELY" and f["cls"] == c]
+        swap_partners[c] = {"n": len(v), "median": float(np.median(v)) if v else None,
+                            "max": int(max(v)) if v else None}
+    inf_none = lambda v: None if v == float("inf") else v   # JSON に Infinity を書かない
     return {
         "motion_vs_spacing": motion_stats,
         "n_tracks": info["n_tracks"], "n_observations": len(obs),
@@ -415,10 +490,55 @@ def summarize(flags, info, roi):
         "suspicious_ratio_by_count": round(len(suspect) / max(len(obs), 1), 5),
         "suspicious_ratio_by_area": round(sum(suspect.values()) / total_area, 5),
         "deviation_from_prediction": dist_stats,
+        "swap_partners_by_size": swap_partners,
         "settings": {"JUMP_REL": JUMP_REL, "MIN_JUMP_PX": MIN_JUMP_PX, "AREA_JUMP_FACTOR": AREA_JUMP_FACTOR,
                      "MIN_AREA_FOR_AREA_CHECK": MIN_AREA_FOR_AREA_CHECK, "AREA_CONSERVATION_TOL": AREA_CONSERVATION_TOL,
+                     "SWAP_RADIUS_FACTOR": SWAP_RADIUS_FACTOR, "SWAP_RADIUS_MAX_PX": inf_none(SWAP_RADIUS_MAX_PX),
+                     "SWAP_PARTNER_AREA_RATIO": inf_none(SWAP_PARTNER_AREA_RATIO), "SWAP_DETAIL_MAX": SWAP_DETAIL_MAX,
+                     "MAX_AGE": info.get("max_age", MAX_AGE),
                      "SIZE_CLASSES": [[n, lo, (hi if hi != float('inf') else None)] for n, lo, hi in SIZE_CLASSES]},
     }
+
+
+# qc_report.json の used_params から読むキー (tracker2.py / tracker3.py の両方。無いキーは None)
+TRACKER_PARAM_KEYS = ("MAX_LEADING_EDGE_JUMP", "MAX_CENTER_X_JUMP", "AREA_RATIO_GATE", "SPACING_GATE_FRAC",
+                      "USE_FLOW_PRIOR",                                      # tracker2
+                      "MAX_SPEED", "POS_GATE", "POS_GATE_SIZE_FRAC", "MAX_AGE", "USE_PIV_PRIOR")   # tracker3
+
+
+def tracker_kind(g):
+    """used_params からトラッカーの種類を判定 (MAX_SPEED があれば tracker3、MAX_LEADING_EDGE_JUMP があれば tracker2)"""
+    if not g:
+        return None
+    if g.get("MAX_SPEED") is not None:
+        return "tracker3"
+    if g.get("MAX_LEADING_EDGE_JUMP") is not None:
+        return "tracker2"
+    return None
+
+
+def _gate_texts(g):
+    """qc_report.json にあるゲート・設定だけを表示用の文字列にする (記録の無い値は出さない)"""
+    out = []
+    if g.get("MAX_LEADING_EDGE_JUMP") is not None:
+        out.append(f"先端部Y {g['MAX_LEADING_EDGE_JUMP']}px")
+    if g.get("MAX_CENTER_X_JUMP") is not None:
+        out.append(f"中心X {g['MAX_CENTER_X_JUMP']}px")
+    if g.get("MAX_SPEED") is not None:
+        out.append(f"速度未知トラックの探索半径 {g['MAX_SPEED']}px")
+    if g.get("POS_GATE") is not None:
+        out.append(f"予測ずれ {g['POS_GATE']}px" + (f"+等価直径×{g['POS_GATE_SIZE_FRAC']}"
+                                                     if g.get("POS_GATE_SIZE_FRAC") else ""))
+    if g.get("AREA_RATIO_GATE") is not None:
+        out.append(f"面積比 {g['AREA_RATIO_GATE']}")
+    if g.get("SPACING_GATE_FRAC") is not None:
+        out.append(f"間隔ゲート {g['SPACING_GATE_FRAC']}×最近接距離" if g["SPACING_GATE_FRAC"] else "間隔ゲート 無効")
+    if g.get("MAX_AGE") is not None:
+        out.append(f"MAX_AGE {g['MAX_AGE']}")
+    for k in ("USE_FLOW_PRIOR", "USE_PIV_PRIOR"):
+        if g.get(k) is not None:
+            out.append(f"{k}={g[k]}")
+    return out
 
 
 def print_report(s, roi):
@@ -443,6 +563,17 @@ def print_report(s, roi):
     print(f"\n疑わしい観測 (SWAP/POS/AREA): 件数で {100 * s['suspicious_ratio_by_count']:.2f}%, "
           f"面積加重で {100 * s['suspicious_ratio_by_area']:.2f}%  ← ボイド率・スリップへの影響の目安")
 
+    sp = s.get("swap_partners_by_size") or {}
+    if any(v["n"] for v in sp.values()):
+        st = s.get("settings", {})
+        ar, rm = st.get("SWAP_PARTNER_AREA_RATIO"), st.get("SWAP_RADIUS_MAX_PX")
+        print(f"\n[SWAP_LIKELY の相手候補数] 1件あたりの別トラックの数 (ID重複なし。面積比 ≤ {ar if ar is not None else '制限なし'}、"
+              f"半径の上限 {f'{rm}px' if rm is not None else 'なし'})。多いほど相手が特定できていない")
+        for c in CLASS_NAMES:
+            v = sp.get(c)
+            if v and v["n"]:
+                print(f"  {c:<6} {v['n']:>6}件  中央値 {v['median']:>5}  最大 {v['max']:>4}")
+
     print("\n[撮影条件のチェック] 追跡結果を使わず、次フレームで一番近い気泡までの距離 ÷ 同じフレームで一番近い気泡までの距離")
     print("  比が0.3以下 = 次フレームで一番近いのはほぼ自分自身 (追跡しやすい)。0.3を超えると動きが気泡間隔に比べて大きく、対応付けが曖昧になりうる")
     for c in CLASS_NAMES:
@@ -451,9 +582,8 @@ def print_report(s, roi):
             print(f"  {c:<6} 次フレーム最近接 {m['median_next_px']:>6}px  同フレーム最近接 {m['median_neighbor_px']:>6}px  "
                   f"比の中央値 {m['median_ratio']:>5}  0.5超え {100 * m['frac_ratio_over_half']:.1f}%")
     g = s.get("tracker_gates")
-    if g:
-        print(f"  トラッカーのゲート: 先端部Y {g.get('MAX_LEADING_EDGE_JUMP')}px, 中心X {g.get('MAX_CENTER_X_JUMP')}px, "
-              f"面積比 {g.get('AREA_RATIO_GATE')}  (qc_report.json)")
+    if g and _gate_texts(g):
+        print(f"  トラッカーのゲート ({tracker_kind(g) or '形式不明'}): {', '.join(_gate_texts(g))}  (qc_report.json)")
 
     # ---- 自動の読み方ヒント ----
     print("\n[読み方]")
@@ -474,7 +604,14 @@ def print_report(s, roi):
             g2 = s.get("tracker_gates") or {}
             print(f"    {', '.join(mid)}: 毎フレーム隣の気泡までの距離の3〜7割動く → 一番近いものを選ぶだけでは曖昧だが、"
                   "速度を予測すれば追える範囲 (ソフトで改善可能)。")
-            if not g2.get("SPACING_GATE_FRAC"):
+            if tracker_kind(g2) == "tracker3":     # tracker3 には間隔ゲートがないので tracker2 用の助言は出さない
+                if g2.get("USE_PIV_PRIOR") is None:
+                    print("      → 新しく現れた気泡の初速度を同じサイズの PIV 速度場から推定する USE_PIV_PRIOR を使うこと "
+                          "(この qc_report.json には USE_PIV_PRIOR の記録がない = PIV prior 対応前の tracker3)")
+                elif not g2.get("USE_PIV_PRIOR"):
+                    print("      → tracker3 の USE_PIV_PRIOR = True にして、新しく現れた気泡の初速度を PIV 速度場から推定すること "
+                          "(沸騰実験など静止状態から出発する気泡が主なら False のままでよい)")
+            elif not g2.get("SPACING_GATE_FRAC"):
                 print("      → 新しく現れた気泡の初速度推定と間隔ゲートを持つトラッカー (USE_FLOW_PRIOR / SPACING_GATE_FRAC) を使うこと")
         if ok:
             gx = (g or {}).get("MAX_CENTER_X_JUMP"); gy = (g or {}).get("MAX_LEADING_EDGE_JUMP")
@@ -482,6 +619,10 @@ def print_report(s, roi):
             msg = f"    {', '.join(ok)}: 気泡は次フレームでもほぼ同じ場所にあるのに追跡がずれる → トラッカー側の問題 (ソフトで直せる)。"
             if gx is not None and gy is not None and max(gx, gy) > nd:
                 msg += f" ゲート({gy}/{gx}px)が気泡間隔({nd:.0f}px)より広く、隣の気泡も候補に入っている。"
+            elif tracker_kind(g) == "tracker3":
+                wide = [f"{k} {g[k]}px" for k in ("POS_GATE", "MAX_SPEED") if g.get(k) is not None and g[k] > nd]
+                if wide:
+                    msg += f" ゲート({', '.join(wide)})が気泡間隔({nd:.0f}px)より広く、隣の気泡も候補に入りうる。"
             print(msg)
     ra = s["suspicious_ratio_by_area"]
     print(f"  - 面積加重の疑わしい割合 {100 * ra:.1f}%" + (
@@ -612,17 +753,25 @@ def main():
     img_hw = None if has_touch else image_size_from(overlay_dir, frame_files)
     if not has_touch and img_hw is None:
         print("※ フレーム接触の列がなく画像サイズも不明なため、画面端の判定を行いません (旧形式CSV)")
-    roi = load_roi(QC_REPORT or os.path.join(base, "qc_report.json"))
-
-    flags, info = analyze(rows, frame_files, has_touch, img_hw)
-    s = summarize(flags, info, roi)
+    report_path = QC_REPORT or os.path.join(base, "qc_report.json")
+    roi = load_roi(report_path)
     try:
-        with open(QC_REPORT or os.path.join(base, "qc_report.json"), encoding="utf-8") as fp:
-            up = json.load(fp).get("used_params", {})
-        s["tracker_gates"] = {k: up.get(k) for k in ("MAX_LEADING_EDGE_JUMP", "MAX_CENTER_X_JUMP", "AREA_RATIO_GATE",
-                                                    "SPACING_GATE_FRAC", "USE_FLOW_PRIOR")}
-    except (OSError, ValueError):
-        s["tracker_gates"] = None
+        with open(report_path, encoding="utf-8") as fp:
+            up = json.load(fp).get("used_params") or {}
+        gates = {k: up.get(k) for k in TRACKER_PARAM_KEYS}
+    except (OSError, ValueError, AttributeError):
+        gates = None
+    max_age = (gates or {}).get("MAX_AGE")    # tracker3 は MAX_AGE を記録する。なければ設定値
+    if isinstance(max_age, bool) or not isinstance(max_age, (int, float)) or max_age < 0:
+        max_age = MAX_AGE
+    else:
+        max_age = int(max_age)
+        if max_age != MAX_AGE:
+            print(f"※ qc_report.json の MAX_AGE = {max_age} を使います (設定値 {MAX_AGE})")
+
+    flags, info = analyze(rows, frame_files, has_touch, img_hw, max_age=max_age)
+    s = summarize(flags, info, roi)
+    s["tracker_gates"] = gates
     s["source_csv"] = os.path.abspath(TRACKING_CSV)
     write_flags(os.path.join(out_dir, "qc_flags.csv"), flags, roi)
     with open(os.path.join(out_dir, "qc_summary.json"), "w", encoding="utf-8") as fp:
