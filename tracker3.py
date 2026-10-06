@@ -795,12 +795,20 @@ class LeadingEdgeLapTracker:
             free = [j for j in range(n_d) if j not in det_to_track]
             if cands and free:
                 cost = np.full((len(cands), len(free)), 1e6)
-                for a, (snap, _) in enumerate(cands):
+                for a, (snap, h) in enumerate(cands):
+                    # PIV の初速度を持つ (速度未知の) 気泡は、塊になっている間ホストと一緒に動いていたかもしれないので、
+                    # 「ホストの移動量で動いた」も候補に加える (PIV の予測だけだと、接触から戻った気泡を見逃す)。
+                    # PIV 導入前の広いゲートに戻すと、遠くの別の気泡を戻してしまう誤接続が出るので戻さない
+                    alts = [snap]
+                    hj = next((jj for jj, ii in det_to_track.items() if active[ii] is h), None)
+                    if not snap.v_known and snap.prior_src == "piv" and h.pre_merge is not None and hj is not None:
+                        kk = max(1, frame_idx - snap.last_frame)
+                        hdx, hdy, _ = displacement(h.pre_merge, dets[hj])
+                        alts.append(replace(snap, prior_vx=hdx / kk, prior_vy=hdy / kk))
                     for b, j in enumerate(free):
-                        # 接触からの復帰の判定は PIV 導入前と同じゲートで行う (合体/分裂の判定を変えないため)
-                        c = pair_cost(replace(snap, prior_src="") if snap.prior_src else snap, dets[j], frame_idx)
-                        if c is not None:
-                            cost[a, b] = c
+                        cs = [c for c in (pair_cost(s_, dets[j], frame_idx) for s_ in alts) if c is not None]
+                        if cs:
+                            cost[a, b] = min(cs)
                 for a, b in zip(*linear_sum_assignment(cost)):
                     if cost[a, b] < 1e6:
                         restored[free[b]] = cands[a]

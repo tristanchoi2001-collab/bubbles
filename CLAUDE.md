@@ -46,6 +46,26 @@
 - 전체 영상 상관은 창의 피크가 픽셀이 많은 큰 기포를 따라가므로 크기별로 분리해야 한다.
   → 지시서 5장 작업: U-Net 인스턴스 마스크로 만든 크기별 영상에서 PIV(상호상관) 속도장을 구해 새 트랙의 초기 속도로 쓴다.
 
+## PIV 초기 속도 추정 구현 현황 (지시서 5장)
+v2가 아니라 `tracker3.py`에 통합했다. 지시서 5-2의 간격 게이트 항목은 tracker3에 간격 게이트가 없으므로 해당 없음.
+x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
+- `piv_field.py`: 크기 구분별 PIV.
+  - `mode="faithful"`은 `reference/piv_prior.py`와 비트 단위로 같다.
+  - 기본값 `"improved"`는 다음을 추가한 버전이다: 주 로브 밖에서 2위 피크 찾기, |d| ≤ 창/4 제한, 고립 벡터 검사, 오프셋 창 clamp, 가장자리 창, 유효성 반환.
+- tracker3 플래그(전부 끌 수 있음): `USE_PIV_PRIOR`, `PIV_GATE`(부트스트랩 자동), `PIV_GATE_HARD` + `PIV_STATIC_SPEED`, `W_PIV_OUTSIDE`, `PIV_KEEP_STATIC`, `PIV_USE_DX`, `PIV_MODE`, `PIV_RASTER`, `PIV_WINDOWS`, `PRIOR_AREA_RATIO`, `SAVE_PIV_DEBUG`.
+- 근거가 있는 결정
+  - 래스터는 마스크 **윤곽**을 쓴다. 채운 마스크는 large 클래스의 유효 창이 0%였다(합성·실제 모두).
+  - PIV 게이트는 하이브리드다. PIV가 "움직임"을 가리키는 곳은 단단한 게이트, ≈정지를 가리키는 곳은 패널티를 붙인 넓은 게이트.
+    정지 기포가 다수인 창에서는 소수의 빠른 기포가 상관에 나타나지 않는다. 그래서 단단한 게이트만 쓰면 끊김만 늘었다.
+  - tiny 창을 키우면 합성(균일 흐름)에서는 좋아졌다. 하지만 실제 프레임(공간적으로 변하는 흐름)에서는 나빠져서 기본값은 256/128→128/64를 유지한다.
+- 검증 도구
+  - `sim_piv.py`: 6-1/6-2 합성 벤치마크.
+  - `fake_detector.py`: 정답 마스크로 확률맵을 만들어 `extract_instances`에 넣는다.
+  - `tests/test_events.py`: 6-3 회귀 테스트, PIV on/off 판정이 동일한지 확인.
+  - `tests/test_qc.py`.
+  - `qc_compare.py`: 실데이터 QC 전후 표.
+- 실데이터 검증(6-4)은 U-Net 가중치(`best.pt`, 사용자 PC에 있음)가 필요하다. 클라우드 세션에서는 업로드받아야 실행할 수 있다(torch는 설치 가능).
+
 ## 저장소 구성
 - `tracker2.py` — 트래커 v2(지시서의 `tracker.py`). 선단부 vy만으로 예측, 간격 게이트, Union IoU 기반 합체·분열.
 - `tracker3.py` — v2 이후의 개선판. 지시서 1~4장 이후에 만들었으므로 지시서가 전제하는 v2와 구조가 다르다.
@@ -53,4 +73,8 @@
   - 크기에 비례하는 게이트 + 속도 미지 트랙용 `MAX_SPEED`(간격 게이트는 없앰).
   - 면적 보존 기반 합체·분열, 접촉 후 ID 복원(`TRANSIENT_MERGE_FRAMES`), `MIN_TRACK_AREA`.
 - `sim_compare.py` — 정답 ID가 있는 합성 장면으로 tracker2 / tracker3을 비교하는 스크립트.
+- `piv_field.py`, `fake_detector.py`, `sim_piv.py`, `qc_compare.py`, `tests/` — 위 "PIV 초기 속도 추정 구현 현황" 참고.
+- `3_tracking_qc.py` — 추적 QC. SWAP_LIKELY 상대 후보는 면적비 ≤ 3, 반경 min(2×등가직경, 200 px), 상세는 ID 중복 제거 후 최대 5개 + 「他N件」.
+- `reference/piv_prior.py` — PIV 참고 구현(수정하지 않음).
 - `docs/PIV_TASK.md` — PIV prior 도입 작업 지시서 원문(5장 할 일, 6장 검증, 7장 주의, 8장 작업 방식).
+- 테스트 실행: `python -B tests/test_events.py`, `python -B tests/test_qc.py` (pytest로도 실행 가능).
