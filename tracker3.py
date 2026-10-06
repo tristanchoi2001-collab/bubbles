@@ -145,6 +145,7 @@ PRIOR_AREA_RATIO = 3.0       # 「周りの気泡」は面積比がこれ以内�
 # 追跡の履歴を使わないので、速い気泡が新しく現れても その場所・その大きさの気泡の速度で次の位置を予測できる。
 # 速度場は予測専用。CSV の速度 (計測値) は従来どおり個々の追跡だけから出す。
 USE_PIV_PRIOR = True         # 沸騰 (加熱) 実験では核生成気泡が静止から動き出し PIV の初速度が外れるので False にすること
+                             # (PIV 導入前の tracker3 と完全に同じ動作にするには PRIOR_AREA_RATIO = 0 も必要)
                              # TODO: 同じ位置で繰り返し発生する気泡 (核生成点) は初速度 0 にする
 PIV_GATE = 10.0              # PIV で初速度が分かった新規トラック: 予測位置からのずれの許容 (px)。+ 等価直径 × POS_GATE_SIZE_FRAC。
                              # 速度未知トラックの MAX_SPEED より狭い。PIV が外れたときは「つながずに途切れさせる」
@@ -692,6 +693,8 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
             radius = MAX_SPEED * k + slack
             gate_dist = math.hypot(dx, dy)
             extra = W_PIV_OUTSIDE
+        elif math.hypot(dx, dy) > (MAX_SPEED * k + slack) * (2.0 if loose else 1.0):
+            return None   # PIV の予測の円でも、物理的に動ける距離 (MAX_SPEED) の外は認めない
     else:   # 速度未知: 物理的に動ける距離までは候補にする (コストは2仮説の近い方で評価)
         radius = MAX_SPEED * k + slack
         gate_dist = math.hypot(dx, dy)
@@ -794,7 +797,8 @@ class LeadingEdgeLapTracker:
                 cost = np.full((len(cands), len(free)), 1e6)
                 for a, (snap, _) in enumerate(cands):
                     for b, j in enumerate(free):
-                        c = pair_cost(snap, dets[j], frame_idx)
+                        # 接触からの復帰の判定は PIV 導入前と同じゲートで行う (合体/分裂の判定を変えないため)
+                        c = pair_cost(replace(snap, prior_src="") if snap.prior_src else snap, dets[j], frame_idx)
                         if c is not None:
                             cost[a, b] = c
                 for a, b in zip(*linear_sum_assignment(cost)):

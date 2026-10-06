@@ -515,6 +515,71 @@ def test_f2_empty_frame():
     assert_link(key, res, live, 2, "g2")
 
 
+class _FixedField:
+    """どこでも同じ移動量を返す速度場 (PIV の結果を固定して与える)"""
+
+    def __init__(self, vy):
+        self.vy = vy
+
+    def sample(self, x, y):
+        return self.vy, 0.0, True
+
+
+def test_g_contact_restore_with_piv_prior():
+    """新規トラック (初速度 = PIV) がすぐスラグに接触して塊になり、2フレーム後に分かれ直す
+    -> PIV なしと同じく「接触」として元のIDに戻すこと (合体 + 新規 にしない)。
+    接触からの復帰の判定は PIV 導入前のゲートで行う (PIV の狭いゲートで判定が変わった不具合の再発防止)"""
+    key = "g) 接触からの復帰 (PIV の初速度を持つ新規トラック)"
+    H = 1174
+
+    def cap(cx, cy, w, h):
+        yy, xx = np.ogrid[:H, :W]
+        r = w / 2.0
+        half = max(h / 2.0 - r, 0.0)
+        dy = yy - cy
+        dy = dy - np.clip(dy, -half, half)
+        return (xx - cx) ** 2 + dy ** 2 <= r * r
+
+    bx, by = 200.0, 900.0 - 40.0 * 3
+    frames = []
+    for f in range(9):
+        lab = np.zeros((H, W), np.int32)
+        lab[cap(170, 900.0 - 40.0 * f, 40, 200)] = 1          # スラグ (-40 px/frame)
+        if f >= 3:
+            if f == 3:
+                m = cap(bx, by, 14, 14)
+            elif f == 4:
+                m = cap(bx - 6, by - 4, 14, 14)                   # スラグに接触 -> 1つの塊
+            else:
+                m = cap(bx + 2, by - 80 - 20 * (f - 5), 14, 14)   # 分かれ直して -20 px/frame
+            lab[m & (lab == 0)] = 1 if f == 4 else 2
+        frames.append(lab)
+
+    def run(piv_vy):
+        T = importlib.reload(tracker3)
+        roi = np.ones((H, W), bool)
+        dets = [T.instances_to_detections(lab, roi) for lab in frames]
+        tr = T.LeadingEdgeLapTracker()
+        rows = {}
+        for f, d in enumerate(dets):
+            piv = None if piv_vy is None else {"tiny": _FixedField(piv_vy), "small": _FixedField(piv_vy),
+                                               "large": _FixedField(-40.0)}
+            rows[f] = tr.update(d, f, piv)
+        T.suppress_transient_merges(rows, tr.restores)
+        ev = [(f, r["track_id"], r["event"], tuple(r["parent_ids"])) for f in rows for r in rows[f]
+              if r["event"] != "normal"]
+        return ev, list(tr.restores), dict(tr.prior_counts)
+
+    off_ev, off_rs, _ = run(None)
+    on_ev, on_rs, pc = run(-20.0)
+    OBSERVED[key] = {"off": off_ev, "on": on_ev, "prior_counts": pc}
+    assert off_rs, f"{key}: PIV なしで接触からの復帰が起きていない (シナリオの前提が崩れた): {off_ev}"
+    assert not any(e[2] == "merge" or e[2].startswith("merged_into") for e in off_ev), f"{key}: {off_ev}"
+    assert pc.get("piv", 0) > 0, f"{key}: PIV の初速度が使われていない: {pc}"
+    assert (on_ev, on_rs) == (off_ev, off_rs), \
+        f"{key}: PIV あり/なしで判定が違う\n  なし: {off_ev} {off_rs}\n  あり: {on_ev} {on_rs}"
+
+
 # ==============================================================
 # 4. スクリプトとして実行
 # ==============================================================

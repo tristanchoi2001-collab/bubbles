@@ -21,8 +21,11 @@ reference/piv_prior.py (相互相関法) をトラッカー用に移植したも
 piv_prior.py からの変更 (mode="improved" で有効。mode="faithful" なら piv_prior.py と同じ計算):
   1. lobe_peak        : 2位ピークを「1位ピークの主ローブ (0.5×1位 を超える連結領域)」の外で探す
                          (±2px の外だと、幅広いピークの肩を2位と数えて正しい窓まで無効になる)
-  2. max_disp_frac    : 相関ピークの移動量が窓の この割合 を超えたら無効
-                         (循環相関の端 ±窓/2 に出る偽ピークが、周りの有効ベクトルが少ない窓で生き残って広がるのを防ぐ)
+     lobe_max_frac    : 主ローブが縦または横に 窓 × この値 より長い窓は無効 (開口問題: スラグの胴体のように
+                         平行な輪郭しか見えない窓は、相関が稜線になり移動量が決まらない)
+  2. max_disp_frac    : 2パス目で、ずらした後に残る移動量が窓の この割合 を超えたら無効
+     pass1_disp_frac  : 1パス目 (ずらしなし) は ±窓/2 の端に出る循環相関の偽ピークだけを除く (窓 × この値)
+     require_guide    : (既定は無効) 2パス目は、1パス目で実測できた場所だけを有効にする
   3. validate_isolated: 3×3 に有効な隣が3つ未満のベクトルも、5×5 に有効な隣が2つ以上あれば中央値で検査する
   4. clamp_offset     : 2パス目でずらした窓が画像からはみ出すとき、ずらしを 0 に戻さず画像内に寄せる
      edge_windows     : 右端・下端に揃えた窓を追加し、端の帯 (下端 = 気泡が入ってくる場所) も計測する
@@ -72,7 +75,11 @@ class PIVSettings:
     median_k: float = 3.0           # 正規化中央値検査: |v - 中央値| > k × (周りの中央値偏差 + eps) なら無効
     median_eps: float = 1.0
     lobe_peak: bool = True          # 変更1
+    lobe_max_frac: float = 0.25     # 変更1 (0 で無効)
     max_disp_frac: float = 0.25     # 変更2 (0 で無効)
+    pass1_disp_frac: float = 0.45   # 変更2 (0 で無効)
+    require_guide: bool = False     # 変更2 (実画像では 1パス目の大きい窓が流れの場所による違いで無効になりやすく、
+                                    # 正しい 2パス目まで捨てて誤差が増えたので既定は無効。pass1_disp_frac で折り返しは防げる)
     validate_isolated: bool = True  # 変更3
     clamp_offset: bool = True       # 変更4
     edge_windows: bool = True       # 変更4
@@ -80,8 +87,8 @@ class PIVSettings:
     @staticmethod
     def faithful(**kw) -> "PIVSettings":
         """piv_prior.py と同じ計算 (変更1〜4 なし。入力の画像の作り方は raster で別に指定)"""
-        base = dict(lobe_peak=False, max_disp_frac=0.0, validate_isolated=False,
-                    clamp_offset=False, edge_windows=False)
+        base = dict(lobe_peak=False, lobe_max_frac=0.0, max_disp_frac=0.0, pass1_disp_frac=0.0, require_guide=False,
+                    validate_isolated=False, clamp_offset=False, edge_windows=False)
         base.update(kw)
         return PIVSettings(**base)
 
@@ -139,28 +146,38 @@ def _gauss3(m, c, p):
     return (lm - lp) / den if den != 0 else 0.0
 
 
-INVALID_EMPTY, INVALID_RATIO, INVALID_DISP, INVALID_MEDIAN = 1, 2, 3, 4
+INVALID_EMPTY, INVALID_RATIO, INVALID_DISP, INVALID_MEDIAN, INVALID_NOGUIDE, INVALID_APERTURE = 1, 2, 3, 4, 5, 6
 
 
-def _lobe_mask(R: np.ndarray, py: int, px: int, p1: float) -> np.ndarray:
-    """1位ピークの主ローブ (0.5×1位 を超える 4連結の領域) を 2px 膨らませたもの"""
+def _lobe_mask(R: np.ndarray, py: int, px: int, p1: float):
+    """1位ピークの主ローブ (0.5×1位 を超える 4連結の領域)。戻り値: (2px 膨らませたマスク, 縦の長さ, 横の長さ)"""
     hi = R > 0.5 * p1
     if cv2 is not None:
         _, lab = cv2.connectedComponents(hi.astype(np.uint8), connectivity=4)
+        lobe = (lab == lab[py, px]).astype(np.uint8)
         k = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-        return cv2.dilate((lab == lab[py, px]).astype(np.uint8), k, iterations=2).astype(bool)
-    lab, _ = ndimage.label(hi)
-    return ndimage.binary_dilation(lab == lab[py, px], iterations=2)
+        grown = cv2.dilate(lobe, k, iterations=2).astype(bool)
+        lobe = lobe.astype(bool)
+    else:
+        lab, _ = ndimage.label(hi)
+        lobe = lab == lab[py, px]
+        grown = ndimage.binary_dilation(lobe, iterations=2)
+    ys = np.flatnonzero(lobe.any(axis=1))
+    xs = np.flatnonzero(lobe.any(axis=0))
+    return grown, ys[-1] - ys[0] + 1, xs[-1] - xs[0] + 1
 
 
-def _peak(R: np.ndarray, s: PIVSettings):
+def _peak(R: np.ndarray, s: PIVSettings, disp_frac: float):
     """相互相関 R (fftshift 済み) のピーク。戻り値: (dy, dx, ピーク比, 無効の理由 or 0)"""
     h, w = R.shape
     py, px = np.unravel_index(np.argmax(R), R.shape)
     p1 = R[py, px]
     R2 = R.copy()
+    elongated = False
     if s.lobe_peak and p1 > 0:   # 主ローブの外の最大値
-        R2[_lobe_mask(R, py, px, p1)] = -np.inf
+        mask, ly, lx = _lobe_mask(R, py, px, p1)
+        R2[mask] = -np.inf
+        elongated = s.lobe_max_frac > 0 and (ly > s.lobe_max_frac * h or lx > s.lobe_max_frac * w)
     else:                        # piv_prior.py: 1位の周り ±2px の外の最大値
         R2[max(0, py - 2):py + 3, max(0, px - 2):px + 3] = -np.inf
     p2 = R2.max()
@@ -170,7 +187,9 @@ def _peak(R: np.ndarray, s: PIVSettings):
     dy, dx = py - h // 2 + sy, px - w // 2 + sx
     if ratio < s.min_peak_ratio:
         return dy, dx, ratio, INVALID_RATIO
-    if s.max_disp_frac > 0 and (abs(dy) > s.max_disp_frac * h or abs(dx) > s.max_disp_frac * w):
+    if elongated:
+        return dy, dx, ratio, INVALID_APERTURE
+    if disp_frac > 0 and (abs(dy) > disp_frac * h or abs(dx) > disp_frac * w):
         return dy, dx, ratio, INVALID_DISP
     return dy, dx, ratio, 0
 
@@ -197,9 +216,11 @@ def _starts(n: int, win: int, step: int, edge: bool):
 
 
 def _pass(a, b, win, step, s: PIVSettings, guess=None):
-    """1パス分。guess(y, x) -> (dy, dx) があれば t+1 側の窓をその分ずらす"""
+    """1パス分。guess (_Interp) があれば t+1 側の窓をその分ずらす"""
     H, W = a.shape
     wy, wx = min(win, H), min(win, W)
+    # はみ出しの判定と窓の中心: faithful では piv_prior.py と同じく窓の公称サイズで判定する
+    by, bx = (wy, wx) if s.clamp_offset else (win, win)
     ys, xs = _starts(H, wy, step, s.edge_windows), _starts(W, wx, step, s.edge_windows)
     V = np.full((len(ys), len(xs)), np.nan)
     U = np.full_like(V, np.nan)
@@ -213,28 +234,33 @@ def _pass(a, b, win, step, s: PIVSettings, guess=None):
                 if np.isfinite(gdy):
                     oy, ox = int(round(gdy)), int(round(gdx))
             yb, xb = y0 + oy, x0 + ox
-            if yb < 0 or xb < 0 or yb + wy > H or xb + wx > W:
+            if yb < 0 or xb < 0 or yb + by > H or xb + bx > W:
                 if s.clamp_offset:
                     yb, xb = min(max(yb, 0), H - wy), min(max(xb, 0), W - wx)
                     oy, ox = yb - y0, xb - x0
                 else:
                     oy = ox = 0
                     yb, xb = y0, x0
-            cells.append((iy, ix, oy, ox))
+            guided = guess is None or not s.require_guide or guess.supported(y0 + wy / 2, x0 + wx / 2)
+            cells.append((iy, ix, oy, ox, guided))
             WA.append(a[y0:y0 + wy, x0:x0 + wx])
             WB.append(b[yb:yb + wy, xb:xb + wx])
     R, empty = _correlate(np.stack(WA), np.stack(WB))
-    for k, (iy, ix, oy, ox) in enumerate(cells):
+    disp_frac = s.max_disp_frac if guess is not None else s.pass1_disp_frac
+    for k, (iy, ix, oy, ox, guided) in enumerate(cells):
         if empty[k]:
             why[iy, ix] = INVALID_EMPTY
             continue
-        dy, dx, _, bad = _peak(R[k], s)
+        if not guided:
+            why[iy, ix] = INVALID_NOGUIDE
+            continue
+        dy, dx, _, bad = _peak(R[k], s, disp_frac)
         if bad:
             why[iy, ix] = bad
         else:
             V[iy, ix], U[iy, ix] = dy + oy, dx + ox
-    cy = np.array(ys, float) + wy / 2
-    cx = np.array(xs, float) + wx / 2
+    cy = np.array(ys, float) + (wy if s.clamp_offset else win) / 2
+    cx = np.array(xs, float) + (wx if s.clamp_offset else win) / 2
     return cy, cx, V, U, why
 
 
@@ -310,7 +336,7 @@ class DisplacementField:
         s = s or PIVSettings()
         cy1, cx1, V1, U1, why1 = _pass(a, b, win1, step1, s)
         V1, U1 = _validate(V1, U1, why1, s)
-        f1 = _Interp(cy1, cx1, _fill(V1), _fill(U1))
+        f1 = _Interp(cy1, cx1, _fill(V1), _fill(U1), np.isfinite(V1))
         self.cy, self.cx, V2, U2, self.why = _pass(a, b, win2, step2, s, guess=f1)
         V2, U2 = _validate(V2, U2, self.why, s)
         self.valid = np.isfinite(V2)
