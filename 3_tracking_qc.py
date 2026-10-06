@@ -211,7 +211,7 @@ def _flag(ftype, r, detail, ascii_detail, prev=None, prev_file=None, next_file=N
             "area": r["area"], "cls": size_class(r["area"]), "detail": detail, "ascii": ascii_detail,
             "file": r.get("file", ""), "prev_file": prev["file"] if prev else prev_file,
             "prev_xy": (prev["cx"], prev["cy"]) if prev else None, "prev_frame": prev["frame"] if prev else None,
-            "next_file": next_file, "pred_xy": pred}
+            "prev_area": prev["area"] if prev else None, "next_file": next_file, "pred_xy": pred}
 
 
 def _dist(a, b):
@@ -364,7 +364,9 @@ def analyze(rows, frame_files, has_touch, img_hw, max_age=None):
             if o["tid"] == fl["tid"]:
                 continue              # 自分自身の発生・消失・ジャンプは相手ではない
             dd = _dist(o, fl)
-            if dd > rad or area_ratio(fl["area"], o["area"]) > SWAP_PARTNER_AREA_RATIO:
+            # 面積比は急変の前と後のどちらかと比べる (乗り移った先が大きい気泡でも、置き去りにされた元の気泡を相手として残す)
+            sizes = [fl["area"]] + ([fl["prev_area"]] if fl.get("prev_area") else [])
+            if dd > rad or min(area_ratio(a, o["area"]) for a in sizes) > SWAP_PARTNER_AREA_RATIO:
                 continue
             p = g["partners"].setdefault(o["tid"], {"reasons": set(), "dist": dd})
             p["reasons"].add(kind)

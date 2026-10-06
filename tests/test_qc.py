@@ -185,6 +185,18 @@ def test_area_ratio_filter():
     assert swaps_of(flags)[0]["partner_ids"] == [501, 502, 503, 504, 505], swaps_of(flags)[0]["partner_ids"]
 
 
+def test_area_ratio_uses_area_before_or_after_jump():
+    """ID1 (120px) が 40px 先の大きい気泡 (400px) に乗り移り、元の位置に ID2 (120px) が新規発生。
+    急変後の面積とは面積比 3.3 だが、急変前の面積とは 1.0 なので ID2 は相手候補に残ること"""
+    Q = load_qc()
+    obs = jumper(area=120.0, area_after=400.0)
+    obs += track(2, range(JUMP_FRAME, N_FRAMES), (200.0, 600.0 - 10.0 * JUMP_FRAME), 120)   # 予測位置 = 置き去りの気泡
+    with tempfile.TemporaryDirectory() as tmp:
+        flags, _ = analyze_csv(Q, obs, tmp)
+    sw = swaps_of(flags)
+    assert len(sw) == 1 and sw[0]["partner_ids"] == [2], sw
+
+
 def test_area_ratio_only_partner_filtered_means_no_swap():
     Q = load_qc()
     jx, jy = jump_xy()
