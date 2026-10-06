@@ -118,6 +118,14 @@ POS_GATE_SIZE_FRAC = 0.25    # 予測ずれの許容に「等価直径 × この
 AREA_RATIO_GATE = 1.8        # 1対1対応で許す面積比。これを超える変化は合体/分裂として扱う
                              # (画面端で切れている気泡は この2倍まで許す。小さい側が画面端で切れているとき
                              #  = 画面に入ってくる途中/出ていく途中 は、見えている面積がいくらでも変わるので面積ゲートなし)
+AREA_RELAX_RATIO = 4.0       # 位置がぴったり合うときに 1対1対応で許す面積比 (AREA_RATIO_GATE より大きくする)。
+                             # U-Net が同じ気泡を内側/外側の輪郭で切り替えると、位置はそのままで面積だけが大きく変わり、
+                             # 「消失 + 同じ場所に新規」になる。合体/分裂の判定の後に残った「速度既知のトラック」と「検出」で、
+                             # 予測位置のずれが AREA_RELAX_POS 以内・互いにほかの候補がない・合体/分裂の相手になりうる
+                             # 別の気泡が重なっていない組だけをつなぐ (速度は更新しない)。画面端で切れている気泡は対象外。
+                             # AREA_RATIO_GATE 以下 (0 など) で無効
+AREA_RELAX_POS = 6.0         # 上の「ぴったり」の位置ずれの許容 (px)。+ 小さい側の等価直径 × POS_GATE_SIZE_FRAC。
+                             # 見失っている間は COAST_GATE_GROWTH で広げる
 OVERLAP_ACCEPT_IOU = 0.4     # 予測マスクとの IoU がこれ以上なら、位置ゲートの外でも対応候補にする (大きく変形する大気泡用)
 MAX_AGE = 3                  # 見失ってから何フレームまで復帰を待つか
 MAX_AGE_NEW = 1              # 1回しか観測していない (速度未知の) トラックは このフレーム数まで。
@@ -720,6 +728,19 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
             + extra)
 
 
+def _relax_tight(t: Track, d: Detection, frame_idx: int) -> bool:
+    """面積ゲートの緩和 (AREA_RELAX_RATIO) の候補か: 速度既知・画面端に接していない・面積比が AREA_RELAX_RATIO 以内で、
+    予測位置からのずれが AREA_RELAX_POS + 小さい側の等価直径 × POS_GATE_SIZE_FRAC 以内"""
+    if not t.v_known or any(t.touch) or any(d.touch):
+        return False
+    if max(t.area, d.area) / max(1.0, min(t.area, d.area)) > AREA_RELAX_RATIO:
+        return False
+    k = max(1, frame_idx - t.last_frame)
+    dx, dy, _ = displacement(t, d)
+    tight = (AREA_RELAX_POS + POS_GATE_SIZE_FRAC * eq_diameter(min(t.area, d.area))) * (1.0 + COAST_GATE_GROWTH * (k - 1))
+    return math.hypot(dx - t.vx * k, dy - t.vy * k) <= tight
+
+
 def _area_tol(touching: bool) -> float:
     return EVENT_AREA_TOL ** 2 if touching else EVENT_AREA_TOL
 
@@ -754,6 +775,7 @@ class LeadingEdgeLapTracker:
         self._next_id = 1
         self.restores: List[Tuple[int, int, int, int]] = []   # (合体フレーム, 復帰フレーム, ホストID, 戻したID)
         self.prior_counts: Dict[str, int] = defaultdict(int)  # 新規トラックの初速度の出どころ (piv / flow / zero)
+        self.relaxed_links = 0                                # 面積ゲートの緩和 (AREA_RELAX_RATIO) でつないだ数
 
     def _new_id(self) -> int:
         tid = self._next_id
@@ -957,6 +979,50 @@ class LeadingEdgeLapTracker:
                 if c != primary_j:
                     split_map[c] = i
 
+        # ---- 4b) 面積ゲートの緩和: 位置がぴったり合う残り同士を、面積比 AREA_RELAX_RATIO までつなぐ ----
+        # 合体/分裂の判定 (3, 4) の後に、どちらにも使われなかったトラックと検出だけで行うので、その判定は変えない。
+        # 互いに唯一の候補で、ほかのトラックの予測マスク/ほかの検出が重なっていない (合体・分裂かもしれない) 組だけ
+        relaxed = set()
+        if AREA_RELAX_RATIO > AREA_RATIO_GATE:
+            busy_t = set(det_to_track.values()) | absorbed_t
+            free_t = [i for i in range(n_t) if i not in busy_t and id(active[i]) not in restored_hosts
+                      and active[i].merge_frame < 0]   # 合体直後 (接触復帰の受付中) の塊は対象外
+            free_d = [j for j in range(n_d) if j not in det_to_track and j not in split_map and j not in restored]
+            pairs = [(i, j) for i in free_t for j in free_d if _relax_tight(active[i], dets[j], frame_idx)]
+            n_pi = defaultdict(int)
+            n_pj = defaultdict(int)
+            for i, j in pairs:
+                n_pi[i] += 1
+                n_pj[j] += 1
+
+            def predicted(o: Track) -> List[Tuple[Shape, float, float]]:
+                k = max(1, frame_idx - o.last_frame)
+                return [(shift_shape(o.shape, hx, hy), o.cx + hx, o.cy + hy) for hx, hy in o.motion_hypotheses(k)]
+
+            def overlaps(s: Shape, sx: float, sy: float, s_area: float, d: Detection) -> bool:
+                """合体/分裂の候補と同じ基準: 重なりが小さい側の面積の EVENT_OVERLAP_MIN 以上か、
+                どちらかの中心が相手 (EVENT_MARGIN だけ膨らませる) の中"""
+                if overlap_px(s, d.shape) >= EVENT_OVERLAP_MIN * min(s_area, d.area):
+                    return True
+                if _near_bbox(s, d.cx, d.cy, EVENT_MARGIN) and point_in_shape(dilate_shape(s, EVENT_MARGIN), d.cx, d.cy):
+                    return True
+                return (_near_bbox(d.shape, sx, sy, EVENT_MARGIN)
+                        and point_in_shape(dilate_shape(d.shape, EVENT_MARGIN), sx, sy))
+
+            for i, j in pairs:
+                if n_pi[i] != 1 or n_pj[j] != 1:
+                    continue
+                t, d = active[i], dets[j]
+                if any(overlaps(s, sx, sy, o.area, d) for ii, o in enumerate(active) if ii != i
+                       for s, sx, sy in predicted(o)):
+                    continue   # 別のトラックもこの検出に重なる (合体かもしれない)
+                if any(overlaps(s, sx, sy, t.area, dd) for jj, dd in enumerate(dets) if jj != j
+                       for s, sx, sy in predicted(t)):
+                    continue   # 別の検出もこのトラックの予測マスクに重なる (分裂かもしれない)
+                det_to_track[j] = i
+                relaxed.add(j)
+            self.relaxed_links += len(relaxed)
+
         # ---- 5) 結果の記録・トラック更新 ----
         frame_rows: List[dict] = []
 
@@ -970,7 +1036,9 @@ class LeadingEdgeLapTracker:
             d = dets[j]
             absorbed = merge_map.get(j, [])
             # 合体/分裂の直後・接触から戻った直後は、塊の重心の動きが気泡自身の動きではないので速度更新を保留
-            hold_v = bool(absorbed) or j in heirs or i in split_parents or id(t) in hosts_with_restore
+            # 面積ゲートの緩和でつないだときも、輪郭の取り方が変わっただけで重心の動きは気泡の動きではないので保留
+            hold_v = (bool(absorbed) or j in heirs or i in split_parents or id(t) in hosts_with_restore
+                      or j in relaxed)
             if id(t) in hosts_with_restore and t.pre_merge is not None:
                 t.vx, t.vy, t.v_known = t.pre_merge.vx, t.pre_merge.vy, t.pre_merge.v_known
             if absorbed and TRANSIENT_MERGE_FRAMES > 0:
@@ -1216,6 +1284,8 @@ def run_laptrack(detections_per_frame: List[List[Detection]], image_size=None,
     n = suppress_transient_merges(rows_by_frame, tracker.restores)
     if n:
         print(f"  合体直後に分かれ直した {n} 組を「接触」として元のIDに戻しました")
+    if tracker.relaxed_links:
+        print(f"  位置がぴったり合うので面積比 {AREA_RATIO_GATE}〜{AREA_RELAX_RATIO} でもつないだ対応: {tracker.relaxed_links}件")
     nf = max(1, len(detections_per_frame))
     pc = tracker.prior_counts
     if seq is not None:
@@ -1223,7 +1293,8 @@ def run_laptrack(detections_per_frame: List[List[Detection]], image_size=None,
         print(f"  計算時間: PIV {1000 * seq.time_s / nf:.0f} ms/フレーム (区分ごとの速度場 {seq.n_fields}個), "
               f"対応付け {1000 * t_track / nf:.0f} ms/フレーム")
     run_laptrack.last_stats = {"prior_counts": dict(pc), "piv_ms_per_frame": 1000 * seq.time_s / nf if seq else 0.0,
-                               "piv_fields": seq.n_fields if seq else 0, "track_ms_per_frame": 1000 * t_track / nf}
+                               "piv_fields": seq.n_fields if seq else 0, "track_ms_per_frame": 1000 * t_track / nf,
+                               "relaxed_links": tracker.relaxed_links}
     return rows_by_frame
 
 
@@ -1903,6 +1974,7 @@ def main():
         "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,
         "MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "POS_GATE_SIZE_FRAC": POS_GATE_SIZE_FRAC,
         "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
+        "AREA_RELAX_RATIO": AREA_RELAX_RATIO, "AREA_RELAX_POS": AREA_RELAX_POS,
         "MAX_AGE": MAX_AGE, "COAST_GATE_GROWTH": COAST_GATE_GROWTH, "MIN_TRACK_AREA": MIN_TRACK_AREA,
         "weights": {"pos": W_POS, "area": W_AREA, "overlap": W_OVERLAP, "shape": W_SHAPE,
                     "coast": W_COAST, "unknown_v": W_UNKNOWN_V},

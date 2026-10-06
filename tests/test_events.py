@@ -580,6 +580,48 @@ def test_g_contact_restore_with_piv_prior():
         f"{key}: PIV あり/なしで判定が違う\n  なし: {off_ev} {off_rs}\n  あり: {on_ev} {on_rs}"
 
 
+def test_h_area_relax_same_position():
+    """気泡 (r=12, -10 px/frame) が フレーム 3, 5 だけ内側の輪郭 (r=7, 面積比 ≈ 2.9 > AREA_RATIO_GATE) で検出される
+    (U-Net が輪郭の内側/外側を取り違える実データの例)。位置は予測どおりなので AREA_RELAX_RATIO で同じIDのままつなぐ (外→内, 内→外 の4回)。
+    AREA_RELAX_RATIO = 0 (無効) なら従来どおり途切れて新規トラックになる"""
+    key = "h) 面積ゲートの緩和 (同じ位置で輪郭の取り方だけ変わる)"
+    H = 900
+    frames = []
+    for f in range(8):
+        lab = blank(H)
+        paint(lab, circle(H, 200.0, 800.0 - 10.0 * f, 7 if f in (3, 5) else 12), 1)
+        paint(lab, circle(H, 330.0, 700.0 - 10.0 * f, 12), 2)   # 離れた別の気泡 (緩和の対象にならない)
+        frames.append(lab)
+
+    def run(relax):
+        T = importlib.reload(tracker3)
+        if relax is not None:
+            T.AREA_RELAX_RATIO = relax
+        roi = np.ones((H, W), bool)
+        dets = [T.instances_to_detections(lab, roi) for lab in frames]
+        tr = T.LeadingEdgeLapTracker()
+        rows = {f: tr.update(d, f) for f, d in enumerate(dets)}
+        ids = {}
+        for f, rs in rows.items():
+            for r in rs:
+                if r["det_index"] is not None:
+                    lab = frames[f]
+                    d = dets[f][r["det_index"]]
+                    ids.setdefault(int(lab[int(round(d.cy)), int(round(d.cx))]), set()).add(r["track_id"])
+        ev = [(f, r["event"]) for f in rows for r in rows[f] if r["event"] != "normal"]
+        return ids, ev, tr.relaxed_links
+
+    ids, ev, n = run(None)
+    OBSERVED[key] = {"off": [(f, e, "", ()) for f, e in ev], "on": None}
+    ratio = (12.0 / 7.0) ** 2
+    assert tracker3.AREA_RATIO_GATE < ratio <= tracker3.AREA_RELAX_RATIO, \
+        f"{key}: シナリオの面積比 {ratio:.2f} が AREA_RATIO_GATE〜AREA_RELAX_RATIO の範囲にない"
+    assert len(ids[1]) == 1 and len(ids[2]) == 1, f"{key}: IDが途切れた {ids} {ev}"
+    assert ev == [(0, "new"), (0, "new")] and n == 4, f"{key}: {ev} (緩和 {n}件)"
+    ids0, ev0, n0 = run(0.0)
+    assert n0 == 0 and len(ids0[1]) > 1, f"{key}: AREA_RELAX_RATIO = 0 でも途切れない (シナリオの前提が崩れた): {ev0}"
+
+
 # ==============================================================
 # 4. スクリプトとして実行
 # ==============================================================
