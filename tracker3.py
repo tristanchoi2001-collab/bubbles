@@ -84,6 +84,9 @@ SAVE_DEBUG_FIRST_FRAME = True   # 最初のフレームの U-Net 入力画像と
 # U-Net 検出パラメータ (1_unet_train.py の [3] と同じ値にすること)
 # ------------------------------------------------------------
 UNET_MIN_AREA = 4       # これより小さい気泡は捨てる (px)
+IGNORE_PARTICLE_AREA = 4  # 面積がこの値 (px) 以下の検出は粒子 (ゴミ・ノイズ) として無視する。
+                          # 面積・個数の集計 (ROI)、トラッキング、PIV、オーバーレイ、CSV のすべてから除く。0 で無効。
+                          # SAVE_INSTANCE_MASKS の npz には U-Net の結果をそのまま (除く前) 保存する
 UNET_BAND = 25          # 壁近傍の判定帯の幅 (px)
 UNET_EDGE_THR = 0.5     # 境界確率のしきい値
 UNET_CLOSE = 2          # 境界の途切れを塞ぐ closing 回数
@@ -446,7 +449,7 @@ def instances_to_detections(inst: np.ndarray, roi_bool: np.ndarray) -> List[Dete
         y0, y1, x0, x1 = sl[0].start, sl[0].stop, sl[1].start, sl[1].stop
         m = inst[y0:y1, x0:x1] == k
         area = int(np.count_nonzero(m))
-        if area == 0:
+        if area == 0 or area <= IGNORE_PARTICLE_AREA:   # 粒子 (IGNORE_PARTICLE_AREA 以下) は無視
             continue
         ys, xs = np.nonzero(m)
         cs, _ = cv2.findContours(m.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE,
@@ -1894,6 +1897,7 @@ def main():
     report = qc_report(rows, total_frames)
     report["used_params"] = {
         "UNET_CKPT": UNET_CKPT,
+        "IGNORE_PARTICLE_AREA": IGNORE_PARTICLE_AREA,
         "UNET": {"min_area": UNET_MIN_AREA, "band": UNET_BAND, "edge_thr": UNET_EDGE_THR,
                  "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX},
         "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,

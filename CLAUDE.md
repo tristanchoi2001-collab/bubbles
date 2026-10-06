@@ -64,6 +64,8 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - `tests/test_events.py`: 6-3 회귀 테스트, PIV on/off 판정이 동일한지 확인.
   - `tests/test_qc.py`.
   - `qc_compare.py`: 실데이터 QC 전후 표.
+- 실데이터(60프레임 731~790, 사용자 U-Net npz): tracker3는 tracker2 대비 내부 신규 1030→479, 내부 소실 941→413. PIV on/off는 이 (느린) 데이터에서 차이가 없었다(기준 초과 tiny 35.4/35.5%, small 21.6/21.1%). 고속 데이터 검증은 아직.
+- `IGNORE_PARTICLE_AREA = 4`: 면적 ≤ 4 px 검출은 입자로 보고 집계·추적·PIV·오버레이·CSV 전부에서 제외(교수님 요청). npz는 원본 저장.
 - 실데이터 검증(6-4)은 U-Net 가중치(`best.pt`, 사용자 PC에 있음)가 필요하다. 클라우드 세션에서는 업로드받아야 실행할 수 있다(torch는 설치 가능).
 
 ## 저장소 구성
