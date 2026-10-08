@@ -91,6 +91,13 @@ UNET_BAND = 25          # 壁近傍の判定帯の幅 (px)
 UNET_EDGE_THR = 0.5     # 境界確率のしきい値
 UNET_CLOSE = 2          # 境界の途切れを塞ぐ closing 回数
 UNET_TINY_MAX = 300     # 境界の塊として拾う小気泡の最大面積 (px)
+UNET_INSTANCE_MODE = "wall"  # 確率マップ -> 気泡の分け方
+                             #   "wall": 境界 (> UNET_EDGE_THR) を壁にして閉じた領域を気泡とする (従来)。
+                             #           壁が途切れると気泡の内部が背景とつながり、気泡ごと消えることがある
+                             #   "seed": 内部確率の「芯」(内部 > UNET_SEED_THR かつ 境界 <= UNET_EDGE_THR) を種にした watershed。
+                             #           芯は壁の途切れに関係なく決まるので、輪郭が途切れても気泡が背景に漏れない。
+                             #           U-Net がそもそも反応していない気泡は どちらの方式でも拾えない
+UNET_SEED_THR = 0.5          # "seed" の芯の内部確率のしきい値
 TRAIN_IMAGE_HW = None   # 学習画像のサイズ (H, W)。best.pt に記録があればそちらを使う。
                         # 古い best.pt で、撮影画像と学習画像のサイズが違う場合のみ指定。例: (1080, 416)
 SAVE_INSTANCE_MASKS = False  # True ならフレームごとの気泡ラベルマップを OUTPUT_FOLDER/instances/*.npz に保存
@@ -422,6 +429,56 @@ def extract_instances(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_
         k += 1
         inst[y0:y1, x0:x1][filled] = k
     return inst
+
+
+def extract_instances_seed(prob, min_area=4, edge_thr=0.5, tiny_max=300, seed_thr=0.5, close_it=2):
+    """確率マップ (3,H,W) -> 気泡ラベルマップ (0=なし, 1..N=気泡)。UNET_INSTANCE_MODE = "seed" の方式。
+    1) 種 = 気泡の芯 (内部確率 > seed_thr かつ 境界確率 <= edge_thr) のかたまり。壁が閉じているかに関係なく決まる
+    2) 背景 (背景確率 >= 0.5) も種にして、境界確率を標高とする watershed で境界画素を両側に配分する
+       (従来の "wall" と同じく、境界の帯の尾根で分ける)。芯は固定なので、壁が途切れていても背景に漏れない
+    3) 芯のない前景 (背景確率 < 0.5) のかたまり = 内部確率が出ない小さい点 は、穴を埋めたかたまり全体を1個の気泡とする
+       (従来の小気泡の経路と同じ)。面積が min_area〜tiny_max のものだけ
+    芯は "wall" の closing と同じ回数の opening をかける: "wall" で閉じてしまう細い内部 (小さいリング気泡の穴) は芯にせず
+    3) で扱うので、気泡の面積の決め方 (輪郭の内側/外側) が "wall" と揃う"""
+    H, W = prob.shape[1:]
+    fg = prob[0] < 0.5
+    core = (prob[1] > seed_thr) & (prob[2] <= edge_thr)
+    if close_it > 0:
+        core = ndimage.binary_opening(core, iterations=close_it + 1)
+    markers, n = ndimage.label(core)
+    markers = markers.astype(np.int32)
+    fl, nf = ndimage.label(fg)
+    has_core = np.zeros(nf + 1, bool)
+    has_core[np.unique(fl[core])] = True
+    k = n
+    for ci, sl in enumerate(ndimage.find_objects(fl), start=1):
+        if sl is None or has_core[ci]:
+            continue
+        y0, y1 = max(sl[0].start - 1, 0), min(sl[0].stop + 1, H)
+        x0, x1 = max(sl[1].start - 1, 0), min(sl[1].stop + 1, W)
+        filled = ndimage.binary_fill_holes(fl[y0:y1, x0:x1] == ci)
+        a = int(filled.sum())
+        if a < min_area or a > tiny_max:
+            continue
+        k += 1
+        markers[y0:y1, x0:x1][filled & (markers[y0:y1, x0:x1] == 0)] = k
+    bg_id = k + 1
+    markers[~fg & (markers == 0)] = bg_id
+    ws = watershed(prob[2], markers=markers)
+    ws[ws == bg_id] = 0
+    area = np.bincount(ws.ravel(), minlength=bg_id + 1)
+    keep = np.nonzero(area[:bg_id] >= min_area)[0]
+    keep = keep[keep > 0]
+    lut = np.zeros(bg_id + 1, np.int32)
+    lut[keep] = np.arange(1, keep.size + 1, dtype=np.int32)
+    return lut[ws]
+
+
+def unet_instances(prob):
+    """UNET_INSTANCE_MODE に従って確率マップを気泡ラベルマップにする"""
+    if UNET_INSTANCE_MODE == "seed":
+        return extract_instances_seed(prob, UNET_MIN_AREA, UNET_EDGE_THR, UNET_TINY_MAX, UNET_SEED_THR, UNET_CLOSE)
+    return extract_instances(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX)
 
 
 # ==============================================================
@@ -1925,7 +1982,7 @@ def run_detection_phase(cache_dir: str):
 
         gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
         prob = detector.prob(gray)
-        inst = extract_instances(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX)
+        inst = unet_instances(prob)
         if not filenames:   # 最初のフレームだけ入力の健全性チェック
             check_unet_input(gray, prob, inst, detector, filename)
         if SAVE_INSTANCE_MASKS:
@@ -1980,7 +2037,8 @@ def main():
         "UNET_CKPT": UNET_CKPT,
         "IGNORE_PARTICLE_AREA": IGNORE_PARTICLE_AREA,
         "UNET": {"min_area": UNET_MIN_AREA, "band": UNET_BAND, "edge_thr": UNET_EDGE_THR,
-                 "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX},
+                 "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX,
+                 "mode": UNET_INSTANCE_MODE, "seed_thr": UNET_SEED_THR},
         "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,
         "MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "POS_GATE_SIZE_FRAC": POS_GATE_SIZE_FRAC,
         "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
