@@ -94,6 +94,9 @@ UNET_TINY_MAX = 300     # 境界の塊として拾う小気泡の最大面積 (p
 TRAIN_IMAGE_HW = None   # 学習画像のサイズ (H, W)。best.pt に記録があればそちらを使う。
                         # 古い best.pt で、撮影画像と学習画像のサイズが違う場合のみ指定。例: (1080, 416)
 SAVE_INSTANCE_MASKS = False  # True ならフレームごとの気泡ラベルマップを OUTPUT_FOLDER/instances/*.npz に保存
+SAVE_PROB_MAPS = False       # True ならフレームごとの U-Net 確率マップを OUTPUT_FOLDER/prob/*.npz に保存
+                             # (キー: p_in = 内部確率, p_edge = 境界確率 (どちらも 0〜255 の uint8), u_input = U-Net 入力画像)。
+                             # 検出漏れが U-Net 自体か後処理 (extract_instances) かを調べる用。1 フレーム数百 KB
 
 # ------------------------------------------------------------
 # ROI (関心領域) 設定
@@ -1884,6 +1887,9 @@ def run_detection_phase(cache_dir: str):
     inst_dir = os.path.join(OUTPUT_FOLDER, "instances")
     if SAVE_INSTANCE_MASKS:
         os.makedirs(inst_dir, exist_ok=True)
+    prob_dir = os.path.join(OUTPUT_FOLDER, "prob")
+    if SAVE_PROB_MAPS:
+        os.makedirs(prob_dir, exist_ok=True)
 
     is_first = True
     thresh_val, bright_val, median_val = PREPROC_FIXED if PREPROC_FIXED else PREPROC_DEFAULT
@@ -1924,6 +1930,10 @@ def run_detection_phase(cache_dir: str):
             check_unet_input(gray, prob, inst, detector, filename)
         if SAVE_INSTANCE_MASKS:
             np.savez_compressed(os.path.join(inst_dir, os.path.splitext(filename)[0] + ".npz"), inst=inst)
+        if SAVE_PROB_MAPS:
+            np.savez_compressed(os.path.join(prob_dir, os.path.splitext(filename)[0] + ".npz"),
+                                p_in=np.round(prob[1] * 255).astype(np.uint8),
+                                p_edge=np.round(prob[2] * 255).astype(np.uint8), u_input=gray)
 
         dets = instances_to_detections(inst, roi_bool)
         total_area = float(sum(d.area_in_roi for d in dets))
