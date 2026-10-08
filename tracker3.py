@@ -1970,6 +1970,8 @@ def run_detection_phase(cache_dir: str):
             continue
         if is_first:
             print(f"  -> 設定値: Noise={thresh_val}, Brightness={bright_val}, Median={median_val}")
+            print(f"  -> 気泡の分け方: UNET_INSTANCE_MODE = \"{UNET_INSTANCE_MODE}\""
+                  + (f" (芯の内部確率 > {UNET_SEED_THR})" if UNET_INSTANCE_MODE == "seed" else ""))
             if ENABLE_ROI and roi_rect is None:
                 roi_rect = resolve_roi(processed_img)
             is_first = False
