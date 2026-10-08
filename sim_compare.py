@@ -218,8 +218,16 @@ def to_detections(T, lab, truth):
     inst = lut[lab]
     roi = np.ones((H, W), bool)
     dets = T.instances_to_detections(inst, roi)
-    assert len(dets) == len(present)
-    return dets, [truth[v] for v in present]
+    # 検出をマスクの画素から元のラベルに戻す (IGNORE_PARTICLE_AREA で数 px のノイズが捨てられるので、
+    # 検出の数・順番はラベルと一致しない)
+    return dets, [truth[present[_label_of(d, inst) - 1]] for d in dets]
+
+
+def _label_of(d, inst) -> int:
+    """検出 d のマスクの1画素が inst のどのラベルか"""
+    m, x0, y0 = d.shape
+    ys, xs = np.nonzero(m)
+    return int(inst[ys[0] + y0, xs[0] + x0])
 
 
 def run_tracker(module_name: str, frames, bootstrap: bool = True):

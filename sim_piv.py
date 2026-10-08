@@ -194,8 +194,13 @@ def detections_for(T, detected):
     dets_pf, gt_pf = [], []
     for inst, gts in detected:
         dets = T.instances_to_detections(inst, roi)
-        labels = [k for k, sl in enumerate(ndimage.find_objects(inst), start=1) if sl is not None]
-        assert len(labels) == len(dets)
+        # 検出をマスクの画素から元のラベルに戻す (IGNORE_PARTICLE_AREA で数 px の検出が捨てられるので、
+        # 検出の数・順番はラベルと一致しない)
+        labels = []
+        for d in dets:
+            m, x0, y0 = d.shape
+            ys, xs = np.nonzero(m)
+            labels.append(int(inst[ys[0] + y0, xs[0] + x0]))
         dets_pf.append(dets)
         gt_pf.append([gts.get(k) for k in labels])
     return dets_pf, gt_pf
