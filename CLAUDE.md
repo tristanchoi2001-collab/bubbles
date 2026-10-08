@@ -92,6 +92,16 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     - 확률맵으로 확인한 뒤 수정할 것. 패치 후보: scratchpad/faint2/C.
   - 사용자가 보고한 문제: 윤곽이 희미한 **대형 기포가 통째로 미검출**되어 추적이 끊긴다. 731~790에는 해당 사례가 없다.
 - `SAVE_PROB_MAPS = False`: True면 OUTPUT_FOLDER/prob/*.npz에 p_in, p_edge(uint8), u_input 저장(실패 원인 분석용).
+- `UNET_INSTANCE_MODE = "wall"`(기본, 종래) / `"seed"`: `extract_instances_seed`.
+  - 방식: 내부 확률의 심(내부 > `UNET_SEED_THR` 그리고 경계 ≤ EDGE_THR)과 배경을 씨앗으로 쓰고, 경계 확률로 watershed를 한다.
+  - 윤곽이 끊겨도 기포가 배경으로 새지 않는다. 심에 wall의 closing과 같은 횟수의 opening을 걸어 작은 기포의 면적 규약을 맞췄다.
+  - 회귀 테스트: `tests/test_instances.py`.
+  - 합성 결과(scratchpad/verify/eval_seed.log)
+    - 열화 없음: wall과 완전히 같다.
+    - 열화 있음: 정답률 small 78→98%, large 90→97.5%, tiny 82→94%.
+    - 대가: 붙은 쌍 융합 28→39%, 오검출 0.03→0.07/프레임.
+    - 합성에서는 끊긴 곳에서도 내부 확률이 높게 유지되므로 낙관적이다.
+  - 실제 효과는 사용자 PC에서 확인이 필요하다.
 - 실데이터 검증(6-4)은 U-Net 가중치(`best.pt`, 사용자 PC에 있음)가 필요하다. 클라우드 세션에서는 업로드받아야 실행할 수 있다(torch는 설치 가능).
 
 ## 저장소 구성
