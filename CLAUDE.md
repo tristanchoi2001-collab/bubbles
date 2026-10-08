@@ -102,6 +102,15 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     - 대가: 붙은 쌍 융합 28→39%, 오검출 0.03→0.07/프레임.
     - 합성에서는 끊긴 곳에서도 내부 확률이 높게 유지되므로 낙관적이다.
   - 실제 효과는 사용자 PC에서 확인이 필요하다.
+- `watershed.py` = tracker3.py의 기본값만 다른 사본. 사용자 요청으로 따로 저장했다. **tracker3.py를 고치면 같이 고칠 것.**
+  - 다른 기본값: seed, SAVE_PROB_MAPS=True, COMPARE_INSTANCE_MODES=True, OUTPUT_FOLDER=...\output_watershed.
+  - 사용자가 PC에서 직접 만든 watershed.py에서는 seed와 확률맵 저장이 동작하지 않았다(원인 불명, 코드 미포함 추정).
+    그래서 실행 시 `실행 중인 파일: ...`과 설정값을 로그에 출력한다.
+  - `COMPARE_INSTANCE_MODES`: 매 프레임 wall/seed의 차이 수를 로그와 mode_diff/*.png에 출력한다.
+  - SAVE_PROB_MAPS는 npz와 함께 확인용 png(입력 | 내부 | 경계)도 저장한다.
+  - 슬라이더 오류(OpenCV 4.11은 createTrackbar 때 콜백 호출 → getTrackbarPos 오류)는 ready 플래그로 수정했다.
+- `shrink_ckpt.py`: best.pt 분할(`--split MB`, 내용 그대로) / float16 변환(`--fp16`, 절반 크기, 확률이 최대 0.1 정도 달라짐).
+  업로드 크기 제한 대책.
 - 실데이터 검증(6-4)은 U-Net 가중치(`best.pt`, 사용자 PC에 있음)가 필요하다. 클라우드 세션에서는 업로드받아야 실행할 수 있다(torch는 설치 가능).
 
 ## 저장소 구성

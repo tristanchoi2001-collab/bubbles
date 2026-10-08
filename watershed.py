@@ -1,6 +1,14 @@
 """
-Microgap Bubble Tracking - U-Net版 (tracker3)
+Microgap Bubble Tracking - U-Net版 (watershed.py = tracker3 の watershed 版)
 =====================================================================
+tracker3.py と同じプログラムで、次の既定値だけが違う (どれも下の設定で変えられる):
+  UNET_INSTANCE_MODE = "seed"      確率マップ -> 気泡の分け方を watershed (内部確率の芯を種にする) にする
+  SAVE_PROB_MAPS = True            U-Net の確率マップを OUTPUT_FOLDER/prob/ に保存 (npz = 解析用, png = 確認用)
+  COMPARE_INSTANCE_MODES = True    毎フレーム従来 ("wall") とも比べ、違う気泡の数をログと OUTPUT_FOLDER/mode_diff/ に出す
+  OUTPUT_FOLDER = ...\output_watershed   tracker3.py の結果を上書きしないよう別フォルダ
+piv_field.py を同じフォルダに置いて実行すること。起動時に「watershed.py」と分け方がログに出るので、
+実行しているファイルを確認できる。
+
 microgaptracker3.py の検出部(YOLO)を、1_unet_train.py で学習した U-Net に置き換えたもの。
 前処理・ROI・ブートストラップ・CSV/オーバーレイ出力は microgaptracker3.py の構成を引き継ぐ。
 
@@ -64,7 +72,7 @@ tracker2.py での変更点 (microgaptracker3.py から。一部は上記の tra
 UNET_CKPT = r"C:\Users\inoue-2024-01\Desktop\U-net\best.pt"   # U-Netの学習結果 (best.pt)
 IMAGE_FOLDER = r"C:\Users\inoue-2024-01\Desktop\U-net\test w0.7 a0.5"                          # 分析する画像があるフォルダ
 BACKGROUND_PATH = r"C:\Users\inoue-2024-01\Desktop\U-net\bg2real\image0000000.jpg"  # 背景画像のパス
-OUTPUT_FOLDER = r"C:\Users\inoue-2024-01\Desktop\U-net\output"                   # 結果を保存するフォルダ
+OUTPUT_FOLDER = r"C:\Users\inoue-2024-01\Desktop\U-net\output_watershed"                   # 結果を保存するフォルダ
 
 # 前処理(背景差分 + Noise Cut + Median + 明度増幅)を有効にするか。
 # U-Netは2値化済み画像で学習しているので、基本は True のまま。
@@ -91,7 +99,7 @@ UNET_BAND = 25          # 壁近傍の判定帯の幅 (px)
 UNET_EDGE_THR = 0.5     # 境界確率のしきい値
 UNET_CLOSE = 2          # 境界の途切れを塞ぐ closing 回数
 UNET_TINY_MAX = 300     # 境界の塊として拾う小気泡の最大面積 (px)
-UNET_INSTANCE_MODE = "wall"  # 確率マップ -> 気泡の分け方
+UNET_INSTANCE_MODE = "seed"  # 確率マップ -> 気泡の分け方
                              #   "wall": 境界 (> UNET_EDGE_THR) を壁にして閉じた領域を気泡とする (従来)。
                              #           壁が途切れると気泡の内部が背景とつながり、気泡ごと消えることがある
                              #   "seed": 内部確率の「芯」(内部 > UNET_SEED_THR かつ 境界 <= UNET_EDGE_THR) を種にした watershed。
@@ -101,11 +109,11 @@ UNET_SEED_THR = 0.5          # "seed" の芯の内部確率のしきい値
 TRAIN_IMAGE_HW = None   # 学習画像のサイズ (H, W)。best.pt に記録があればそちらを使う。
                         # 古い best.pt で、撮影画像と学習画像のサイズが違う場合のみ指定。例: (1080, 416)
 SAVE_INSTANCE_MASKS = False  # True ならフレームごとの気泡ラベルマップを OUTPUT_FOLDER/instances/*.npz に保存
-SAVE_PROB_MAPS = False       # True ならフレームごとの U-Net 確率マップを OUTPUT_FOLDER/prob/ に保存
+SAVE_PROB_MAPS = True        # True ならフレームごとの U-Net 確率マップを OUTPUT_FOLDER/prob/ に保存
                              #   *.npz : 解析用 (キー: p_in = 内部確率, p_edge = 境界確率 (どちらも 0〜255 の uint8), u_input = U-Net 入力画像)
                              #   *.png : 確認用 (左から U-Net 入力 | 内部確率 | 境界確率。白 = 確率 1)
                              # 検出漏れが U-Net 自体か後処理 (気泡の分け方) かを調べる用
-COMPARE_INSTANCE_MODES = False  # True なら毎フレーム "wall" と "seed" の両方で気泡を分け、違う気泡の数をログに出す。
+COMPARE_INSTANCE_MODES = True   # True なら毎フレーム "wall" と "seed" の両方で気泡を分け、違う気泡の数をログに出す。
                                 # 違いのあったフレームは OUTPUT_FOLDER/mode_diff/*.png に保存
                                 # (緑 = "seed" だけにある気泡, 赤 = "wall" だけにある気泡)。最大 COMPARE_SAVE_MAX 枚
 COMPARE_SAVE_MAX = 30
