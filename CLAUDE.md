@@ -102,13 +102,37 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     - 대가: 붙은 쌍 융합 28→39%, 오검출 0.03→0.07/프레임.
     - 합성에서는 끊긴 곳에서도 내부 확률이 높게 유지되므로 낙관적이다.
   - 실제 효과는 사용자 PC에서 확인이 필요하다.
+- `UNET_INSTANCE_MODE = "hybrid"` (권장, watershed.py 기본값): `extract_instances_hybrid`.
+  - 방식
+    - wall 결과는 그대로 쓴다.
+    - 벽 틈으로 배경에 새어 사라진 기포만 되살린다. 어떤 기포에도 속하지 않은 심(≥ `UNET_RESCUE_CORE_MIN` = 100 px)을 대상으로,
+      `RESCUE_SCHEDULE`((0.5,5)…(0.1,7))로 벽을 점점 강하게 다시 닫는다.
+    - 심 비율 ≥ `UNET_RESCUE_CORE_FRAC` = 0.5이고 wall의 띠 판정을 통과하는 첫 단계의 영역을 기포로 삼는다.
+      경계 화소는 wall과 같은 능선 분배로 나눈다.
+    - 순서는 주 경로 → 구제 → 작은 기포 경로.
+  - 실데이터(best.pt, 60프레임, scratchpad/real)
+    - 구제는 742, 752, 753, 762에서 각 1개뿐이다. 모두 눈으로 보고 옳다고 판정했다.
+    - 나머지 56프레임은 wall과 완전히 같다. 리팩터 전 wall과도 60/60 일치한다.
+    - QC 차이는 작다: 대형 내부 신규 0.52→0.50/프레임, 기준 초과 3.4→2.5%, large SWAP 1→2.
+    - 원래 설계자의 추적 분석: 구제 4건 중 2건은 트랙이 이어지고, 2건은 트래커 약점 때문에 오연결·애매해졌다.
+  - `"seed"`는 실데이터에서 결함이 확인됐다. 대형 기포 안쪽 깊은 곳은 p_in < 0.5라서 wall이 맞힌 대형 15건을 들쭉날쭉하게 자른다.
+    사용자가 PC에서 본 "이상한 판정"이 이것이다. 비교용으로만 남긴다.
+  - 이번 카탈로그(scratchpad/hybrid/A) 결과: wall이 대형 기포를 통째로 잃는 경우는 60프레임 중 4건뿐이고, 원인은 전부 벽 틈이다(띠 판정 실패는 0).
+    → 대형 트랙 끊김의 주원인은 검출이 아니라 추적(슬러그와의 합체·분열 등) 쪽일 가능성이 높다. 다음 분석 후보.
+  - wall의 작은 기포 경로는 고리가 열린(C자) 작은 기포를 덜 채운다(92건).
+    seed가 흰 윤곽에 더 가까웠다(84/85). 작은 기포 면적 규약은 별도 개선 후보.
+  - 회귀 테스트: `tests/test_instances.py`의 c, d(U-Net에 가까운 3px 벽 + 약한 틈).
 - `watershed.py` = tracker3.py의 기본값만 다른 사본. 사용자 요청으로 따로 저장했다. **tracker3.py를 고치면 같이 고칠 것.**
-  - 다른 기본값: seed, SAVE_PROB_MAPS=True, COMPARE_INSTANCE_MODES=True, OUTPUT_FOLDER=...\output_watershed.
-  - 사용자가 PC에서 직접 만든 watershed.py에서는 seed와 확률맵 저장이 동작하지 않았다(원인 불명, 코드 미포함 추정).
-    그래서 실행 시 `실행 중인 파일: ...`과 설정값을 로그에 출력한다.
-  - `COMPARE_INSTANCE_MODES`: 매 프레임 wall/seed의 차이 수를 로그와 mode_diff/*.png에 출력한다.
+  - 다른 기본값: hybrid, SAVE_PROB_MAPS=True, COMPARE_INSTANCE_MODES=True, OUTPUT_FOLDER=...\output_watershed.
+  - 실행 시 `실행 중인 파일: ...`과 설정값을 로그에 출력한다.
+  - 사용자가 PC에서 직접 만든 이전 watershed.py는 코드가 빠져 있어 동작하지 않았다.
+  - `COMPARE_INSTANCE_MODES`: 매 프레임 다른 방식(쓰는 방식이 wall이 아니면 wall, wall이면 hybrid)과 비교한다.
+    차이 수를 로그와 mode_diff/*.png에 출력한다. hybrid는 구제 수도 출력한다.
   - SAVE_PROB_MAPS는 npz와 함께 확인용 png(입력 | 내부 | 경계)도 저장한다.
   - 슬라이더 오류(OpenCV 4.11은 createTrackbar 때 콜백 호출 → getTrackbarPos 오류)는 ready 플래그로 수정했다.
+- 사용자의 best.pt(2026-10-06, resnet34, epoch 65, train 480 / val 46, val IoU 배경 0.982 / 내부 0.944 / 경계 0.578)
+  - 이 세션 scratchpad/ckpt/best.pt에 있다. 세션이 끝나면 없어진다.
+  - 추론만 허용(학습 금지). CPU에서 60프레임 33초.
 - `shrink_ckpt.py`: best.pt 분할(`--split MB`, 내용 그대로) / float16 변환(`--fp16`, 절반 크기, 확률이 최대 0.1 정도 달라짐).
   업로드 크기 제한 대책.
 - 실데이터 검증(6-4)은 U-Net 가중치(`best.pt`, 사용자 PC에 있음)가 필요하다. 클라우드 세션에서는 업로드받아야 실행할 수 있다(torch는 설치 가능).

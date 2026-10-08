@@ -92,12 +92,17 @@ UNET_EDGE_THR = 0.5     # 境界確率のしきい値
 UNET_CLOSE = 2          # 境界の途切れを塞ぐ closing 回数
 UNET_TINY_MAX = 300     # 境界の塊として拾う小気泡の最大面積 (px)
 UNET_INSTANCE_MODE = "wall"  # 確率マップ -> 気泡の分け方
-                             #   "wall": 境界 (> UNET_EDGE_THR) を壁にして閉じた領域を気泡とする (従来)。
-                             #           壁が途切れると気泡の内部が背景とつながり、気泡ごと消えることがある
-                             #   "seed": 内部確率の「芯」(内部 > UNET_SEED_THR かつ 境界 <= UNET_EDGE_THR) を種にした watershed。
-                             #           芯は壁の途切れに関係なく決まるので、輪郭が途切れても気泡が背景に漏れない。
-                             #           U-Net がそもそも反応していない気泡は どちらの方式でも拾えない
-UNET_SEED_THR = 0.5          # "seed" の芯の内部確率のしきい値
+                             #   "wall"  : 境界 (> UNET_EDGE_THR) を壁にして閉じた領域を気泡とする (従来)。
+                             #             壁が途切れると気泡の内部が背景とつながり、気泡ごと消えることがある
+                             #   "hybrid": "wall" の結果はそのまま使い、壁の切れ目から背景に漏れて消えた気泡だけを
+                             #             壁を強く閉じ直して取り戻す (推奨。救済がないフレームは "wall" と完全に同じ)
+                             #   "seed"  : 内部確率の「芯」(内部 > UNET_SEED_THR かつ 境界 <= UNET_EDGE_THR) を種にした watershed。
+                             #             輪郭が途切れても漏れないが、大きい気泡の奥は内部確率が下がるので
+                             #             気泡がギザギザに切られる (実データで確認)。比較用
+                             #   U-Net がそもそも反応していない気泡は どの方式でも拾えない
+UNET_SEED_THR = 0.5          # "seed" / "hybrid" の芯の内部確率のしきい値
+UNET_RESCUE_CORE_MIN = 100   # "hybrid": 救済を試す芯の最小面積 (px)。小さい芯 (小気泡・ノイズ) は救済しない
+UNET_RESCUE_CORE_FRAC = 0.5  # "hybrid": 閉じ直した領域のうち芯が占める割合の下限 (液の領域を気泡にしないため)
 TRAIN_IMAGE_HW = None   # 学習画像のサイズ (H, W)。best.pt に記録があればそちらを使う。
                         # 古い best.pt で、撮影画像と学習画像のサイズが違う場合のみ指定。例: (1080, 416)
 SAVE_INSTANCE_MASKS = False  # True ならフレームごとの気泡ラベルマップを OUTPUT_FOLDER/instances/*.npz に保存
@@ -105,9 +110,10 @@ SAVE_PROB_MAPS = False       # True ならフレームごとの U-Net 確率マ�
                              #   *.npz : 解析用 (キー: p_in = 内部確率, p_edge = 境界確率 (どちらも 0〜255 の uint8), u_input = U-Net 入力画像)
                              #   *.png : 確認用 (左から U-Net 入力 | 内部確率 | 境界確率。白 = 確率 1)
                              # 検出漏れが U-Net 自体か後処理 (気泡の分け方) かを調べる用
-COMPARE_INSTANCE_MODES = False  # True なら毎フレーム "wall" と "seed" の両方で気泡を分け、違う気泡の数をログに出す。
+COMPARE_INSTANCE_MODES = False  # True なら毎フレーム 使っている分け方と もう1つの分け方 (使っているのが "wall" 以外なら
+                                # "wall"、"wall" なら "hybrid") の両方で気泡を分け、違う気泡の数をログに出す。
                                 # 違いのあったフレームは OUTPUT_FOLDER/mode_diff/*.png に保存
-                                # (緑 = "seed" だけにある気泡, 赤 = "wall" だけにある気泡)。最大 COMPARE_SAVE_MAX 枚
+                                # (緑 = 使っている方式だけにある気泡, 赤 = 比べた方式だけにある気泡)。最大 COMPARE_SAVE_MAX 枚
 COMPARE_SAVE_MAX = 30
 
 # ------------------------------------------------------------
@@ -384,45 +390,55 @@ class UNetDetector:
         return np.stack([cv2.resize(c, (W, H), interpolation=cv2.INTER_LINEAR) for c in p])
 
 
-def extract_instances(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_max=300):
-    """確率マップ (3,H,W) -> 気泡ラベルマップ (0=なし, 1..N=気泡)
-    1) 境界(class 2)を壁として領域分割。フレーム端も壁とする -> 画面で切れた気泡の領域も閉じる
-    2) 領域の判定: 壁近傍の帯で 内部確率 > 背景確率 なら気泡
-    3) watershed で境界画素を隣接領域に配分
-    4) 内部画素が残らなかった小気泡: 閉じた境界の塊を塗りつぶして気泡とする
-    """
-    H, W = prob.shape[1:]
+def _wall_regions(prob, edge_thr, close_iters):
+    """境界確率 > edge_thr を壁にして close_iters 回 closing し、壁で区切られた領域にラベルを付ける。
+    フレーム端も壁とする -> 画面で切れた気泡の領域も閉じる。戻り値: (領域ラベル, 領域数, 壁)"""
     edge_raw = prob[2] > edge_thr
-
-    p = close_it + 3                                       # closing がフレーム端の壁を削らないよう余白
+    p = close_iters + 2                                    # closing がフレーム端の壁を削らないよう余白
     ep = np.pad(edge_raw, p, constant_values=True)
-    if close_it > 0:
-        ep = ndimage.binary_closing(ep, iterations=close_it + 1)
+    if close_iters > 0:
+        ep = ndimage.binary_closing(ep, iterations=close_iters)
     ep = ep[p - 1:-(p - 1), p - 1:-(p - 1)]                # 1px の外枠だけ残す
     ep[0, :] = ep[-1, :] = ep[:, 0] = ep[:, -1] = True
     lab, n = ndimage.label(~ep)
-    lab = lab[1:-1, 1:-1]
-    edge = ep[1:-1, 1:-1]
+    return lab[1:-1, 1:-1], n, ep[1:-1, 1:-1]
 
+
+def _band_accept(prob, lab, n, edge, band, min_area):
+    """領域の判定: 壁近傍の帯 (幅 band) で 内部確率の和 > 背景確率の和 なら気泡。戻り値: 領域ごとの bool"""
+    wall_band = ndimage.binary_dilation(edge, iterations=band)
+    size = np.bincount(lab.ravel(), minlength=n + 1)
+    lb = lab[wall_band]
+    cnt = np.bincount(lb, minlength=n + 1)
+    s_in = np.bincount(lb, weights=prob[1][wall_band].astype(np.float64), minlength=n + 1)
+    s_bg = np.bincount(lb, weights=prob[0][wall_band].astype(np.float64), minlength=n + 1)
+    ok = (size >= min_area) & (cnt > 0) & (s_in > s_bg)
+    ok[0] = False
+    return ok
+
+
+def _wall_main(prob, min_area, band, edge_thr, close_it):
+    """"wall" の主経路: 1) 壁で領域分割 2) 帯の判定 3) watershed で境界画素を隣接領域に配分。戻り値: (ラベルマップ, 気泡数)"""
+    H, W = prob.shape[1:]
+    lab, n, edge = _wall_regions(prob, edge_thr, close_it + 1)
     inst = np.zeros((H, W), np.int32)
     k = 0
     if n > 0:
-        wall_band = ndimage.binary_dilation(edge, iterations=band)
-        size = np.bincount(lab.ravel(), minlength=n + 1)
-        lb = lab[wall_band]
-        cnt = np.bincount(lb, minlength=n + 1)
-        s_in = np.bincount(lb, weights=prob[1][wall_band].astype(np.float64), minlength=n + 1)
-        s_bg = np.bincount(lb, weights=prob[0][wall_band].astype(np.float64), minlength=n + 1)
-        ok = (size >= min_area) & (cnt > 0) & (s_in > s_bg)
-        ok[0] = False
-        keep = np.nonzero(ok)[0]
+        keep = np.nonzero(_band_accept(prob, lab, n, edge, band, min_area))[0]
         if keep.size:
             ws = watershed(prob[2], markers=lab)
             lut = np.zeros(n + 1, np.int32)
             lut[keep] = np.arange(1, keep.size + 1, dtype=np.int32)
             inst = lut[ws]
             k = int(keep.size)
+    return inst, k
 
+
+def _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max):
+    """"wall" の 4) 内部画素が残らなかった小気泡: 閉じた境界の塊を塗りつぶして気泡とする。
+    既にある気泡から 2px 以内の塊 (大きい気泡のリングの外側半分) は拾わない。inst をその場で更新"""
+    H, W = inst.shape
+    edge_raw = prob[2] > edge_thr
     assigned = inst > 0
     near_assigned = ndimage.binary_dilation(assigned, iterations=2)
     comp, nc = ndimage.label(edge_raw & ~assigned)         # closing 前の境界を使う (角の残骸を拾わない)
@@ -440,6 +456,100 @@ def extract_instances(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_
             continue
         k += 1
         inst[y0:y1, x0:x1][filled] = k
+    return inst, k
+
+
+def extract_instances(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_max=300):
+    """確率マップ (3,H,W) -> 気泡ラベルマップ (0=なし, 1..N=気泡)。UNET_INSTANCE_MODE = "wall" の方式
+    1) 境界(class 2)を壁として領域分割。フレーム端も壁とする -> 画面で切れた気泡の領域も閉じる
+    2) 領域の判定: 壁近傍の帯で 内部確率 > 背景確率 なら気泡
+    3) watershed で境界画素を隣接領域に配分
+    4) 内部画素が残らなかった小気泡: 閉じた境界の塊を塗りつぶして気泡とする
+    """
+    inst, k = _wall_main(prob, min_area, band, edge_thr, close_it)
+    inst, k = _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max)
+    return inst
+
+
+# 救済で壁を閉じ直す段階 (境界確率のしきい値, closing の回数)。前から順に試し、最初に条件を満たした段階を使う
+RESCUE_SCHEDULE = ((0.5, 5), (0.3, 5), (0.2, 5), (0.1, 5), (0.5, 7), (0.3, 7), (0.2, 7), (0.1, 7))
+
+
+def _rescue_leaked(prob, inst, k, min_area, band, edge_thr, close_it, seed_thr, core_min, core_frac):
+    """"hybrid" の救済: 壁の切れ目から背景に漏れて消えた気泡を取り戻す。既にある気泡の画素は変えない。
+    1) 芯 = opening(内部 > seed_thr かつ 境界 <= edge_thr, close_it+1 回) のうち、どの気泡にも属さないもの。
+       面積 >= core_min のかたまりを大きい順に候補にする
+    2) 候補ごとに RESCUE_SCHEDULE の順に壁を強く閉じ直し (しきい値を下げる / closing を増やす)、
+       芯の半分以上を含む領域が 芯の割合 >= core_frac かつ wall と同じ帯の判定 を満たした最初の段階で
+       その領域を気泡にする。境界画素は wall と同じく境界確率の尾根で隣と分ける (まだ気泡でない画素の中だけ)
+    3) どの段階でも満たさなければ救済しない (芯を種にした "seed" のようなギザギザの形は作らない)
+    戻り値: (ラベルマップ, 最後のラベル番号, 救済した数)"""
+    H, W = inst.shape
+    free = inst == 0
+    core = (prob[1] > seed_thr) & (prob[2] <= edge_thr)
+    if close_it > 0:
+        core = ndimage.binary_opening(core, iterations=close_it + 1)
+    core &= free
+    cl, nc = ndimage.label(core)
+    if nc == 0:
+        return inst, k, 0
+    area = np.bincount(cl.ravel(), minlength=nc + 1)
+    cand = [int(c) for c in np.argsort(-area) if c > 0 and area[c] >= core_min]
+    out = inst.copy()
+    regions = {}
+    done = np.zeros(nc + 1, bool)
+    n_res = 0
+    for c in cand:
+        if done[c]:
+            continue
+        cm = cl == c
+        for thr, it in RESCUE_SCHEDULE:
+            if (thr, it) not in regions:
+                lab, n, _ = _wall_regions(prob, thr, it)
+                regions[(thr, it)] = (lab, n)
+            lab, n = regions[(thr, it)]
+            ov = np.bincount(lab[cm], minlength=n + 1)
+            ov[0] = 0
+            r = int(ov.argmax())
+            if ov[r] < 0.5 * area[c]:
+                continue
+            reg = lab == r
+            R = reg & free
+            a = int(R.sum())
+            if a == 0 or float((core & R).sum()) / a < core_frac:
+                continue
+            bnd = ndimage.binary_dilation(~reg, iterations=band) & R
+            if not (bnd.any() and float(prob[1][bnd].sum()) > float(prob[0][bnd].sum())):
+                continue
+            ws = watershed(prob[2], markers=np.where(free, lab, 0).astype(np.int32), mask=free)
+            m = ws == r
+            if int(m.sum()) >= min_area:
+                k += 1
+                n_res += 1
+                out[m] = k
+                free &= ~m
+                done[np.unique(cl[m & core])] = True
+            break
+    return out, k, n_res
+
+
+def extract_instances_hybrid(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_max=300,
+                             seed_thr=0.5, core_min=100, core_frac=0.5, stats=None):
+    """確率マップ (3,H,W) -> 気泡ラベルマップ。UNET_INSTANCE_MODE = "hybrid" の方式。
+    "wall" の結果はそのまま使い、壁の切れ目から背景に漏れて消えた気泡だけを _rescue_leaked で取り戻す。
+    順番: wall の主経路 -> 救済 -> wall の小気泡の経路 (救済した気泡の輪郭の破片は拾わない)。
+    救済がないフレームは "wall" と完全に同じ結果になる。ラベル番号は 主経路 -> 小気泡 -> 救済 の順。
+    stats (dict) を渡すと stats["rescued"] に救済した数を足す"""
+    inst, k_main = _wall_main(prob, min_area, band, edge_thr, close_it)
+    off = 1 << 24                                          # 救済した気泡は一時的に大きい番号にしておく
+    inst, k_off, n_res = _rescue_leaked(prob, inst, off, min_area, band, edge_thr, close_it, seed_thr,
+                                        core_min, core_frac)
+    inst, k = _tiny_path(prob, inst, k_main, edge_thr, min_area, tiny_max)
+    if n_res:
+        m = inst > off
+        inst[m] = inst[m] - off + k
+    if stats is not None:
+        stats["rescued"] = stats.get("rescued", 0) + n_res
     return inst
 
 
@@ -486,13 +596,17 @@ def extract_instances_seed(prob, min_area=4, edge_thr=0.5, tiny_max=300, seed_th
     return lut[ws]
 
 
-def unet_instances(prob, mode=None):
-    """確率マップを気泡ラベルマップにする。mode: "wall" / "seed" (None なら UNET_INSTANCE_MODE)"""
+def unet_instances(prob, mode=None, stats=None):
+    """確率マップを気泡ラベルマップにする。mode: "wall" / "hybrid" / "seed" (None なら UNET_INSTANCE_MODE)。
+    stats (dict): "hybrid" で救済した数を stats["rescued"] に足す"""
     mode = UNET_INSTANCE_MODE if mode is None else mode
-    if mode not in ("wall", "seed"):
-        raise ValueError(f'UNET_INSTANCE_MODE は "wall" か "seed": {mode!r}')
+    if mode not in ("wall", "hybrid", "seed"):
+        raise ValueError(f'UNET_INSTANCE_MODE は "wall" / "hybrid" / "seed": {mode!r}')
     if mode == "seed":
         return extract_instances_seed(prob, UNET_MIN_AREA, UNET_EDGE_THR, UNET_TINY_MAX, UNET_SEED_THR, UNET_CLOSE)
+    if mode == "hybrid":
+        return extract_instances_hybrid(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
+                                        UNET_SEED_THR, UNET_RESCUE_CORE_MIN, UNET_RESCUE_CORE_FRAC, stats)
     return extract_instances(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX)
 
 
@@ -509,19 +623,18 @@ def unmatched_instances(a: np.ndarray, b: np.ndarray, iou_thr: float = 0.5) -> L
 
 
 def save_mode_diff(path: str, gray: np.ndarray, inst: np.ndarray, other: np.ndarray,
-                   only_inst: List[int], only_other: List[int], mode: str):
-    """気泡の分け方の違いを描いた画像: 緑 = "seed" だけ, 赤 = "wall" だけ, 灰 = 両方で同じ"""
+                   only_inst: List[int], only_other: List[int], mode: str, other_mode: str):
+    """気泡の分け方の違いを描いた画像: 緑 = 使っている方式 (mode) だけにある気泡, 赤 = 比べた方式 (other_mode) だけ,
+    灰 = 使っている方式の全気泡の輪郭"""
     vis = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
     cs, _ = cv2.findContours((inst > 0).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     cv2.drawContours(vis, cs, -1, (128, 128, 128), 1)
-    seed_only, wall_only = (only_inst, only_other) if mode == "seed" else (only_other, only_inst)
-    seed_map, wall_map = (inst, other) if mode == "seed" else (other, inst)
-    for lab_map, ids, col in ((seed_map, seed_only, (0, 255, 0)), (wall_map, wall_only, (0, 0, 255))):
+    for lab_map, ids, col in ((inst, only_inst, (0, 255, 0)), (other, only_other, (0, 0, 255))):
         if ids:
             m = np.isin(lab_map, ids).astype(np.uint8)
             cs, _ = cv2.findContours(m, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
             cv2.drawContours(vis, cs, -1, col, 2)
-    cv2.putText(vis, f"green: seed only {len(seed_only)}  red: wall only {len(wall_only)}", (6, 20),
+    cv2.putText(vis, f"green: {mode} only {len(only_inst)}  red: {other_mode} only {len(only_other)}", (6, 20),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
     cv2.imwrite(path, vis)
 
@@ -1999,7 +2112,8 @@ def run_detection_phase(cache_dir: str):
     if COMPARE_INSTANCE_MODES:
         os.makedirs(diff_dir, exist_ok=True)
     unet_instances(np.zeros((3, 8, 8), np.float32))   # UNET_INSTANCE_MODE の綴りを最初に確認
-    other_mode = "wall" if UNET_INSTANCE_MODE == "seed" else "seed"
+    other_mode = "wall" if UNET_INSTANCE_MODE != "wall" else "hybrid"   # 比べる相手 (COMPARE_INSTANCE_MODES)
+    inst_stats: Dict[str, int] = {}
     n_prob_saved = 0
     diff_tot = {"only_" + UNET_INSTANCE_MODE: 0, "only_" + other_mode: 0, "frames_with_diff": 0}
 
@@ -2026,7 +2140,7 @@ def run_detection_phase(cache_dir: str):
         if is_first:
             print(f"  -> 設定値: Noise={thresh_val}, Brightness={bright_val}, Median={median_val}")
             print(f"  -> 気泡の分け方: UNET_INSTANCE_MODE = \"{UNET_INSTANCE_MODE}\""
-                  + (f" (芯の内部確率 > {UNET_SEED_THR})" if UNET_INSTANCE_MODE == "seed" else ""))
+                  + (f" (芯の内部確率 > {UNET_SEED_THR})" if UNET_INSTANCE_MODE != "wall" else ""))
             if ENABLE_ROI and roi_rect is None:
                 roi_rect = resolve_roi(processed_img)
             is_first = False
@@ -2039,7 +2153,9 @@ def run_detection_phase(cache_dir: str):
 
         gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
         prob = detector.prob(gray)
-        inst = unet_instances(prob)
+        n_res0 = inst_stats.get("rescued", 0)
+        inst = unet_instances(prob, stats=inst_stats)
+        n_res = inst_stats.get("rescued", 0) - n_res0
         if not filenames:   # 最初のフレームだけ入力の健全性チェック
             check_unet_input(gray, prob, inst, detector, filename)
         if SAVE_INSTANCE_MASKS:
@@ -2063,7 +2179,7 @@ def run_detection_phase(cache_dir: str):
                 diff_tot["frames_with_diff"] += 1
                 if diff_tot["frames_with_diff"] <= COMPARE_SAVE_MAX:
                     save_mode_diff(os.path.join(diff_dir, stem + ".png"), gray, inst, other,
-                                   only_here, only_other, UNET_INSTANCE_MODE)
+                                   only_here, only_other, UNET_INSTANCE_MODE, other_mode)
 
         dets = instances_to_detections(inst, roi_bool)
         total_area = float(sum(d.area_in_roi for d in dets))
@@ -2073,10 +2189,14 @@ def run_detection_phase(cache_dir: str):
         filenames.append(filename)
         total_areas.append(total_area)
         roi_counts.append(roi_count)
-        print(f"  [{filename}] 検出{len(dets)}個 (ROI内{roi_count}個), ROI内合計面積 {total_area:.0f}px{diff_msg}")
+        res_msg = f"  | 救済 {n_res}個" if n_res else ""
+        print(f"  [{filename}] 検出{len(dets)}個 (ROI内{roi_count}個), ROI内合計面積 {total_area:.0f}px{res_msg}{diff_msg}")
 
     DETECTION_STATS.clear()
     DETECTION_STATS["mode"] = UNET_INSTANCE_MODE
+    if UNET_INSTANCE_MODE == "hybrid":
+        DETECTION_STATS["rescued"] = inst_stats.get("rescued", 0)
+        print(f"\n  hybrid: 壁の切れ目から背景に漏れていた気泡を {inst_stats.get('rescued', 0)} 個 取り戻しました")
     if SAVE_PROB_MAPS:
         print(f"\n  確率マップを {n_prob_saved} フレーム分保存: {os.path.abspath(prob_dir)}"
               "  (npz = 解析用 / png = 確認用: 入力 | 内部確率 | 境界確率)")
@@ -2127,7 +2247,8 @@ def main():
         "IGNORE_PARTICLE_AREA": IGNORE_PARTICLE_AREA,
         "UNET": {"min_area": UNET_MIN_AREA, "band": UNET_BAND, "edge_thr": UNET_EDGE_THR,
                  "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX,
-                 "mode": UNET_INSTANCE_MODE, "seed_thr": UNET_SEED_THR, "detection": dict(DETECTION_STATS)},
+                 "mode": UNET_INSTANCE_MODE, "seed_thr": UNET_SEED_THR, "rescue_core_min": UNET_RESCUE_CORE_MIN,
+                 "rescue_core_frac": UNET_RESCUE_CORE_FRAC, "detection": dict(DETECTION_STATS)},
         "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,
         "MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "POS_GATE_SIZE_FRAC": POS_GATE_SIZE_FRAC,
         "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
