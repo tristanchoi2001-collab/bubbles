@@ -137,6 +137,58 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   업로드 크기 제한 대책.
 - 실데이터 검증(6-4)은 U-Net 가중치(`best.pt`, 사용자 PC에 있음)가 필요하다. 클라우드 세션에서는 업로드받아야 실행할 수 있다(torch는 설치 가능).
 
+## Tracking-aware U-Net (TAU) — 2026-10 시작
+후처리(wall/hybrid)로는 한계라는 판단에서 사용자가 "완전히 새롭게" 개발하자고 했다. 코드는 클라우드에서 쓰고 배관만 확인했다. **학습은 사용자가 PC에서 한다.**
+- 구성
+  - `tau_unet.py`: 공통 부품. 5채널 입력 = 그레이 ×3(best.pt와 같은 정규화) + 사전 마스크 2장(내부 채움, 기포별 안쪽 윤곽 `PRIOR_EDGE_PX`=2).
+    출력은 3클래스 그대로라서 hybrid와 tracker3을 그대로 쓴다.
+    - `expand_state_dict`: 3ch 가중치의 첫 conv에 사전 마스크용 가중치를 0으로 추가 → 학습 전에는 best.pt와 같은 확률.
+    - `synth_prior`(`PriorAug`): 정답 라벨을 망가뜨려 학습용 사전 마스크를 만든다(MaskTrack 방식, 연속 프레임 라벨 불필요).
+      비움 0.15, 기포별 삭제 0.2, 위치 σ=1+0.05·등가직경(10%는 ×4), 크기 ×0.85~1.15, 팽창/수축 ±2, 일부 잘림 0.1,
+      접한 쌍 융합 0.3, 큰 기포 쪼개기 0.05, 빈 곳의 가짜 기포 평균 2개/장.
+    - `TauDetector.prob(gray, prior)`: UNetDetector와 같은 전후처리(32 패딩, train_hw 리사이즈). 3ch ckpt면 사전 마스크를 무시한다.
+  - `1_tau_unet_train.py`: 사용자의 `1_unet_train.py`(한국어 주석, 저장소에는 없음)를 바탕으로 했다.
+    - 데이터셋에 기포별 라벨맵 `instances/*.png`(uint16)를 추가.
+    - FINETUNE_FROM=best.pt에서 3→5ch로 시작, 80 epoch, lr 1e-4.
+    - val은 사전 없음 / 사전 있음(이미지별 고정 시드) 둘 다 평가하고 평균 점수(0.4·내부 IoU + 0.6·경계 IoU)로 best를 고른다.
+      "写し"(사전 마스크에 있지만 정답은 배경인 화소를 기포로 낸 비율)도 출력한다.
+    - CROP은 기존과 같은 (1088,416)(= 전체 이미지). "사전 마스크만 다르다"는 비교를 유지하려는 것.
+    - test는 시작 모델 / 새 모델 사전 없음 / 새 모델 사전 있음 3열.
+  - `tau_tracker.py`: tracker3을 import해서 오프라인 다중 패스로 돈다.
+    - 패스0은 사전 없음 → 부트스트랩 → 추적.
+    - 패스k에서 프레임 t의 사전 = 패스k-1 트랙의 예측. t±1 둘 다 있으면 t-1 마스크를 변위의 절반만큼 옮기고(내삽),
+      한쪽만 있으면 t∓2와의 변위로 외삽한다(합체·분열·hold_v 직후는 0).
+    - **t 자신의 검출은 쓰지 않는다.** t를 뺀 관측 수 < `PRIOR_MIN_HITS`(2)인 트랙도 쓰지 않는다(1프레임 오검출 확산 방지).
+    - `PRIOR_PASSES`=2. 검출이 이전 패스와 같으면 조기 종료. 연속 누락은 패스마다 양 끝에서 1프레임씩 복구된다.
+    - 패스별 CSV/qc_report → `passes/pass<k>/`, 3_tracking_qc 항목 비교표 → `pass_summary.json`.
+      검출이 바뀐 프레임은 `prior_debug/*.png`로 남긴다. 마지막 패스는 tracker3과 같은 형식으로 출력한다.
+    - `PRIOR_FROM="forward"`는 온라인과 같은 정보만 쓰는 비교용.
+  - tracker3.py / watershed.py: `main()`의 used_params 딕셔너리를 `used_params(roi_rect, preprocess_params)` 함수로 분리했다(출력 동일).
+- 검증 (배관만, 실제 학습 없음)
+  - `tests/test_tau.py`
+    - a: 3→5ch 변환 시 사전 마스크와 무관하게 확률 차 < 1e-5.
+    - b: 3ch ckpt면 TauDetector = tracker3.UNetDetector(완전 일치, 리사이즈 경로 포함).
+    - c: render_prior. d: synth_prior.
+    - e: 가짜 검출기로 4프레임 누락 대형 기포가 패스 2개로 복구되어 트랙 1개가 된다.
+      사전 마스크를 그대로 베끼는 최악의 검출기에서도 1프레임 오검출은 MIN_HITS=2면 퍼지지 않고, 1이면 퍼진다.
+    - f: 가짜 COCO 96×128로 학습 스크립트 1 epoch(2 step)가 끝까지 돈다.
+  - 실데이터 60프레임(731~790)에 best.pt(3ch)로 tau_tracker.main 실행 → 패스1에서 "같음"으로 끝난다.
+    result_tracking.csv / result_area_count.csv가 watershed.py(hybrid) 출력과 바이트 단위로 같다.
+  - 실데이터에서 만든 사전 마스크의 품질(패스0 = best.pt hybrid, scratchpad/tau/prior_stats.py)
+
+    | | tiny | small | large |
+    |---|---|---|---|
+    | 검출 중 사전이 50% 이상 덮는 비율 | 42% | 73% | 87.5% |
+    | 사전 없음(<10%) | 37% | 14% | 5% |
+    | 사전 IoU 중앙값 | 0.35 | 0.55 | 0.73 |
+    | 중심 오차/등가직경 중앙값 | 0.26 | 0.17 | 0.06 |
+
+    synth의 위치 σ를 이 값에 맞춰 2→1 px, 큰 이동 5→10%로 조정했다(조정 후 IoU 중앙값 0.37 / 0.53 / 0.77).
+- 남은 일
+  - 사용자가 PC에서 학습한 TAU best.pt를 받아 731~790과 637~641(1200×480, L자 기포)에서 패스별 비교.
+    지표: 대형 내부 신규/소실, large 合体直後の分裂(flip-flop), 637~641 검출.
+  - 637~641은 앞뒤 프레임도 누락이면 사전이 없어서 도움이 안 된다(그 전후 프레임 확인 필요).
+
 ## 저장소 구성
 - `tracker2.py` — 트래커 v2(지시서의 `tracker.py`). 선단부 vy만으로 예측, 간격 게이트, Union IoU 기반 합체·분열.
 - `tracker3.py` — v2 이후의 개선판. 지시서 1~4장 이후에 만들었으므로 지시서가 전제하는 v2와 구조가 다르다.
@@ -146,6 +198,8 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `sim_compare.py` — 정답 ID가 있는 합성 장면으로 tracker2 / tracker3을 비교하는 스크립트.
 - `piv_field.py`, `fake_detector.py`, `sim_piv.py`, `qc_compare.py`, `tests/` — 위 "PIV 초기 속도 추정 구현 현황" 참고.
 - `3_tracking_qc.py` — 추적 QC. SWAP_LIKELY 상대 후보는 면적비 ≤ 3, 반경 min(2×등가직경, 200 px), 상세는 ID 중복 제거 후 최대 5개 + 「他N件」.
+- `tau_unet.py`, `1_tau_unet_train.py`, `tau_tracker.py`, `tests/test_tau.py` — 위 "Tracking-aware U-Net" 참고.
 - `reference/piv_prior.py` — PIV 참고 구현(수정하지 않음).
 - `docs/PIV_TASK.md` — PIV prior 도입 작업 지시서 원문(5장 할 일, 6장 검증, 7장 주의, 8장 작업 방식).
-- 테스트 실행: `python -B tests/test_events.py`, `python -B tests/test_qc.py` (pytest로도 실행 가능).
+- 테스트 실행: `python -B tests/test_events.py`, `python -B tests/test_qc.py`, `python -B tests/test_instances.py`,
+  `python -B tests/test_tau.py` (pytest로도 실행 가능).

@@ -2223,6 +2223,39 @@ def run_detection_phase(cache_dir: str):
     return detections_per_frame, filenames, total_areas, roi_counts, image_size, roi_rect, preprocess_params
 
 
+def used_params(roi_rect, preprocess_params) -> dict:
+    """qc_report.json の used_params (3_tracking_qc.py が ROI・ゲート・MAX_AGE を読む)"""
+    return {
+        "UNET_CKPT": UNET_CKPT,
+        "IGNORE_PARTICLE_AREA": IGNORE_PARTICLE_AREA,
+        "UNET": {"min_area": UNET_MIN_AREA, "band": UNET_BAND, "edge_thr": UNET_EDGE_THR,
+                 "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX,
+                 "mode": UNET_INSTANCE_MODE, "seed_thr": UNET_SEED_THR, "rescue_core_min": UNET_RESCUE_CORE_MIN,
+                 "rescue_core_frac": UNET_RESCUE_CORE_FRAC, "detection": dict(DETECTION_STATS)},
+        "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,
+        "MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "POS_GATE_SIZE_FRAC": POS_GATE_SIZE_FRAC,
+        "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
+        "AREA_RELAX_RATIO": AREA_RELAX_RATIO, "AREA_RELAX_POS": AREA_RELAX_POS,
+        "MAX_AGE": MAX_AGE, "COAST_GATE_GROWTH": COAST_GATE_GROWTH, "MIN_TRACK_AREA": MIN_TRACK_AREA,
+        "weights": {"pos": W_POS, "area": W_AREA, "overlap": W_OVERLAP, "shape": W_SHAPE,
+                    "coast": W_COAST, "unknown_v": W_UNKNOWN_V},
+        "SHAPE_AREA_REF": SHAPE_AREA_REF,
+        "USE_FLOW_PRIOR": USE_FLOW_PRIOR, "PRIOR_AREA_RATIO": PRIOR_AREA_RATIO,
+        "USE_PIV_PRIOR": USE_PIV_PRIOR and piv_field is not None, "PIV_GATE": PIV_GATE,
+        "PIV_GATE_HARD": PIV_GATE_HARD, "PIV_STATIC_SPEED": PIV_STATIC_SPEED, "W_PIV_OUTSIDE": W_PIV_OUTSIDE,
+        "PIV_KEEP_STATIC": PIV_KEEP_STATIC, "PIV_USE_DX": PIV_USE_DX, "PIV_MODE": PIV_MODE,
+        "PIV_RASTER": PIV_RASTER, "PIV_SIZE_CLASSES": list(PIV_SIZE_CLASSES),
+        "PIV_WINDOWS": {k: list(v) for k, v in PIV_WINDOWS.items()},
+        "piv_stats": getattr(run_laptrack, "last_stats", None),
+        "EVENT_OVERLAP_MIN": EVENT_OVERLAP_MIN, "EVENT_MARGIN": EVENT_MARGIN,
+        "EVENT_AREA_TOL": EVENT_AREA_TOL, "EVENT_MINOR_FRAC": EVENT_MINOR_FRAC,
+        "EVENT_MINOR_OVERLAP": EVENT_MINOR_OVERLAP, "TRANSIENT_MERGE_FRAMES": TRANSIENT_MERGE_FRAMES,
+        "bootstrap_enabled": ENABLE_BOOTSTRAP,
+        "roi_enabled": ENABLE_ROI,
+        "roi_rect": list(roi_rect) if (ENABLE_ROI and roi_rect is not None) else None,
+    }
+
+
 # ==============================================================
 # 12. メインパイプライン
 # ==============================================================
@@ -2253,35 +2286,7 @@ def main():
                   total_areas, roi_counts, roi_rect=(roi_rect if ENABLE_ROI else None))
 
     report = qc_report(rows, total_frames)
-    report["used_params"] = {
-        "UNET_CKPT": UNET_CKPT,
-        "IGNORE_PARTICLE_AREA": IGNORE_PARTICLE_AREA,
-        "UNET": {"min_area": UNET_MIN_AREA, "band": UNET_BAND, "edge_thr": UNET_EDGE_THR,
-                 "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX,
-                 "mode": UNET_INSTANCE_MODE, "seed_thr": UNET_SEED_THR, "rescue_core_min": UNET_RESCUE_CORE_MIN,
-                 "rescue_core_frac": UNET_RESCUE_CORE_FRAC, "detection": dict(DETECTION_STATS)},
-        "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,
-        "MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "POS_GATE_SIZE_FRAC": POS_GATE_SIZE_FRAC,
-        "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
-        "AREA_RELAX_RATIO": AREA_RELAX_RATIO, "AREA_RELAX_POS": AREA_RELAX_POS,
-        "MAX_AGE": MAX_AGE, "COAST_GATE_GROWTH": COAST_GATE_GROWTH, "MIN_TRACK_AREA": MIN_TRACK_AREA,
-        "weights": {"pos": W_POS, "area": W_AREA, "overlap": W_OVERLAP, "shape": W_SHAPE,
-                    "coast": W_COAST, "unknown_v": W_UNKNOWN_V},
-        "SHAPE_AREA_REF": SHAPE_AREA_REF,
-        "USE_FLOW_PRIOR": USE_FLOW_PRIOR, "PRIOR_AREA_RATIO": PRIOR_AREA_RATIO,
-        "USE_PIV_PRIOR": USE_PIV_PRIOR and piv_field is not None, "PIV_GATE": PIV_GATE,
-        "PIV_GATE_HARD": PIV_GATE_HARD, "PIV_STATIC_SPEED": PIV_STATIC_SPEED, "W_PIV_OUTSIDE": W_PIV_OUTSIDE,
-        "PIV_KEEP_STATIC": PIV_KEEP_STATIC, "PIV_USE_DX": PIV_USE_DX, "PIV_MODE": PIV_MODE,
-        "PIV_RASTER": PIV_RASTER, "PIV_SIZE_CLASSES": list(PIV_SIZE_CLASSES),
-        "PIV_WINDOWS": {k: list(v) for k, v in PIV_WINDOWS.items()},
-        "piv_stats": getattr(run_laptrack, "last_stats", None),
-        "EVENT_OVERLAP_MIN": EVENT_OVERLAP_MIN, "EVENT_MARGIN": EVENT_MARGIN,
-        "EVENT_AREA_TOL": EVENT_AREA_TOL, "EVENT_MINOR_FRAC": EVENT_MINOR_FRAC,
-        "EVENT_MINOR_OVERLAP": EVENT_MINOR_OVERLAP, "TRANSIENT_MERGE_FRAMES": TRANSIENT_MERGE_FRAMES,
-        "bootstrap_enabled": ENABLE_BOOTSTRAP,
-        "roi_enabled": ENABLE_ROI,
-        "roi_rect": list(roi_rect) if (ENABLE_ROI and roi_rect is not None) else None,
-    }
+    report["used_params"] = used_params(roi_rect, preprocess_params)
     report_path = os.path.join(OUTPUT_FOLDER, "qc_report.json")
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
