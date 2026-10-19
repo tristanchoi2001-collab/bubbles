@@ -622,6 +622,71 @@ def test_h_area_relax_same_position():
     assert n0 == 0 and len(ids0[1]) > 1, f"{key}: AREA_RELAX_RATIO = 0 でも途切れない (シナリオの前提が崩れた): {ev0}"
 
 
+def _track_ids(frames, settings):
+    """正解ラベル画像をそのまま検出にして LeadingEdgeLapTracker で追跡し、正解ID -> トラックIDの集合 を返す。
+    settings: tracker3 の設定 {名前: 値} (読み直した既定値に上書き)"""
+    T = importlib.reload(tracker3)
+    for k, v in settings.items():
+        setattr(T, k, v)
+    H = frames[0].shape[0]
+    roi = np.ones((H, W), bool)
+    tr = T.LeadingEdgeLapTracker()
+    ids = defaultdict(set)
+    for f, lab in enumerate(frames):
+        dets = T.instances_to_detections(lab, roi)
+        for r in tr.update(dets, f):
+            if r["det_index"] is not None:
+                m, x0, y0 = dets[r["det_index"]].shape
+                ys, xs = np.nonzero(m)
+                ids[int(lab[ys[0] + y0, xs[0] + x0])].add(r["track_id"])
+    importlib.reload(tracker3)
+    return dict(ids)
+
+
+def test_i_edge_entry_short_of_border():
+    """大きいスラグ (幅 140, 高さ 300, +40 px/frame) が画面上端から入ってくる。検出は画面端の 2 px 手前で止まる
+    (U-Net の実データの例)。見えている面積が 1フレームで 2倍以上になっても、EDGE_TOUCH_PX で「切れた気泡」と
+    みなされるので同じIDのまま。EDGE_TOUCH_PX = 0 (ぴったり接するときだけ) なら面積ゲートで途切れる"""
+    key = "i) 画面端の 2 px 手前で止まる気泡の入場"
+    H, GAP = 900, 2
+    frames = []
+    for f in range(9):
+        lab = blank(H)
+        m = capsule(H, 200.0, 30.0 + 40.0 * f - 150.0, 140, 300)
+        m[:GAP] = False
+        paint(lab, m, 1)
+        frames.append(lab)
+    areas = [int((lab == 1).sum()) for lab in frames]
+    assert areas[1] / areas[0] > tracker3.AREA_RATIO_GATE, f"{key}: シナリオの面積比が小さすぎる {areas[:3]}"
+    ids = _track_ids(frames, {})
+    OBSERVED[key] = {"off": [], "on": None}
+    assert len(ids[1]) == 1, f"{key}: IDが途切れた {ids} (面積 {areas})"
+    ids0 = _track_ids(frames, {"EDGE_TOUCH_PX": 0})
+    assert len(ids0[1]) > 1, f"{key}: EDGE_TOUCH_PX = 0 でも途切れない (シナリオの前提が崩れた) {ids0}"
+
+
+def test_j_large_new_track_waits():
+    """フレーム 0 に現れた大きい気泡 (r=60) と小さい気泡 (r=8) が フレーム 1, 2 で検出されず、3 から戻ってくる
+    (どちらも -15 px/frame)。大きい方は MAX_AGE_NEW_LARGE で同じIDに戻る。小さい方は従来どおり新規 (ノイズと区別できないため)。
+    MAX_AGE_NEW_LARGE = 0 (無効) なら大きい方も新規になる"""
+    key = "j) 大きい新規トラックの見失い"
+    H = 900
+    frames = []
+    for f in range(7):
+        lab = blank(H)
+        if f not in (1, 2):
+            paint(lab, circle(H, 150.0, 700.0 - 15.0 * f, 60), 1)
+            paint(lab, circle(H, 360.0, 700.0 - 15.0 * f, 8), 2)
+        frames.append(lab)
+    assert (frames[0] == 1).sum() >= tracker3.LARGE_NEW_AREA > (frames[0] == 2).sum()
+    ids = _track_ids(frames, {})
+    OBSERVED[key] = {"off": [], "on": None}
+    assert len(ids[1]) == 1, f"{key}: 大きい気泡のIDが途切れた {ids}"
+    assert len(ids[2]) == 2, f"{key}: 小さい気泡まで同じIDに戻った (MAX_AGE_NEW の対象のはず) {ids}"
+    ids0 = _track_ids(frames, {"MAX_AGE_NEW_LARGE": 0})
+    assert len(ids0[1]) == 2, f"{key}: MAX_AGE_NEW_LARGE = 0 でも途切れない (シナリオの前提が崩れた) {ids0}"
+
+
 # ==============================================================
 # 4. スクリプトとして実行
 # ==============================================================

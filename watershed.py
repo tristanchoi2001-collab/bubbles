@@ -67,6 +67,8 @@ tracker2.py での変更点 (microgaptracker3.py から。一部は上記の tra
   - 生まれたばかりのトラック(速度未知)は初回のみ先端部ゲートを NEW_TRACK_GATE_SCALE 倍に拡大
   - ブートストラップの位置ゲートに下限 BOOTSTRAP_MIN_JUMP を設定
   - トラッキングCSVの末尾に 周長(px)・フレーム接触 の列を追加
+  - 画面端の判定に余裕 EDGE_TOUCH_PX (画面端の 1〜2 px 手前で止まる気泡も「切れた気泡」として扱う)
+  - 面積の大きい新規トラックは MAX_AGE_NEW_LARGE フレームまで復帰を待つ
 """
 
 # ------------------------------------------------------------
@@ -174,8 +176,17 @@ MAX_AGE = 3                  # 見失ってから何フレームまで復帰を�
 MAX_AGE_NEW = 1              # 1回しか観測していない (速度未知の) トラックは このフレーム数まで。
                              # 探索半径が MAX_SPEED と広いので、長く残すとノイズや画面端の切れ端のトラックが
                              # 後から通りかかった別の気泡を奪う
+MAX_AGE_NEW_LARGE = 3        # 速度未知のトラックでも、面積が LARGE_NEW_AREA 以上で画面端に接していなければ このフレーム数まで待つ。
+                             # 大きい気泡の1回だけの観測はノイズではなく、検出が1〜2フレーム抜けただけのことが多い
+                             # (実データ: 約35000 px のスラグが2フレーム抜けて別IDになった)。面積ゲートで別の気泡とは区別する。
+                             # 画面端の切れ端は上の理由で対象外。MAX_AGE_NEW 以下 (0 など) で無効
+LARGE_NEW_AREA = 2000        # 上の「大きい」の面積 (px)
 COAST_GATE_GROWTH = 0.5      # 見失っている間、1フレームごとに位置ゲートを何倍ずつ広げるか
 VELOCITY_EMA_ALPHA = 0.5
+EDGE_TOUCH_PX = 3            # 外接矩形が画面端からこの px 以内なら「画面端に接している (切れた気泡)」とみなす。
+                             # U-Net の気泡は画面端の 1〜2 px 手前で止まることが多い (実データで確認)。ぴったり接するときだけだと、
+                             # 入ってくる途中/出ていく途中の大きい気泡が画面内の気泡として扱われ、見えている面積が増減するたびに
+                             # 面積ゲート (AREA_RATIO_GATE) で途切れて毎フレーム新しいIDになる。0 で従来どおり (ぴったり接するときだけ)
 MIN_TRACK_AREA = 10          # これより小さい検出はトラッキングしない (数px のノイズの点滅で新規/消失が大量に出るため)。
                              # 面積・個数の集計 (ROI) には含まれる。0 なら全てトラッキング
 
@@ -858,7 +869,8 @@ def instances_to_detections(inst: np.ndarray, roi_bool: np.ndarray) -> List[Dete
         lx, ly = leading_edge_from_points(pts)
         per = float(sum(cv2.arcLength(c, True) for c in cs))
         a_roi = float(np.count_nonzero(m & roi_bool[y0:y1, x0:x1]))
-        touch = (bool(y0 == 0), bool(y1 == H), bool(x0 == 0), bool(x1 == W))
+        e = max(0, int(EDGE_TOUCH_PX))
+        touch = (bool(y0 <= e), bool(y1 >= H - e), bool(x0 <= e), bool(x1 >= W - e))
         dets.append(Detection(
             shape=(m, x0, y0), contours=cs, area=float(area),
             cx=float(xs.mean() + x0), cy=float(ys.mean() + y0),
@@ -1120,6 +1132,15 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
             + extra)
 
 
+def _max_age(t: Track) -> int:
+    """見失ってから何フレームまで復帰を待つか (MAX_AGE / MAX_AGE_NEW / MAX_AGE_NEW_LARGE)"""
+    if t.v_known:
+        return MAX_AGE
+    if MAX_AGE_NEW_LARGE > MAX_AGE_NEW and t.area >= LARGE_NEW_AREA and not any(t.touch):
+        return MAX_AGE_NEW_LARGE
+    return MAX_AGE_NEW
+
+
 def _relax_tight(t: Track, d: Detection, frame_idx: int) -> bool:
     """面積ゲートの緩和 (AREA_RELAX_RATIO) の候補か: 速度既知・画面端に接していない・面積比が AREA_RELAX_RATIO 以内で、
     予測位置からのずれが AREA_RELAX_POS + 小さい側の等価直径 × POS_GATE_SIZE_FRAC 以内"""
@@ -1179,8 +1200,7 @@ class LeadingEdgeLapTracker:
         新しく現れた気泡の初速度にだけ使う (None なら従来どおり)"""
         det_ids = [j for j, d in enumerate(detections) if d.area >= MIN_TRACK_AREA]   # 元の検出番号
         dets = [detections[j] for j in det_ids]
-        self.tracks = [t for t in self.tracks
-                       if t.time_since_update <= (MAX_AGE if t.v_known else MAX_AGE_NEW)]
+        self.tracks = [t for t in self.tracks if t.time_since_update <= _max_age(t)]
         active = list(self.tracks)
         n_t, n_d = len(active), len(dets)
 
@@ -2409,6 +2429,8 @@ def used_params(roi_rect, preprocess_params) -> dict:
         "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
         "AREA_RELAX_RATIO": AREA_RELAX_RATIO, "AREA_RELAX_POS": AREA_RELAX_POS,
         "MAX_AGE": MAX_AGE, "COAST_GATE_GROWTH": COAST_GATE_GROWTH, "MIN_TRACK_AREA": MIN_TRACK_AREA,
+        "MAX_AGE_NEW": MAX_AGE_NEW, "MAX_AGE_NEW_LARGE": MAX_AGE_NEW_LARGE, "LARGE_NEW_AREA": LARGE_NEW_AREA,
+        "EDGE_TOUCH_PX": EDGE_TOUCH_PX,
         "weights": {"pos": W_POS, "area": W_AREA, "overlap": W_OVERLAP, "shape": W_SHAPE,
                     "coast": W_COAST, "unknown_v": W_UNKNOWN_V},
         "SHAPE_AREA_REF": SHAPE_AREA_REF,
