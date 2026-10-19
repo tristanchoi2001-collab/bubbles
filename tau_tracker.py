@@ -202,6 +202,7 @@ def detect_pass(k: int, n_frames: int, gray_of: Callable[[int], np.ndarray], det
     st["rescued"] = inst_stats.get("rescued", 0)
     st["ring"] = inst_stats.get("ring", 0)
     st["pair_split"] = inst_stats.get("pair_split", 0)
+    st["nested"] = inst_stats.get("nested", 0)
     return dets_all, st
 
 
@@ -298,6 +299,8 @@ def set_detection_stats(st: dict):
     if T3.UNET_RING_RESCUE and UNET_INSTANCE_MODE != "seed":
         T3.DETECTION_STATS["ring"] = st.get("ring", 0)
         T3.DETECTION_STATS["pair_split"] = st.get("pair_split", 0)
+    if T3.UNET_DROP_NESTED:
+        T3.DETECTION_STATS["nested"] = st.get("nested", 0)
     T3.DETECTION_STATS["pass"] = st["pass"]
 
 

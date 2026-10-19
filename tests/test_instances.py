@@ -15,6 +15,8 @@
   k) リング気泡: 主経路の帯の判定で背景とされた領域を気泡にしない
   l) リング気泡: 穴を横切る細い境界の線で1個の気泡を2個に割らない
   m) リング気泡: 画面の端にかかる気泡は拾わない
+  n) 気泡の中の気泡 (UNET_DROP_NESTED): 大きい気泡の中 (周りがその気泡) の気泡は除き、
+     液の島 (周りが背景) の中の気泡と、大きい気泡に接しているだけの気泡は残す。外側の気泡は変えない
 使い方: リポジトリのルートで  python -B tests/test_instances.py     (pytest でも実行できる)
 """
 import os
@@ -291,6 +293,39 @@ def test_m_frame_edge():
         off, on = _ring_on_off(scene(x_ring))
         got = bool(((on > 0) & (off == 0) & ((xx - x_ring) ** 2 + (yy - 79) ** 2 <= 9)).any())
         assert got == expect, (x_ring, got)
+
+def test_n_drop_nested():
+    yy, xx = np.ogrid[:240, :200]
+    pin, pedge = np.zeros((240, 200), np.float32), np.zeros((240, 200), np.float32)
+    _big(pin, pedge, 60, 60, r=45)
+    pin[(xx - 60) ** 2 + (yy - 60) ** 2 <= 10 ** 2] = 0    # 大きい気泡の中 (気体) のリング (穴が closing で埋まらない大きさ)
+    _ring(pin, pedge, 60, 60, 6, 10)
+    _big(pin, pedge, 140, 170, r=50)
+    d2 = (xx - 140) ** 2 + (yy - 170) ** 2
+    pin[d2 <= 22 ** 2] = 0                                 # 液の島 (半径 20) とその壁
+    pedge[(d2 <= 22 ** 2) & (d2 > 20 ** 2)] = 1
+    _ring(pin, pedge, 140, 170, 2.5, 7)                    # 液の島の中の気泡
+    _ring(pin, pedge, 60, 113, 2.5, 8)                     # 1つ目の大きい気泡の下端に接している気泡
+    p = _p(pin, pedge)
+    old = T.UNET_DROP_NESTED
+    try:
+        T.UNET_DROP_NESTED = False
+        keep = T.unet_instances(p, "wall")
+        T.UNET_DROP_NESTED = True
+        st = {}
+        out = T.unet_instances(p, "wall", stats=st)
+    finally:
+        T.UNET_DROP_NESTED = old
+    def lab_at(m, x, y):
+        return int(m[y, x])
+    print(f"    気泡の中の気泡: 除外 {st.get('nested', 0)} 個")
+    assert lab_at(keep, 60, 60) > 0 and lab_at(out, 60, 60) == 0, "気体の中の気泡が残った (または元々ない)"
+    assert lab_at(out, 140, 170) > 0, "液の島の中の気泡を消した"
+    assert lab_at(out, 60, 113) > 0, "接しているだけの気泡を消した"
+    big = lab_at(keep, 60, 25)
+    assert big > 0 and np.array_equal(out == big, keep == big), "外側の気泡が変わった"
+    assert st.get("nested") == 1
+
 
 def main() -> int:
     tests = [(n, f) for n, f in globals().items() if n.startswith("test_") and callable(f)]

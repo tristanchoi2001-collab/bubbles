@@ -120,6 +120,11 @@ UNET_RING_RESCUE = True      # 穴の小さいリング気泡の取りこぼし�
                              # 既にある気泡は変えずに足す。ただし小気泡の経路で1個にしていた「くっついたリング」は穴ごとに分ける
 UNET_RING_MAX = 600          # この方法で拾う気泡1個の最大面積 (px)。実データで拾った気泡は最大 374px
 UNET_RING_REACH = 8          # リングの穴からこの距離 (px) 以内の境界だけを気泡に含める (隣の大きい気泡の輪郭の残りを含めない)
+UNET_DROP_NESTED = True      # 別の気泡の中にある気泡を除く (大きい気泡の中に見える液滴・壁の点など。形は気泡と同じなので
+                             # ラベルも U-Net も気泡として扱い、ここで除く)。外側の気泡の形はそのまま (除いた分は穴のまま)。
+                             # 「中にある」= 外側 2px の画素の UNET_NESTED_SURROUND 以上が 自分より大きい1個の気泡。
+                             # 液の島 (周りが背景) の中の気泡や、大きい気泡に接しているだけの気泡は残る。画面端の気泡は対象外
+UNET_NESTED_SURROUND = 0.9   # 実データ 731〜790 では最大 0.76 (液の島の中の気泡)、接しているだけの気泡は 0.5 以下
 TRAIN_IMAGE_HW = None   # 学習画像のサイズ (H, W)。best.pt に記録があればそちらを使う。
                         # 古い best.pt で、撮影画像と学習画像のサイズが違う場合のみ指定。例: (1080, 416)
 SAVE_INSTANCE_MASKS = False  # True ならフレームごとの気泡ラベルマップを OUTPUT_FOLDER/instances/*.npz に保存
@@ -733,21 +738,47 @@ def extract_instances_seed(prob, min_area=4, edge_thr=0.5, tiny_max=300, seed_th
     return lut[ws]
 
 
+def drop_nested(inst: np.ndarray, surround: float = 0.9, stats=None) -> np.ndarray:
+    """別の気泡の中にある気泡 (外側 2px の画素の surround 以上が 自分より大きい1個の気泡) を消す。
+    画面端に接する気泡は対象外。外側の気泡は変えない。stats["nested"] に消した数を足す"""
+    H, W = inst.shape
+    area = np.bincount(inst.ravel())
+    drop = []
+    for l, sl in enumerate(ndimage.find_objects(inst), start=1):
+        if sl is None or sl[0].start == 0 or sl[1].start == 0 or sl[0].stop == H or sl[1].stop == W:
+            continue
+        y0, y1, x0, x1 = max(sl[0].start - 3, 0), min(sl[0].stop + 3, H), max(sl[1].start - 3, 0), min(sl[1].stop + 3, W)
+        sub = inst[y0:y1, x0:x1]
+        m = sub == l
+        v = sub[ndimage.binary_dilation(m, iterations=2) & ~m]
+        ids, cnt = np.unique(v[v > 0], return_counts=True)
+        if ids.size and cnt.max() >= surround * v.size and area[ids[cnt.argmax()]] > area[l]:
+            drop.append(l)
+    if drop:
+        inst = np.where(np.isin(inst, drop), 0, inst)
+    if stats is not None:
+        stats["nested"] = stats.get("nested", 0) + len(drop)
+    return inst
+
+
 def unet_instances(prob, mode=None, stats=None):
     """確率マップを気泡ラベルマップにする。mode: "wall" / "hybrid" / "seed" (None なら UNET_INSTANCE_MODE)。
-    stats (dict): "hybrid" で救済した数を stats["rescued"] に、UNET_RING_RESCUE で拾ったリング気泡の数を stats["ring"] に足す"""
+    stats (dict): "hybrid" で救済した数を stats["rescued"] に、UNET_RING_RESCUE で拾ったリング気泡の数を stats["ring"] に、
+    UNET_DROP_NESTED で除いた 気泡の中の気泡 の数を stats["nested"] に足す"""
     mode = UNET_INSTANCE_MODE if mode is None else mode
     ring_max = UNET_RING_MAX if UNET_RING_RESCUE else 0
     if mode not in ("wall", "hybrid", "seed"):
         raise ValueError(f'UNET_INSTANCE_MODE は "wall" / "hybrid" / "seed": {mode!r}')
     if mode == "seed":
-        return extract_instances_seed(prob, UNET_MIN_AREA, UNET_EDGE_THR, UNET_TINY_MAX, UNET_SEED_THR, UNET_CLOSE)
-    if mode == "hybrid":
-        return extract_instances_hybrid(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
+        inst = extract_instances_seed(prob, UNET_MIN_AREA, UNET_EDGE_THR, UNET_TINY_MAX, UNET_SEED_THR, UNET_CLOSE)
+    elif mode == "hybrid":
+        inst = extract_instances_hybrid(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
                                         UNET_SEED_THR, UNET_RESCUE_CORE_MIN, UNET_RESCUE_CORE_FRAC, stats,
                                         ring_max, UNET_RING_REACH)
-    return extract_instances(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
-                             ring_max, UNET_RING_REACH, UNET_SEED_THR, stats)
+    else:
+        inst = extract_instances(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
+                                 ring_max, UNET_RING_REACH, UNET_SEED_THR, stats)
+    return drop_nested(inst, UNET_NESTED_SURROUND, stats) if UNET_DROP_NESTED else inst
 
 
 def unmatched_instances(a: np.ndarray, b: np.ndarray, iou_thr: float = 0.5) -> List[int]:
@@ -2293,7 +2324,7 @@ def run_detection_phase(cache_dir: str):
 
         gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
         prob = detector.prob(gray)
-        n_res0, n_ring0 = inst_stats.get("rescued", 0), inst_stats.get("ring", 0)
+        n_res0, n_ring0, n_nest0 = inst_stats.get("rescued", 0), inst_stats.get("ring", 0), inst_stats.get("nested", 0)
         inst = unet_instances(prob, stats=inst_stats)
         n_res, n_ring = inst_stats.get("rescued", 0) - n_res0, inst_stats.get("ring", 0) - n_ring0
         if not filenames:   # 最初のフレームだけ入力の健全性チェック
@@ -2329,7 +2360,9 @@ def run_detection_phase(cache_dir: str):
         filenames.append(filename)
         total_areas.append(total_area)
         roi_counts.append(roi_count)
-        res_msg = (f"  | 救済 {n_res}個" if n_res else "") + (f"  | リング気泡 {n_ring}個" if n_ring else "")
+        n_nest = inst_stats.get("nested", 0) - n_nest0
+        res_msg = ((f"  | 救済 {n_res}個" if n_res else "") + (f"  | リング気泡 {n_ring}個" if n_ring else "")
+                   + (f"  | 気泡の中の気泡を除外 {n_nest}個" if n_nest else ""))
         print(f"  [{filename}] 検出{len(dets)}個 (ROI内{roi_count}個), ROI内合計面積 {total_area:.0f}px{res_msg}{diff_msg}")
 
     DETECTION_STATS.clear()
@@ -2342,6 +2375,9 @@ def run_detection_phase(cache_dir: str):
         DETECTION_STATS["pair_split"] = inst_stats.get("pair_split", 0)
         print(f"  穴の小さいリング気泡の取りこぼしを {inst_stats.get('ring', 0)} 個 拾い、くっついたリングを "
               f"{inst_stats.get('pair_split', 0)} 組 分けました (UNET_RING_RESCUE)")
+    if UNET_DROP_NESTED:
+        DETECTION_STATS["nested"] = inst_stats.get("nested", 0)
+        print(f"  別の気泡の中にある気泡を {inst_stats.get('nested', 0)} 個 除きました (UNET_DROP_NESTED)")
     if SAVE_PROB_MAPS:
         print(f"\n  確率マップを {n_prob_saved} フレーム分保存: {os.path.abspath(prob_dir)}"
               "  (npz = 解析用 / png = 確認用: 入力 | 内部確率 | 境界確率)")
@@ -2366,7 +2402,8 @@ def used_params(roi_rect, preprocess_params) -> dict:
                  "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX,
                  "mode": UNET_INSTANCE_MODE, "seed_thr": UNET_SEED_THR, "rescue_core_min": UNET_RESCUE_CORE_MIN,
                  "rescue_core_frac": UNET_RESCUE_CORE_FRAC, "ring_rescue": UNET_RING_RESCUE,
-                 "ring_max": UNET_RING_MAX, "ring_reach": UNET_RING_REACH, "detection": dict(DETECTION_STATS)},
+                 "ring_max": UNET_RING_MAX, "ring_reach": UNET_RING_REACH, "drop_nested": UNET_DROP_NESTED,
+                 "nested_surround": UNET_NESTED_SURROUND, "detection": dict(DETECTION_STATS)},
         "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,
         "MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "POS_GATE_SIZE_FRAC": POS_GATE_SIZE_FRAC,
         "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
