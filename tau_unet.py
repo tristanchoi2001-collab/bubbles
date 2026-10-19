@@ -238,9 +238,11 @@ def _touching_pairs(ins: np.ndarray, shapes: List[Shape], touch_px: int) -> List
     return sorted(pairs)
 
 
-def synth_prior(ins: np.ndarray, rng, aug: Optional[PriorAug] = None, edge_px: int = PRIOR_EDGE_PX) -> np.ndarray:
+def synth_prior(ins: np.ndarray, rng, aug: Optional[PriorAug] = None, edge_px: int = PRIOR_EDGE_PX,
+                keep_ids=()) -> np.ndarray:
     """正解の気泡ラベルマップ (0 = 背景, 1..N の連番) を崩して学習用の事前マスク (2, H, W) を作る。
-    rng = np.random.default_rng(...) (同じ rng の状態なら同じ結果)"""
+    rng = np.random.default_rng(...) (同じ rng の状態なら同じ結果)。
+    keep_ids の気泡は消さない (degrade_image で画像を崩した気泡。事前マスクで補えるようにする)"""
     aug = aug or PriorAug()
     H, W = ins.shape
     if rng.random() < aug.p_empty:
@@ -248,10 +250,12 @@ def synth_prior(ins: np.ndarray, rng, aug: Optional[PriorAug] = None, edge_px: i
     ins = ins.astype(np.int32)
     ids = np.unique(ins)
     ids = ids[ids > 0]
+    keep = {int(k) for k in keep_ids}
     if ids.size and (ids[-1] != ids.size):     # 連番に詰める (_touching_pairs が番号 = 位置 + 1 を使うため)
         lut = np.zeros(int(ids[-1]) + 1, np.int32)
         lut[ids] = np.arange(1, ids.size + 1)
         ins = lut[ins]
+        keep = {int(lut[k]) for k in keep if 0 < k < lut.size}
     shapes = label_shapes(ins)
     # 接している2個を1個に (前のパスの融合)
     groups = [[i] for i in range(len(shapes))]
@@ -281,7 +285,7 @@ def synth_prior(ins: np.ndarray, rng, aug: Optional[PriorAug] = None, edge_px: i
             m[yb - y0 + p:yb - y0 + p + mb.shape[0], xb - x0 + p:xb - x0 + p + mb.shape[1]] |= mb
             m = ndimage.binary_closing(m, iterations=p)
             x0, y0 = x0 - p, y0 - p
-        if rng.random() < aug.p_drop:
+        if rng.random() < aug.p_drop and not any(i + 1 in keep for i in g):
             continue
         pieces = [m]
         if m.sum() >= aug.split_min_area and rng.random() < aug.p_split:
@@ -313,6 +317,60 @@ def synth_prior(ins: np.ndarray, rng, aug: Optional[PriorAug] = None, edge_px: i
                     objs.append(d)
                 break
     return render_prior(objs, H, W, edge_px)
+
+
+@dataclass
+class ImageDegrade:
+    """学習画像の崩し方 (degrade_image)。前のフレームでは見えていたが このフレームでは輪郭が切れた/薄い 気泡を真似る"""
+    n_max: int = 4                 # 1枚で崩す気泡の最大数
+    min_area: int = 300            # 崩す気泡の最小面積 (px)。小さい点は崩さない
+    p_fade: float = 0.3            # 崩す気泡のうち「輪郭全体を薄くする」の割合 (残りは「輪郭の一部を消す」)
+    gap_frac: Tuple[float, float] = (0.1, 0.35)   # 消す輪郭の割合 (周の何割。1〜2か所に分ける)
+    fade_keep: Tuple[float, float] = (0.25, 0.6)  # 薄くするとき残す画素の割合 (2値化画像では薄い輪郭は途切れ途切れになる)
+
+    def as_dict(self):
+        return {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.__dict__.items()}
+
+
+def degrade_image(g: np.ndarray, ins: np.ndarray, rng, cfg: Optional[ImageDegrade] = None):
+    """画像 g (2値化画像: 輪郭が明るい) のうち、面積 cfg.min_area 以上の気泡を 1〜cfg.n_max 個選んで輪郭を崩す。
+    輪郭の帯 (気泡のマスクの縁から内側 6px・外側 2px の明るい画素) の一部を 0 にする (切れ目) か、
+    全体を途切れ途切れにする (薄い輪郭)。正解ラベルは変えない。
+    戻り値: (崩した画像, 崩した気泡のラベルの組) -> synth_prior(keep_ids=...) に渡して事前マスクには残す"""
+    cfg = cfg or ImageDegrade()
+    ins = ins.astype(np.int32)
+    ids, area = np.unique(ins[ins > 0], return_counts=True)
+    cand = ids[area >= cfg.min_area]
+    if cand.size == 0:
+        return g, ()
+    chosen = rng.choice(cand, int(rng.integers(1, min(cfg.n_max, cand.size) + 1)), replace=False)
+    g = g.copy()
+    H, W = g.shape
+    objs = ndimage.find_objects(ins)
+    done = []
+    for k in chosen:
+        sl = objs[int(k) - 1]
+        y0, y1, x0, x1 = max(sl[0].start - 3, 0), min(sl[0].stop + 3, H), max(sl[1].start - 3, 0), min(sl[1].stop + 3, W)
+        m = ins[y0:y1, x0:x1] == k
+        sub = g[y0:y1, x0:x1]
+        band = ndimage.binary_dilation(m, iterations=2) & ~ndimage.binary_erosion(m, iterations=6) & (sub > 0)
+        if band.sum() < 10:
+            continue
+        if rng.random() < cfg.p_fade:
+            band &= rng.random(band.shape) >= rng.uniform(*cfg.fade_keep)
+            sub[band] = 0
+        else:
+            ys, xs = np.nonzero(m)
+            by, bx = np.nonzero(band)
+            ang = np.arctan2(by - ys.mean(), bx - xs.mean())
+            n_gap = int(rng.integers(1, 3))
+            total = rng.uniform(*cfg.gap_frac)
+            for _ in range(n_gap):
+                d = (ang - rng.uniform(-math.pi, math.pi)) % (2 * math.pi)
+                sel = d < 2 * math.pi * total / n_gap
+                sub[by[sel], bx[sel]] = 0
+        done.append(int(k))
+    return g, tuple(done)
 
 
 # ==============================================================

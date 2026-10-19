@@ -12,11 +12,14 @@
   - FINETUNE_FROM (今の best.pt) から始める。最初の畳み込みに事前マスク用の重みを 0 で足すので、
     学習前は best.pt と全く同じ結果 = 「今より悪くならない所」から始まる
   - val は「事前マスクなし」と「事前マスクあり (正解から作ったもの。毎 epoch 同じ)」の両方で評価する。
-    best は BEST_BY で選ぶ (既定: 事前マスクありの点数が最高の epoch。ただし事前マスクなしの点数が開始モデルより
-    BEST_EMPTY_TOL 以上下がった epoch は選ばない)。毎 epoch「事前の効果」(ありとなしの境界 IoU の差) と
-    事前マスク用の重みの大きさも表示する (0 のままなら事前マスクを使っていない)
+    best は BEST_BY で選ぶ (既定: 崩した画像・事前マスクありの点数が最高の epoch。ただし元の画像・事前マスクなしの点数が
+    開始モデルより BEST_EMPTY_TOL 以上下がった epoch は選ばない)。毎 epoch「事前の効果」(崩した画像での ありとなしの
+    境界 IoU の差) と事前マスク用の重みの大きさも表示する (0 のままなら事前マスクを使っていない)
     「写し」= 事前マスクにあって正解では背景の画素を、気泡と出した割合 (事前マスクをそのまま写していないかの目安。低いほどよい)
   - 正解の気泡ごとのラベルマップ (instances/) もデータセットに保存する (事前マスクを作るため)
+  - 画像を崩す増強 (DEGRADE_*): 学習画像の気泡の輪郭を一部消す / 途切れ途切れにし、その気泡は事前マスクに必ず残す
+    (正解ラベルはそのまま)。学習画像は輪郭がはっきりしていて画像だけで正解が分かるため、崩さないと事前マスクを全く使わない
+    ことが 1回目の学習 (80 epoch で事前の効果 +0.0001) で分かった。val も「崩した画像」で事前なし/ありを比べる
 
 流れ
   [1] Roboflow の COCO-segmentation 書き出し → 3クラスのマスク (0=背景, 1=気泡内部, 2=気泡境界) + 気泡ごとのラベルマップ (DST)
@@ -56,8 +59,8 @@ ENCODER = 'resnet34'          # FINETUNE_FROM = None のときのエンコーダ
 WORKERS = 0                   # Windows では 0 のまま
 SEED    = 0                   # 再現用の乱数シード
 FREEZE_ENCODER_EPOCHS = 0     # 最初の何 epoch エンコーダを固定するか (最初の畳み込み = 事前マスクの入口は固定しない)
-BEST_BY = 'prior'             # best.pt の選び方: 'prior' = 事前マスクありの点数が最高の epoch (ただし事前マスクなしの点数が
-                              #   開始モデルより BEST_EMPTY_TOL 以上下がった epoch は除く) / 'mean' = ありとなしの平均 (前の版)
+BEST_BY = 'prior'             # best.pt の選び方: 'prior' = 崩した画像・事前マスクありの点数が最高の epoch (ただし元の画像・
+                              #   事前マスクなしの点数が開始モデルより BEST_EMPTY_TOL 以上下がった epoch は除く) / 'mean' = 両方の平均
 BEST_EMPTY_TOL = 0.01         # 'prior' のとき、事前マスクなしの点数 (0.4×内部 IoU + 0.6×境界 IoU) の低下の許容
 
 # [2-0] 学習中の増強 (1_unet_train.py と同じ。Roboflow で増強したなら切っておく)
@@ -74,7 +77,15 @@ CP_MAX_AREA = 500             # この面積 (px) 未満の気泡だけ材料に
 CP_ALPHA = (0.35, 1.0)        # 貼るときの明るさの倍率 (薄い小気泡を真似る)
 CP_SAVE_PREVIEW = 6           # 増強結果の確認画像の枚数 (OUT/cp_preview/。事前マスクも重ねて描く)
 
-# [2-2] 事前マスクの作り方 (正解ラベルを崩す。値の意味は tau_unet.PriorAug を参照)
+# [2-2] 画像を崩す (事前マスクがないと正しく出せない状況を作る。値の意味は tau_unet.ImageDegrade を参照)
+DEGRADE_P = 0.5               # 学習サンプルごとに画像を崩す確率 (0 なら崩さない = 1回目の学習と同じ)
+DEGRADE_N_MAX = 4             # 1枚で崩す気泡の最大数
+DEGRADE_MIN_AREA = 300        # 崩す気泡の最小面積 (px)。大きい気泡の切れ目・薄い輪郭を真似る
+DEGRADE_P_FADE = 0.3          # 崩す気泡のうち「輪郭全体を途切れ途切れにする」割合 (残りは「輪郭の一部を消す」)
+DEGRADE_GAP = (0.1, 0.35)     # 消す輪郭の割合 (周の何割)
+DEGRADE_FADE_KEEP = (0.25, 0.6)  # 途切れ途切れにするとき残す画素の割合
+
+# [2-3] 事前マスクの作り方 (正解ラベルを崩す。値の意味は tau_unet.PriorAug を参照)
 PRIOR_P_EMPTY = 0.15          # 事前マスクなし (1パス目と同じ状況) の割合
 PRIOR_P_DROP = 0.2            # 気泡ごとに消す確率 (前のパスの見落とし)
 PRIOR_SHIFT_PX = 1.0          # 位置ずれの標準偏差 = この値 + 等価直径 × PRIOR_SHIFT_SIZE (px)。
@@ -102,6 +113,7 @@ import shutil
 import sys
 import time
 from collections import Counter
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
@@ -134,6 +146,11 @@ def prior_aug():
         p_empty=PRIOR_P_EMPTY, p_drop=PRIOR_P_DROP, shift_px=PRIOR_SHIFT_PX, shift_size=PRIOR_SHIFT_SIZE,
         p_big_shift=PRIOR_P_BIG_SHIFT, scale=tuple(PRIOR_SCALE), morph_px=PRIOR_MORPH_PX, p_trunc=PRIOR_P_TRUNC,
         p_merge=PRIOR_P_MERGE, p_split=PRIOR_P_SPLIT, phantom_rate=PRIOR_PHANTOM_RATE)
+
+
+def degrade_cfg():
+    return tau_unet.ImageDegrade(n_max=DEGRADE_N_MAX, min_area=DEGRADE_MIN_AREA, p_fade=DEGRADE_P_FADE,
+                                 gap_frac=tuple(DEGRADE_GAP), fade_keep=tuple(DEGRADE_FADE_KEEP))
 
 
 def resolve(p):
@@ -344,6 +361,7 @@ class BubbleDS(Dataset):
         self.ins_dir = Path(root) / 'instances' / split
         self.ch, self.cw, self.train = crop_h, crop_w, train
         self.prior_mode = prior_mode
+        self.val_degrade = False      # val/test で画像を崩して評価するか (毎回同じ崩し方)
         self.aug = aug or prior_aug()
         for d, what in ((self.mask_dir, 'マスク'), (self.ins_dir, '気泡ごとのラベルマップ')):
             missing = [p.name for p in self.imgs if not (d / (p.stem + '.png')).exists()]
@@ -438,21 +456,33 @@ class BubbleDS(Dataset):
             raise RuntimeError(f'{ip.stem}: 気泡ごとのラベルマップが読めないか大きさが違います')
         return g, m, ins
 
-    def prior_for(self, i, ins):
+    def prior_for(self, i, ins, keep=()):
+        """事前マスク。keep (画像を崩した気泡) は消さず、事前マスクなしにもしない"""
         if self.prior_mode == 'empty':
             return None
         rng = np.random.default_rng(np.random.randint(0, 2 ** 31 - 1)) if self.train else np.random.default_rng((SEED, i))
-        return tau_unet.synth_prior(ins, rng, self.aug)
+        aug = replace(self.aug, p_empty=0.0) if keep else self.aug
+        return tau_unet.synth_prior(ins, rng, aug, keep_ids=keep)
 
-    def __getitem__(self, i):
+    def sample(self, i, force_degrade=False):
+        """(画像, 3クラスのラベル, 気泡ごとのラベル, 崩した気泡, 事前マスク)"""
         g, m, ins = self.load(i)
         g, m, ins = self._augment(g, m, ins) if self.train else self._pad32(g, m, ins)
-        x = tau_unet.make_input(g, self.prior_for(i, ins), self.mean, self.std)
+        keep = ()
+        if self.train and (force_degrade or (DEGRADE_P > 0 and np.random.rand() < DEGRADE_P)):
+            g, keep = tau_unet.degrade_image(g, ins, np.random.default_rng(np.random.randint(0, 2 ** 31 - 1)), degrade_cfg())
+        elif not self.train and self.val_degrade:
+            g, keep = tau_unet.degrade_image(g, ins, np.random.default_rng((SEED, i, 7)), degrade_cfg())
+        return g, m, ins, keep, self.prior_for(i, ins, keep)
+
+    def __getitem__(self, i):
+        g, m, ins, keep, prior = self.sample(i)
+        x = tau_unet.make_input(g, prior, self.mean, self.std)
         return torch.from_numpy(x), torch.from_numpy(m.astype(np.int64))
 
 
 def save_cp_preview(ds, folder, n):
-    """増強の確認: 左 = 元の画像とラベル, 右 = 増強後 + 事前マスクの輪郭 (黄)"""
+    """増強の確認: 左 = 元の画像とラベル, 右 = 増強後 (画像を崩したもの) + 事前マスクの輪郭 (黄)"""
     if n <= 0 or not ds.imgs:
         return
     folder.mkdir(parents=True, exist_ok=True)
@@ -460,8 +490,7 @@ def save_cp_preview(ds, folder, n):
     for k in range(n):
         i = k % len(ds.imgs)
         g, m, ins = ds.load(i)
-        ag, am, ai = ds._augment(g, m, ins)
-        prior = ds.prior_for(i, ai)
+        ag, am, ai, keep, prior = ds.sample(i, force_degrade=DEGRADE_P > 0)
         H = min(g.shape[0], ag.shape[0])
         left = label_preview(g[:H], m[:H])
         right = label_preview(ag[:H], am[:H], None if prior is None else prior[:, :H])
@@ -469,7 +498,8 @@ def save_cp_preview(ds, folder, n):
             right = cv2.resize(right, (int(right.shape[1] * H / right.shape[0]), H))
         cv2.imwrite(str(folder / f'aug_{k:02d}.png'), np.hstack([left, np.full((H, 6, 3), 255, np.uint8), right]))
     np.random.set_state(state)
-    print(f'  増強・事前マスクの確認画像 → {folder}  (左: 元, 右: 増強後 + 事前マスクの輪郭 = 黄)')
+    print(f'  増強・事前マスクの確認画像 → {folder}  (左: 元, 右: 増強後 + 事前マスクの輪郭 = 黄。'
+          f'輪郭の一部が消えた/途切れた気泡にも黄の輪郭があれば正常)')
 
 
 @torch.no_grad()
@@ -496,13 +526,15 @@ def score_of(ev):
 
 
 def evaluate_both(model, ds, dev):
-    """事前マスクなし / あり の両方で評価"""
+    """val を3通りで評価: empty = 元の画像・事前なし (今までどおり出せているか) /
+    deg_empty = 崩した画像・事前なし / deg_synth = 崩した画像・事前あり (事前マスクで補えているか)"""
     out = {}
-    for mode in ('empty', 'synth'):
-        ds.prior_mode = mode
-        out[mode] = evaluate(model, DataLoader(ds, 1, shuffle=False, num_workers=WORKERS), dev)
-    ds.prior_mode = 'synth'
-    out['score'] = score_of(out['synth']) if BEST_BY == 'prior' else 0.5 * (score_of(out['empty']) + score_of(out['synth']))
+    for name, mode, deg in (('empty', 'empty', False), ('deg_empty', 'empty', True), ('deg_synth', 'synth', True)):
+        ds.prior_mode, ds.val_degrade = mode, deg
+        out[name] = evaluate(model, DataLoader(ds, 1, shuffle=False, num_workers=WORKERS), dev)
+    ds.prior_mode, ds.val_degrade = 'synth', False
+    out['score'] = (score_of(out['deg_synth']) if BEST_BY == 'prior'
+                    else 0.5 * (score_of(out['empty']) + score_of(out['deg_synth'])))
     return out
 
 
@@ -513,10 +545,10 @@ def prior_weight(first_conv):
 
 
 def fmt_eval(ev):
-    e, s = ev['empty']['iou'], ev['synth']['iou']
-    cp = ev['synth']['copy']
-    return (f'[事前なし] 内部 {e[1]:.3f} 境界 {e[2]:.3f} | [事前あり] 内部 {s[1]:.3f} 境界 {s[2]:.3f} '
-            f'(事前の効果 {s[2] - e[2]:+.4f}) 写し {"-" if cp is None else f"{100 * cp:.1f}%"}')
+    e, de, ds_ = ev['empty']['iou'], ev['deg_empty']['iou'], ev['deg_synth']['iou']
+    cp = ev['deg_synth']['copy']
+    return (f'[元の画像・事前なし] 内部 {e[1]:.3f} 境界 {e[2]:.3f} | [崩した画像] 境界 事前なし {de[2]:.3f} -> '
+            f'事前あり {ds_[2]:.3f} (事前の効果 {ds_[2] - de[2]:+.4f}) 写し {"-" if cp is None else f"{100 * cp:.1f}%"}')
 
 
 def make_model(dev):
@@ -551,6 +583,7 @@ def train(root, out, dev):
     on = [n for n, f in (('ランダムクロップ', AUG_RANDOM_CROP), ('左右反転', AUG_FLIP), ('回転', AUG_ROTATE),
                          ('明るさ', AUG_BRIGHTNESS), ('Copy-Paste', COPY_PASTE)) if f]
     print(f'  学習中の増強: {", ".join(on) if on else "なし"}  + 事前マスク {aug.as_dict()}')
+    print(f'  画像を崩す: 確率 {DEGRADE_P}, {degrade_cfg().as_dict()}')
     if COPY_PASTE:
         print(f'  Copy-Paste の材料: 小さい気泡 {len(tr.bank)}個')
     save_cp_preview(tr, out / 'aug_preview', CP_SAVE_PREVIEW)
@@ -567,6 +600,7 @@ def train(root, out, dev):
             'in_channels': tau_unet.IMAGE_CHANNELS + tau_unet.PRIOR_CHANNELS, 'tau': True,
             'prior_channels': ['interior', 'outline'], 'prior_edge_px': tau_unet.PRIOR_EDGE_PX,
             'prior_aug': aug.as_dict(),
+            'degrade': dict(degrade_cfg().as_dict(), p=DEGRADE_P),
             'edge_px': EDGE_PX, 'edge_w': EDGE_W, 'crop': list(CROP), 'seed': SEED,
             'train_hw': train_hw, 'n_train': len(tr), 'n_val': len(va),
             'src': str(SRC), 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
@@ -607,9 +641,10 @@ def train(root, out, dev):
         ev = evaluate_both(model, va, dev)
         pw_mean, pw_max = prior_weight(first_conv)
         ok_empty = empty_floor is None or score_of(ev['empty']) >= empty_floor
-        log.append({'ep': ep, 'loss': tl / len(dl_tr), 'score': ev['score'],
-                    'empty_iou': ev['empty']['iou'], 'synth_iou': ev['synth']['iou'], 'copy': ev['synth']['copy'],
-                    'prior_effect_edge': ev['synth']['iou'][2] - ev['empty']['iou'][2],
+        log.append({'ep': ep, 'loss': tl / len(dl_tr), 'score': ev['score'], 'empty_iou': ev['empty']['iou'],
+                    'deg_empty_iou': ev['deg_empty']['iou'], 'deg_synth_iou': ev['deg_synth']['iou'],
+                    'copy': ev['deg_synth']['copy'],
+                    'prior_effect_edge': ev['deg_synth']['iou'][2] - ev['deg_empty']['iou'][2],
                     'prior_w_mean': pw_mean, 'prior_w_max': pw_max, 'empty_ok': ok_empty})
         mark = '' if ok_empty else '  (事前なしの点数が下がりすぎ: best の候補外)'
         ck = dict(meta, state_dict=model.state_dict(), epoch=ep, val=ev)
