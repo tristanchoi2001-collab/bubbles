@@ -11,7 +11,10 @@
     -> 「事前マスクを参考にするが、画像に無いものは出さない・画像にあるものは事前マスクに無くても出す」を学ぶ
   - FINETUNE_FROM (今の best.pt) から始める。最初の畳み込みに事前マスク用の重みを 0 で足すので、
     学習前は best.pt と全く同じ結果 = 「今より悪くならない所」から始まる
-  - val は「事前マスクなし」と「事前マスクあり (正解から作ったもの。毎 epoch 同じ)」の両方で評価し、平均で best を選ぶ
+  - val は「事前マスクなし」と「事前マスクあり (正解から作ったもの。毎 epoch 同じ)」の両方で評価する。
+    best は BEST_BY で選ぶ (既定: 事前マスクありの点数が最高の epoch。ただし事前マスクなしの点数が開始モデルより
+    BEST_EMPTY_TOL 以上下がった epoch は選ばない)。毎 epoch「事前の効果」(ありとなしの境界 IoU の差) と
+    事前マスク用の重みの大きさも表示する (0 のままなら事前マスクを使っていない)
     「写し」= 事前マスクにあって正解では背景の画素を、気泡と出した割合 (事前マスクをそのまま写していないかの目安。低いほどよい)
   - 正解の気泡ごとのラベルマップ (instances/) もデータセットに保存する (事前マスクを作るため)
 
@@ -53,6 +56,9 @@ ENCODER = 'resnet34'          # FINETUNE_FROM = None のときのエンコーダ
 WORKERS = 0                   # Windows では 0 のまま
 SEED    = 0                   # 再現用の乱数シード
 FREEZE_ENCODER_EPOCHS = 0     # 最初の何 epoch エンコーダを固定するか (最初の畳み込み = 事前マスクの入口は固定しない)
+BEST_BY = 'prior'             # best.pt の選び方: 'prior' = 事前マスクありの点数が最高の epoch (ただし事前マスクなしの点数が
+                              #   開始モデルより BEST_EMPTY_TOL 以上下がった epoch は除く) / 'mean' = ありとなしの平均 (前の版)
+BEST_EMPTY_TOL = 0.01         # 'prior' のとき、事前マスクなしの点数 (0.4×内部 IoU + 0.6×境界 IoU) の低下の許容
 
 # [2-0] 学習中の増強 (1_unet_train.py と同じ。Roboflow で増強したなら切っておく)
 AUG_RANDOM_CROP = True        # CROP の大きさを無作為な位置で切り出す
@@ -496,15 +502,21 @@ def evaluate_both(model, ds, dev):
         ds.prior_mode = mode
         out[mode] = evaluate(model, DataLoader(ds, 1, shuffle=False, num_workers=WORKERS), dev)
     ds.prior_mode = 'synth'
-    out['score'] = 0.5 * (score_of(out['empty']) + score_of(out['synth']))
+    out['score'] = score_of(out['synth']) if BEST_BY == 'prior' else 0.5 * (score_of(out['empty']) + score_of(out['synth']))
     return out
+
+
+def prior_weight(first_conv):
+    """最初の畳み込みの事前マスク用の重みの大きさ (平均, 最大)。開始時は 0。小さいままなら事前マスクを使っていない"""
+    w = first_conv.detach()[:, tau_unet.IMAGE_CHANNELS:].abs()
+    return (float(w.mean()), float(w.max())) if w.numel() else (0.0, 0.0)
 
 
 def fmt_eval(ev):
     e, s = ev['empty']['iou'], ev['synth']['iou']
     cp = ev['synth']['copy']
     return (f'[事前なし] 内部 {e[1]:.3f} 境界 {e[2]:.3f} | [事前あり] 内部 {s[1]:.3f} 境界 {s[2]:.3f} '
-            f'写し {"-" if cp is None else f"{100 * cp:.1f}%"}')
+            f'(事前の効果 {s[2] - e[2]:+.4f}) 写し {"-" if cp is None else f"{100 * cp:.1f}%"}')
 
 
 def make_model(dev):
@@ -564,12 +576,17 @@ def train(root, out, dev):
             'copy_paste': {'on': COPY_PASTE, 'prob': CP_PROB, 'max': CP_MAX,
                            'max_area': CP_MAX_AREA, 'alpha': list(CP_ALPHA)} if COPY_PASTE else None}
 
-    best, best_ep = -1.0, 0
+    meta['best_by'] = BEST_BY
+    best, best_ep, empty_floor = -1.0, 0, None
     if FINETUNE_FROM:      # 開始モデル自体を基準にする → 学習で悪くなったら best.pt は開始モデルのまま
         ev0 = evaluate_both(model, va, dev)
         best = ev0['score']
+        if BEST_BY == 'prior':
+            empty_floor = score_of(ev0['empty']) - BEST_EMPTY_TOL
         torch.save(dict(meta, state_dict=model.state_dict(), epoch=0, val=ev0), out / 'best.pt')
-        print(f'  開始モデル val {fmt_eval(ev0)} (score {best:.3f}) — これより良くなったときだけ best を更新')
+        print(f'  開始モデル val {fmt_eval(ev0)} (score {best:.4f}) — これより良くなったときだけ best を更新'
+              + (f'\n  best の選び方: 事前マスクありの点数 (事前マスクなしの点数が {empty_floor:.4f} 未満の epoch は除く)'
+                 if empty_floor is not None else ''))
     log = []
     for ep in range(1, epochs + 1):
         frozen = ep <= FREEZE_ENCODER_EPOCHS
@@ -588,19 +605,23 @@ def train(root, out, dev):
             tl += loss.item()
         sched.step()
         ev = evaluate_both(model, va, dev)
+        pw_mean, pw_max = prior_weight(first_conv)
+        ok_empty = empty_floor is None or score_of(ev['empty']) >= empty_floor
         log.append({'ep': ep, 'loss': tl / len(dl_tr), 'score': ev['score'],
-                    'empty_iou': ev['empty']['iou'], 'synth_iou': ev['synth']['iou'], 'copy': ev['synth']['copy']})
-        mark = ''
+                    'empty_iou': ev['empty']['iou'], 'synth_iou': ev['synth']['iou'], 'copy': ev['synth']['copy'],
+                    'prior_effect_edge': ev['synth']['iou'][2] - ev['empty']['iou'][2],
+                    'prior_w_mean': pw_mean, 'prior_w_max': pw_max, 'empty_ok': ok_empty})
+        mark = '' if ok_empty else '  (事前なしの点数が下がりすぎ: best の候補外)'
         ck = dict(meta, state_dict=model.state_dict(), epoch=ep, val=ev)
         torch.save(ck, out / 'last.pt')
-        if ev['score'] > best:
+        if ok_empty and ev['score'] > best:
             best, best_ep = ev['score'], ep
             torch.save(ck, out / 'best.pt')
             mark = '  ← best'
         print(f'  ep {ep:3d}/{epochs}{" (エンコーダ固定)" if frozen else ""}  loss {tl / len(dl_tr):.4f}  '
-              f'{fmt_eval(ev)}   {time.time() - t0:.0f}s{mark}')
+              f'{fmt_eval(ev)}  事前の重み {pw_mean:.4f}/{pw_max:.4f}   {time.time() - t0:.0f}s{mark}')
         (out / 'log.json').write_text(json.dumps(log, indent=1), encoding='utf-8')
-    print(f'  学習完了。best = epoch {best_ep} (score {best:.3f})'
+    print(f'  学習完了。best = epoch {best_ep} (score {best:.4f})'
           + ('  ※ 開始モデルより良くならなかったので、best.pt は開始モデル (事前マスクを使わない) のまま'
              if FINETUNE_FROM and best_ep == 0 else ''))
     return out / 'best.pt'
