@@ -105,9 +105,9 @@ UNET_RESCUE_CORE_MIN = 100   # "hybrid": 救済を試す芯の最小面積 (px)�
 UNET_RESCUE_CORE_FRAC = 0.5  # "hybrid": 閉じ直した領域のうち芯が占める割合の下限 (液の領域を気泡にしないため)
 UNET_RING_RESCUE = True      # 穴の小さいリング気泡の取りこぼしを拾う ("wall" / "hybrid" 共通。False なら従来どおり)。
                              # 主経路の closing で穴が埋まり、小気泡の経路でも「くっついたリング2個で面積 > UNET_TINY_MAX」
-                             # 「隣の気泡から 2px 以内」のために捨てられていた (実データ 731〜790 の 60 フレームで 7 個。
-                             # U-Net は内部・境界とも確率 ≈ 1 で出していた)。既にある気泡は変えず、足すだけ
-UNET_RING_MAX = 2000         # この方法で拾う気泡1個の最大面積 (px)
+                             # 「隣の気泡から 2px 以内」のために捨てられていた (U-Net は内部・境界とも確率 ≈ 1 で出していた)。
+                             # 既にある気泡は変えずに足す。ただし小気泡の経路で1個にしていた「くっついたリング」は穴ごとに分ける
+UNET_RING_MAX = 600          # この方法で拾う気泡1個の最大面積 (px)。実データで拾った気泡は最大 374px
 UNET_RING_REACH = 8          # リングの穴からこの距離 (px) 以内の境界だけを気泡に含める (隣の大きい気泡の輪郭の残りを含めない)
 TRAIN_IMAGE_HW = None   # 学習画像のサイズ (H, W)。best.pt に記録があればそちらを使う。
                         # 古い best.pt で、撮影画像と学習画像のサイズが違う場合のみ指定。例: (1080, 416)
@@ -440,14 +440,17 @@ def _wall_main(prob, min_area, band, edge_thr, close_it):
     return inst, k
 
 
-def _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max):
+def _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max, ring=None, reach=8, stats=None):
     """"wall" の 4) 内部画素が残らなかった小気泡: 閉じた境界の塊を塗りつぶして気泡とする。
-    既にある気泡から 2px 以内の塊 (大きい気泡のリングの外側半分) は拾わない。inst をその場で更新"""
+    既にある気泡から 2px 以内の塊 (大きい気泡のリングの外側半分) は拾わない。inst をその場で更新。
+    ring = _ring_inputs(...) を渡すと、芯のある穴が2つ以上ある塊 (くっついたリング) は穴ごとに分ける
+    (分けた数は stats["pair_split"] に足す)"""
     H, W = inst.shape
     edge_raw = prob[2] > edge_thr
     assigned = inst > 0
     near_assigned = ndimage.binary_dilation(assigned, iterations=2)
     comp, nc = ndimage.label(edge_raw & ~assigned)         # closing 前の境界を使う (角の残骸を拾わない)
+    pad = int(np.ceil(reach)) + 2
     for ci, sl in enumerate(ndimage.find_objects(comp), start=1):
         if sl is None:
             continue
@@ -460,68 +463,114 @@ def _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max):
         a = int(filled.sum())
         if a < min_area or a > tiny_max:
             continue
+        if ring is not None and int((filled & ~c).sum()) > 0:
+            ya, yb, xa, xb = max(sl[0].start - pad, 0), min(sl[0].stop + pad, H), max(sl[1].start - pad, 0), min(sl[1].stop + pad, W)
+            sub = inst[ya:yb, xa:xb]
+            pieces = [(w, pm) for w, pm, ncore in _ring_pieces(comp[ya:yb, xa:xb] == ci, sub, ring[0][ya:yb, xa:xb],
+                                                               ring[1][ya:yb, xa:xb], reach)
+                      if ncore > RING_WEAK_CORE and int(pm.sum()) >= min_area]
+            if len(pieces) >= 2:                           # くっついたリング -> 穴ごとに1個
+                for w, pm in pieces:
+                    k += 1
+                    sub[w][pm & (sub[w] == 0)] = k
+                if stats is not None:
+                    stats["pair_split"] = stats.get("pair_split", 0) + 1
+                continue
         k += 1
         inst[y0:y1, x0:x1][filled] = k
     return inst, k
 
 
-def _ring_path(prob, inst, k, edge_thr, min_area, seed_thr, ring_max, reach):
+# 5) リング気泡の取りこぼしの判定に使う定数
+RING_WEAK_CORE = 4         # 芯がこの画素数以下の穴は「弱い種」: 気泡の面積が RING_WEAK_MAX_AREA 以下のときだけ拾う
+RING_WEAK_MAX_AREA = 45    #   (太い境界の帯の中の小さい穴から、輪郭の破片が気泡になるのを防ぐ。実データ 731〜790 で
+                           #    芯 4px 以下の正しい小気泡は面積 41px 以下、誤検出は 51〜121px だった)
+RING_FRAME_MARGIN = 2      # 画面の端からこの幅 (px) にかかる気泡は 5) では拾わない (画面で切れた気泡の輪郭の破片が多いため)
+RING_MERGE_GAP = 2         # この幅 (px) 以下の境界の線で隔てられた穴は同じ気泡 (穴を横切る細い線で1個を2個に割らない)
+
+
+def _ring_inputs(prob, edge_thr, close_it, seed_thr):
+    """リング気泡の判定に使う (芯, closing 後も残った領域)。closing 後も残った領域の穴は主経路が判定済みなので種にしない"""
+    core = (prob[1] > seed_thr) & (prob[2] <= edge_thr)
+    regions = _wall_regions(prob, edge_thr, close_it + 1)[0] > 0
+    return core, regions
+
+
+def _ring_pieces(c, sub, cor, regions, reach):
+    """境界の塊 c (切り出し座標) をリングの穴ごとの気泡に分ける。
+    リングの穴 = c が囲む穴のうち、画素の半分以上が芯で、既にある気泡も closing 後に残った領域も含まない穴。
+    RING_MERGE_GAP px 以下の線で隔てられた穴は1つにまとめる。
+    境界の画素は いちばん近い穴 の気泡にする。ただし 穴から reach px より遠い画素と、
+    穴より既にある気泡の方が近い画素 (隣の気泡の輪郭の残り) は含めない。
+    戻り値: [(窓 (slice, slice), 窓の中の気泡マスク, 穴の芯の画素数), ...]"""
+    hole = ndimage.binary_fill_holes(c) & ~c
+    if not hole.any():
+        return []
+    hl, nh = ndimage.label(hole)
+    seed = np.zeros(c.shape, bool)
+    for h, hs in enumerate(ndimage.find_objects(hl), start=1):
+        if hs is None:
+            continue
+        hm = hl[hs] == h
+        if (hm & ((sub[hs] > 0) | regions[hs])).any() or 2 * int((hm & cor[hs]).sum()) < int(hm.sum()):
+            continue
+        seed[hs] |= hm
+    if not seed.any():
+        return []
+    g = RING_MERGE_GAP // 2
+    grown = (ndimage.binary_dilation(seed, iterations=g) & (seed | c)) if g > 0 else seed
+    glab, ns = ndimage.label(grown)
+    seeds = np.where(seed, glab, 0)
+    d_seed, idx = ndimage.distance_transform_edt(seeds == 0, return_indices=True)
+    near = seeds[idx[0], idx[1]]
+    mask = c & (d_seed <= reach)
+    if (sub > 0).any():
+        mask &= d_seed < ndimage.distance_transform_edt(sub == 0)
+    mask |= seeds > 0
+    r = int(np.ceil(reach)) + 1
+    out = []
+    for s_id, ss in enumerate(ndimage.find_objects(seeds), start=1):
+        if ss is None:
+            continue
+        w = (slice(max(ss[0].start - r, 0), ss[0].stop + r), slice(max(ss[1].start - r, 0), ss[1].stop + r))
+        sm = seeds[w] == s_id
+        pl, _ = ndimage.label(mask[w] & (near[w] == s_id))
+        pm = ndimage.binary_fill_holes(np.isin(pl, np.unique(pl[sm]))) & (sub[w] == 0)
+        out.append((w, pm, int((sm & cor[w]).sum())))
+    return out
+
+
+def _ring_path(prob, inst, k, edge_thr, min_area, ring_max, reach, ring):
     """5) 穴の小さいリング気泡の取りこぼし (ring_max <= 0 なら何もしない)。既にある気泡の画素は変えない。
     主経路の closing でリングの穴が埋まり、4) でも「くっついたリング2個で 面積 > tiny_max」「隣の気泡から 2px 以内」
-    のために捨てられた気泡を拾う。
-    1) まだ気泡でない境界 (境界確率 > edge_thr) の塊ごとに、塊が囲む穴を求める
-    2) リングの穴 = 画素の半分以上が芯 (内部確率 > seed_thr かつ 境界確率 <= edge_thr) で、既にある気泡を含まない穴
-       (液の領域を囲む輪や、大きい気泡の輪郭の残りは、穴に芯がないので拾わない)
-    3) 気泡 = リングの穴 + その穴がいちばん近い境界の画素 (面積の決め方は 4) と同じく輪郭の外側まで)。
-       穴が2つ以上 (くっついたリング) なら境界の画素を近い方の穴に分ける。
-       既にある気泡の方が近い画素 (隣の気泡の輪郭の残り) と 穴から reach px より遠い画素は含めない
-    戻り値: (ラベルマップ, 最後のラベル番号, 追加した数)"""
+    のために捨てられた気泡を、まだ気泡でない境界の塊ごとに _ring_pieces で拾う。次のものは拾わない:
+      面積 < min_area または > ring_max / 弱い種 (芯 <= RING_WEAK_CORE px) で 面積 > RING_WEAK_MAX_AREA /
+      画面の端から RING_FRAME_MARGIN px にかかる
+    面積の決め方は 4) と同じく輪郭の外側まで。戻り値: (ラベルマップ, 最後のラベル番号, 追加した数)"""
     if ring_max <= 0:
         return inst, k, 0
     H, W = inst.shape
-    edge_raw = prob[2] > edge_thr
-    core_all = (prob[1] > seed_thr) & ~edge_raw
-    comp, nc = ndimage.label(edge_raw & ~(inst > 0))
+    comp, nc = ndimage.label((prob[2] > edge_thr) & ~(inst > 0))
+    pad = int(np.ceil(reach)) + 2
+    m = RING_FRAME_MARGIN
     n_add = 0
     for ci, sl in enumerate(ndimage.find_objects(comp), start=1):
         if sl is None:
             continue
-        y0, y1 = max(sl[0].start - 1, 0), min(sl[0].stop + 1, H)
-        x0, x1 = max(sl[1].start - 1, 0), min(sl[1].stop + 1, W)
-        c = comp[y0:y1, x0:x1] == ci
-        hole = ndimage.binary_fill_holes(c) & ~c
-        if not hole.any():
-            continue
-        sub = inst[y0:y1, x0:x1]
-        hl, nh = ndimage.label(hole)
-        cor = core_all[y0:y1, x0:x1]
-        seeds = np.zeros(c.shape, np.int32)
-        ns = 0
-        for h in range(1, nh + 1):
-            hm = hl == h
-            if (hm & (sub > 0)).any() or 2 * int((hm & cor).sum()) < int(hm.sum()):
-                continue
-            ns += 1
-            seeds[hm] = ns
-        if ns == 0:
-            continue
-        # 境界の画素は「いちばん近い穴」の気泡にする。ただし穴より既にある気泡の方が近い画素 (隣の気泡の輪郭の残り) と
-        # 穴から reach px より遠い画素は含めない
-        d_seed, idx = ndimage.distance_transform_edt(seeds == 0, return_indices=True)
-        d_asg = ndimage.distance_transform_edt(sub == 0) if (sub > 0).any() else np.full(c.shape, np.inf)
-        near = seeds[idx[0], idx[1]]
-        mask = (seeds > 0) | (c & (d_seed <= reach) & (d_seed < d_asg))
-        for s_id in range(1, ns + 1):
-            pm = mask & (near == s_id)
-            pl, npl = ndimage.label(pm)                       # 穴につながった部分だけ
-            pm = np.isin(pl, np.unique(pl[seeds == s_id]))
-            pm = ndimage.binary_fill_holes(pm) & (sub == 0)
+        ya, yb, xa, xb = max(sl[0].start - pad, 0), min(sl[0].stop + pad, H), max(sl[1].start - pad, 0), min(sl[1].stop + pad, W)
+        sub = inst[ya:yb, xa:xb]
+        for w, pm, ncore in _ring_pieces(comp[ya:yb, xa:xb] == ci, sub, ring[0][ya:yb, xa:xb], ring[1][ya:yb, xa:xb], reach):
+            pm = pm & (sub[w] == 0)
             a = int(pm.sum())
-            if a < min_area or a > ring_max:
+            if a < min_area or a > ring_max or (ncore <= RING_WEAK_CORE and a > RING_WEAK_MAX_AREA):
+                continue
+            ys, xs = np.nonzero(pm)
+            gy, gx = ya + w[0].start, xa + w[1].start
+            if gy + ys.min() < m or gx + xs.min() < m or gy + ys.max() >= H - m or gx + xs.max() >= W - m:
                 continue
             k += 1
             n_add += 1
-            sub[pm] = k
+            sub[w][pm] = k
     return inst, k, n_add
 
 
@@ -532,11 +581,13 @@ def extract_instances(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_
     2) 領域の判定: 壁近傍の帯で 内部確率 > 背景確率 なら気泡
     3) watershed で境界画素を隣接領域に配分
     4) 内部画素が残らなかった小気泡: 閉じた境界の塊を塗りつぶして気泡とする
-    5) ring_max > 0 なら 穴の小さいリング気泡の取りこぼしを拾う (_ring_path)。stats["ring"] に拾った数を足す
+    5) ring_max > 0 なら 穴の小さいリング気泡の取りこぼしを拾い (_ring_path)、4) のくっついたリングを分ける。
+       stats["ring"] に拾った数、stats["pair_split"] に分けた塊の数を足す
     """
     inst, k = _wall_main(prob, min_area, band, edge_thr, close_it)
-    inst, k = _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max)
-    inst, k, n_ring = _ring_path(prob, inst, k, edge_thr, min_area, seed_thr, ring_max, ring_reach)
+    ring = _ring_inputs(prob, edge_thr, close_it, seed_thr) if ring_max > 0 else None
+    inst, k = _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max, ring, ring_reach, stats)
+    inst, k, n_ring = _ring_path(prob, inst, k, edge_thr, min_area, ring_max, ring_reach, ring)
     if stats is not None:
         stats["ring"] = stats.get("ring", 0) + n_ring
     return inst
@@ -610,13 +661,15 @@ def extract_instances_hybrid(prob, min_area=4, band=25, edge_thr=0.5, close_it=2
     "wall" の結果はそのまま使い、壁の切れ目から背景に漏れて消えた気泡だけを _rescue_leaked で取り戻す。
     順番: wall の主経路 -> 救済 -> wall の小気泡の経路 -> リング気泡 (救済した気泡の輪郭の破片は拾わない)。
     救済がないフレームは "wall" と完全に同じ結果になる。ラベル番号は 主経路 -> 小気泡 -> リング -> 救済 の順。
-    stats (dict) を渡すと stats["rescued"] に救済した数、stats["ring"] にリング気泡を拾った数を足す"""
+    stats (dict) を渡すと stats["rescued"] に救済した数、stats["ring"] / stats["pair_split"] にリング気泡を拾った数 /
+    くっついたリングを分けた数を足す"""
     inst, k_main = _wall_main(prob, min_area, band, edge_thr, close_it)
     off = 1 << 24                                          # 救済した気泡は一時的に大きい番号にしておく
     inst, k_off, n_res = _rescue_leaked(prob, inst, off, min_area, band, edge_thr, close_it, seed_thr,
                                         core_min, core_frac)
-    inst, k = _tiny_path(prob, inst, k_main, edge_thr, min_area, tiny_max)
-    inst, k, n_ring = _ring_path(prob, inst, k, edge_thr, min_area, seed_thr, ring_max, ring_reach)
+    ring = _ring_inputs(prob, edge_thr, close_it, seed_thr) if ring_max > 0 else None
+    inst, k = _tiny_path(prob, inst, k_main, edge_thr, min_area, tiny_max, ring, ring_reach, stats)
+    inst, k, n_ring = _ring_path(prob, inst, k, edge_thr, min_area, ring_max, ring_reach, ring)
     if n_res:
         m = inst > off
         inst[m] = inst[m] - off + k
@@ -2275,7 +2328,9 @@ def run_detection_phase(cache_dir: str):
         print(f"\n  hybrid: 壁の切れ目から背景に漏れていた気泡を {inst_stats.get('rescued', 0)} 個 取り戻しました")
     if UNET_RING_RESCUE and UNET_INSTANCE_MODE != "seed":
         DETECTION_STATS["ring"] = inst_stats.get("ring", 0)
-        print(f"  穴の小さいリング気泡の取りこぼしを {inst_stats.get('ring', 0)} 個 拾いました (UNET_RING_RESCUE)")
+        DETECTION_STATS["pair_split"] = inst_stats.get("pair_split", 0)
+        print(f"  穴の小さいリング気泡の取りこぼしを {inst_stats.get('ring', 0)} 個 拾い、くっついたリングを "
+              f"{inst_stats.get('pair_split', 0)} 組 分けました (UNET_RING_RESCUE)")
     if SAVE_PROB_MAPS:
         print(f"\n  確率マップを {n_prob_saved} フレーム分保存: {os.path.abspath(prob_dir)}"
               "  (npz = 解析用 / png = 確認用: 入力 | 内部確率 | 境界確率)")

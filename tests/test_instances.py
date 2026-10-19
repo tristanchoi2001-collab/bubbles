@@ -10,6 +10,11 @@
      大きい気泡の画素は変えず、拾った気泡に大きい気泡の輪郭の残りを含めない
   g) リング気泡: 穴が液 (内部確率が低い) の輪は拾わない
   h) リング気泡: wall / hybrid とも、従来の気泡はすべて画素まで同じで、足すだけ
+  i) リング気泡: 小気泡の経路で1個にしていた小さいくっついたリング (面積 <= tiny_max) を2個に分ける
+  j) リング気泡: 太い境界の中の 1px の芯 (弱い種) から大きい気泡を作らない
+  k) リング気泡: 主経路の帯の判定で背景とされた領域を気泡にしない
+  l) リング気泡: 穴を横切る細い境界の線で1個の気泡を2個に割らない
+  m) リング気泡: 画面の端にかかる気泡は拾わない
 使い方: リポジトリのルートで  python -B tests/test_instances.py     (pytest でも実行できる)
 """
 import os
@@ -167,7 +172,7 @@ def test_e_ring_pair():
     lab, p = ring_scene()
     off = T.extract_instances(p, 4, 25, 0.5, 2, 300)
     st = {}
-    on = T.extract_instances(p, 4, 25, 0.5, 2, 300, ring_max=2000, stats=st)
+    on = T.extract_instances(p, 4, 25, 0.5, 2, 300, ring_max=600, stats=st)
     mo, mn = match(lab, off), match(lab, on)
     print(f"    くっついたリング IoU: 従来 {mo[1]:.2f}, {mo[2]:.2f} / リング気泡あり {mn[1]:.2f}, {mn[2]:.2f} (拾った {st.get('ring')} 個)")
     assert mo[1] == 0 and mo[2] == 0, "従来の方式で消えていない (テストの前提が崩れた)"
@@ -178,7 +183,7 @@ def test_e_ring_pair():
 def test_f_ring_touching_large():
     lab, p = ring_scene()
     off = T.extract_instances(p, 4, 25, 0.5, 2, 300)
-    on = T.extract_instances(p, 4, 25, 0.5, 2, 300, ring_max=2000)
+    on = T.extract_instances(p, 4, 25, 0.5, 2, 300, ring_max=600)
     mo, mn = match(lab, off), match(lab, on)
     print(f"    大きい気泡に接したリング IoU: 従来 {mo[4]:.2f} / リング気泡あり {mn[4]:.2f}, 大きい気泡 {mo[3]:.2f} -> {mn[3]:.2f}")
     assert mo[4] == 0, "従来の方式で消えていない (テストの前提が崩れた)"
@@ -190,7 +195,7 @@ def test_f_ring_touching_large():
 
 def test_g_ring_not_liquid_loop():
     lab, p = ring_scene()
-    on = T.extract_instances(p, 4, 25, 0.5, 2, 300, ring_max=2000)
+    on = T.extract_instances(p, 4, 25, 0.5, 2, 300, ring_max=600)
     yy, xx = np.ogrid[:H, :W]
     loop = (xx - 60) ** 2 + (yy - 200) ** 2 <= 15 ** 2
     assert not on[loop].any(), "穴が液の輪を気泡にした"
@@ -200,13 +205,92 @@ def test_h_ring_only_adds():
     lab, p = ring_scene()
     for name, f in (("wall", lambda **kw: T.extract_instances(p, 4, 25, 0.5, 2, 300, **kw)),
                     ("hybrid", lambda **kw: T.extract_instances_hybrid(p, 4, 25, 0.5, 2, 300, **kw))):
-        off, on = f(), f(ring_max=2000)
+        off, on = f(), f(ring_max=600)
         for g in np.unique(off[off > 0]):
             m = off == g
             v = np.unique(on[m])
             assert v.size == 1 and v[0] > 0 and (on == v[0]).sum() == m.sum(), f"{name}: 従来の気泡 {g} が変わった"
         assert match(lab, on)[5] == match(lab, off)[5] > 0.75
 
+
+def _p(pin, pedge, sigma=0.5):
+    p = np.stack([np.clip(1 - pin - pedge, 0, 1), pin, pedge]).astype(np.float32)
+    if sigma:
+        p = np.stack([ndimage.gaussian_filter(c, sigma) for c in p])
+    return (p / p.sum(0, keepdims=True)).astype(np.float32)
+
+
+def _ring(pin, pedge, cx, cy, rh, ro):
+    yy, xx = np.ogrid[:pin.shape[0], :pin.shape[1]]
+    d2 = (xx - cx) ** 2 + (yy - cy) ** 2
+    ann = (d2 > rh * rh) & (d2 <= ro * ro) & (pedge == 0) & (pin == 0)
+    ho = (d2 <= rh * rh) & (pedge == 0) & (pin == 0)
+    pedge[ann] = 1
+    pin[ho] = 1
+
+
+def _big(pin, pedge, cx, cy, r=30, wall=2):
+    yy, xx = np.ogrid[:pin.shape[0], :pin.shape[1]]
+    d = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+    pedge[(d <= r) & (d > r - wall)] = 1
+    pin[d <= r - wall] = 1
+
+
+def _ring_on_off(p):
+    return T.extract_instances(p, 4, 25, 0.5, 2, 300), T.extract_instances(p, 4, 25, 0.5, 2, 300, ring_max=600)
+
+
+def test_i_small_pair_split():
+    pin, pedge = np.zeros((120, 120), np.float32), np.zeros((120, 120), np.float32)
+    _ring(pin, pedge, 50, 50, 2, 5)
+    _ring(pin, pedge, 50, 60, 2, 5)                 # 合わせても 300px 未満
+    off, on = _ring_on_off(_p(pin, pedge))
+    print(f"    小さいくっついたリング: 従来 {off.max()} 個 / リング気泡あり {on.max()} 個")
+    assert off.max() == 1 and on.max() == 2
+    assert set(np.unique(on[off > 0])) == {1, 2} and not ((on > 0) & (off == 0)).any(), "画素が増えた/移った"
+
+
+def test_j_weak_seed():
+    pin, pedge = np.zeros((60, 60), np.float32), np.ones((60, 60), np.float32)
+    pin[30, 30], pedge[30, 30] = 1, 0
+    off, on = _ring_on_off(_p(pin, pedge, 0))
+    assert on.max() == off.max(), "1px の芯から気泡を作った"
+
+
+def test_k_band_rejected_region():
+    yy, xx = np.ogrid[:120, :120]
+    d2 = (xx - 60) ** 2 + (yy - 60) ** 2
+    pedge = ((d2 > 144) & (d2 <= 225)).astype(np.float32)
+    pin = np.where((d2 <= 144) & (xx < 48 + 0.62 * 25), 0.6, 0).astype(np.float32)
+    off, on = _ring_on_off(_p(pin, pedge))
+    assert on.max() == off.max(), "帯の判定で背景とされた領域を気泡にした"
+
+
+def test_l_line_across_hole():
+    pin, pedge = np.zeros((140, 140), np.float32), np.zeros((140, 140), np.float32)
+    _big(pin, pedge, 70, 40)
+    _ring(pin, pedge, 70, 79, 3.5, 9)               # 大きい気泡の下端に接したリング
+    pedge[72:87, 70] = 1                            # 穴を横切る 1px の線
+    pin[72:87, 70] = 0
+    off, on = _ring_on_off(_p(pin, pedge))
+    yy, xx = np.ogrid[:140, :140]
+    gt = (xx - 70) ** 2 + (yy - 79) ** 2 <= 81
+    new = np.unique(on[gt & (off == 0) & (on > 0)])
+    print(f"    穴を横切る線のあるリング: 拾った気泡 {len(new)} 個")
+    assert len(new) == 1
+
+
+def test_m_frame_edge():
+    def scene(x_ring):
+        pin, pedge = np.zeros((160, 120), np.float32), np.zeros((160, 120), np.float32)
+        _big(pin, pedge, x_ring + 36, 79, r=28)
+        _ring(pin, pedge, x_ring, 79, 2.5, 8)       # 大きい気泡の左端に接したリング
+        return _p(pin, pedge)
+    yy, xx = np.ogrid[:160, :120]
+    for x_ring, expect in ((30, True), (9, False)):   # 画面の中 -> 拾う / 左端から 1px -> 拾わない
+        off, on = _ring_on_off(scene(x_ring))
+        got = bool(((on > 0) & (off == 0) & ((xx - x_ring) ** 2 + (yy - 79) ** 2 <= 9)).any())
+        assert got == expect, (x_ring, got)
 
 def main() -> int:
     tests = [(n, f) for n, f in globals().items() if n.startswith("test_") and callable(f)]

@@ -174,7 +174,7 @@ def detect_pass(k: int, n_frames: int, gray_of: Callable[[int], np.ndarray], det
             st["prior_shapes"] += len(shapes)
             prior = tau_unet.render_prior(shapes, H, W, getattr(detector, "edge_px", tau_unet.PRIOR_EDGE_PX))
         prob = detector.prob(gray, prior)
-        n_res0 = inst_stats.get("rescued", 0)
+        n_res0, n_ring0 = inst_stats.get("rescued", 0), inst_stats.get("ring", 0)
         inst = T3.unet_instances(prob, stats=inst_stats)
         dets = T3.instances_to_detections(inst, roi_bool)
         dets_all.append(dets)
@@ -193,13 +193,15 @@ def detect_pass(k: int, n_frames: int, gray_of: Callable[[int], np.ndarray], det
                     save_prior_debug(os.path.join(debug_dir, f"{stem}_pass{k}.png"), gray, prior, pinst, cinst,
                                      only_prev, only_now, k)
                     st["debug_saved"] += 1
-        n_res = inst_stats.get("rescued", 0) - n_res0
+        n_res, n_ring = inst_stats.get("rescued", 0) - n_res0, inst_stats.get("ring", 0) - n_ring0
         if on_frame is not None:
             on_frame(f, gray, prob, inst, dets)
         name = names[f] if names else str(f)
         log(f"  [パス{k} {name}] 検出{len(dets)}個" + (f", 事前マスクの気泡 {len(shapes)}個" if prev is not None else "")
-            + (f"  | 救済 {n_res}個" if n_res else "") + msg)
+            + (f"  | 救済 {n_res}個" if n_res else "") + (f"  | リング気泡 {n_ring}個" if n_ring else "") + msg)
     st["rescued"] = inst_stats.get("rescued", 0)
+    st["ring"] = inst_stats.get("ring", 0)
+    st["pair_split"] = inst_stats.get("pair_split", 0)
     return dets_all, st
 
 
@@ -293,6 +295,9 @@ def set_detection_stats(st: dict):
     T3.DETECTION_STATS["mode"] = UNET_INSTANCE_MODE
     if UNET_INSTANCE_MODE == "hybrid":
         T3.DETECTION_STATS["rescued"] = st.get("rescued", 0)
+    if T3.UNET_RING_RESCUE and UNET_INSTANCE_MODE != "seed":
+        T3.DETECTION_STATS["ring"] = st.get("ring", 0)
+        T3.DETECTION_STATS["pair_split"] = st.get("pair_split", 0)
     T3.DETECTION_STATS["pass"] = st["pass"]
 
 
