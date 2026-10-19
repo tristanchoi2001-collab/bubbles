@@ -114,6 +114,12 @@ UNET_INSTANCE_MODE = "hybrid"  # 確率マップ -> 気泡の分け方
 UNET_SEED_THR = 0.5          # "seed" / "hybrid" の芯の内部確率のしきい値
 UNET_RESCUE_CORE_MIN = 100   # "hybrid": 救済を試す芯の最小面積 (px)。小さい芯 (小気泡・ノイズ) は救済しない
 UNET_RESCUE_CORE_FRAC = 0.5  # "hybrid": 閉じ直した領域のうち芯が占める割合の下限 (液の領域を気泡にしないため)
+UNET_RING_RESCUE = True      # 穴の小さいリング気泡の取りこぼしを拾う ("wall" / "hybrid" 共通。False なら従来どおり)。
+                             # 主経路の closing で穴が埋まり、小気泡の経路でも「くっついたリング2個で面積 > UNET_TINY_MAX」
+                             # 「隣の気泡から 2px 以内」のために捨てられていた (実データ 731〜790 の 60 フレームで 7 個。
+                             # U-Net は内部・境界とも確率 ≈ 1 で出していた)。既にある気泡は変えず、足すだけ
+UNET_RING_MAX = 2000         # この方法で拾う気泡1個の最大面積 (px)
+UNET_RING_REACH = 8          # リングの穴からこの距離 (px) 以内の境界だけを気泡に含める (隣の大きい気泡の輪郭の残りを含めない)
 TRAIN_IMAGE_HW = None   # 学習画像のサイズ (H, W)。best.pt に記録があればそちらを使う。
                         # 古い best.pt で、撮影画像と学習画像のサイズが違う場合のみ指定。例: (1080, 416)
 SAVE_INSTANCE_MASKS = False  # True ならフレームごとの気泡ラベルマップを OUTPUT_FOLDER/instances/*.npz に保存
@@ -470,15 +476,80 @@ def _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max):
     return inst, k
 
 
-def extract_instances(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_max=300):
+def _ring_path(prob, inst, k, edge_thr, min_area, seed_thr, ring_max, reach):
+    """5) 穴の小さいリング気泡の取りこぼし (ring_max <= 0 なら何もしない)。既にある気泡の画素は変えない。
+    主経路の closing でリングの穴が埋まり、4) でも「くっついたリング2個で 面積 > tiny_max」「隣の気泡から 2px 以内」
+    のために捨てられた気泡を拾う。
+    1) まだ気泡でない境界 (境界確率 > edge_thr) の塊ごとに、塊が囲む穴を求める
+    2) リングの穴 = 画素の半分以上が芯 (内部確率 > seed_thr かつ 境界確率 <= edge_thr) で、既にある気泡を含まない穴
+       (液の領域を囲む輪や、大きい気泡の輪郭の残りは、穴に芯がないので拾わない)
+    3) 気泡 = リングの穴 + その穴がいちばん近い境界の画素 (面積の決め方は 4) と同じく輪郭の外側まで)。
+       穴が2つ以上 (くっついたリング) なら境界の画素を近い方の穴に分ける。
+       既にある気泡の方が近い画素 (隣の気泡の輪郭の残り) と 穴から reach px より遠い画素は含めない
+    戻り値: (ラベルマップ, 最後のラベル番号, 追加した数)"""
+    if ring_max <= 0:
+        return inst, k, 0
+    H, W = inst.shape
+    edge_raw = prob[2] > edge_thr
+    core_all = (prob[1] > seed_thr) & ~edge_raw
+    comp, nc = ndimage.label(edge_raw & ~(inst > 0))
+    n_add = 0
+    for ci, sl in enumerate(ndimage.find_objects(comp), start=1):
+        if sl is None:
+            continue
+        y0, y1 = max(sl[0].start - 1, 0), min(sl[0].stop + 1, H)
+        x0, x1 = max(sl[1].start - 1, 0), min(sl[1].stop + 1, W)
+        c = comp[y0:y1, x0:x1] == ci
+        hole = ndimage.binary_fill_holes(c) & ~c
+        if not hole.any():
+            continue
+        sub = inst[y0:y1, x0:x1]
+        hl, nh = ndimage.label(hole)
+        cor = core_all[y0:y1, x0:x1]
+        seeds = np.zeros(c.shape, np.int32)
+        ns = 0
+        for h in range(1, nh + 1):
+            hm = hl == h
+            if (hm & (sub > 0)).any() or 2 * int((hm & cor).sum()) < int(hm.sum()):
+                continue
+            ns += 1
+            seeds[hm] = ns
+        if ns == 0:
+            continue
+        # 境界の画素は「いちばん近い穴」の気泡にする。ただし穴より既にある気泡の方が近い画素 (隣の気泡の輪郭の残り) と
+        # 穴から reach px より遠い画素は含めない
+        d_seed, idx = ndimage.distance_transform_edt(seeds == 0, return_indices=True)
+        d_asg = ndimage.distance_transform_edt(sub == 0) if (sub > 0).any() else np.full(c.shape, np.inf)
+        near = seeds[idx[0], idx[1]]
+        mask = (seeds > 0) | (c & (d_seed <= reach) & (d_seed < d_asg))
+        for s_id in range(1, ns + 1):
+            pm = mask & (near == s_id)
+            pl, npl = ndimage.label(pm)                       # 穴につながった部分だけ
+            pm = np.isin(pl, np.unique(pl[seeds == s_id]))
+            pm = ndimage.binary_fill_holes(pm) & (sub == 0)
+            a = int(pm.sum())
+            if a < min_area or a > ring_max:
+                continue
+            k += 1
+            n_add += 1
+            sub[pm] = k
+    return inst, k, n_add
+
+
+def extract_instances(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_max=300,
+                      ring_max=0, ring_reach=8, seed_thr=0.5, stats=None):
     """確率マップ (3,H,W) -> 気泡ラベルマップ (0=なし, 1..N=気泡)。UNET_INSTANCE_MODE = "wall" の方式
     1) 境界(class 2)を壁として領域分割。フレーム端も壁とする -> 画面で切れた気泡の領域も閉じる
     2) 領域の判定: 壁近傍の帯で 内部確率 > 背景確率 なら気泡
     3) watershed で境界画素を隣接領域に配分
     4) 内部画素が残らなかった小気泡: 閉じた境界の塊を塗りつぶして気泡とする
+    5) ring_max > 0 なら 穴の小さいリング気泡の取りこぼしを拾う (_ring_path)。stats["ring"] に拾った数を足す
     """
     inst, k = _wall_main(prob, min_area, band, edge_thr, close_it)
     inst, k = _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max)
+    inst, k, n_ring = _ring_path(prob, inst, k, edge_thr, min_area, seed_thr, ring_max, ring_reach)
+    if stats is not None:
+        stats["ring"] = stats.get("ring", 0) + n_ring
     return inst
 
 
@@ -545,22 +616,24 @@ def _rescue_leaked(prob, inst, k, min_area, band, edge_thr, close_it, seed_thr, 
 
 
 def extract_instances_hybrid(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_max=300,
-                             seed_thr=0.5, core_min=100, core_frac=0.5, stats=None):
+                             seed_thr=0.5, core_min=100, core_frac=0.5, stats=None, ring_max=0, ring_reach=8):
     """確率マップ (3,H,W) -> 気泡ラベルマップ。UNET_INSTANCE_MODE = "hybrid" の方式。
     "wall" の結果はそのまま使い、壁の切れ目から背景に漏れて消えた気泡だけを _rescue_leaked で取り戻す。
-    順番: wall の主経路 -> 救済 -> wall の小気泡の経路 (救済した気泡の輪郭の破片は拾わない)。
-    救済がないフレームは "wall" と完全に同じ結果になる。ラベル番号は 主経路 -> 小気泡 -> 救済 の順。
-    stats (dict) を渡すと stats["rescued"] に救済した数を足す"""
+    順番: wall の主経路 -> 救済 -> wall の小気泡の経路 -> リング気泡 (救済した気泡の輪郭の破片は拾わない)。
+    救済がないフレームは "wall" と完全に同じ結果になる。ラベル番号は 主経路 -> 小気泡 -> リング -> 救済 の順。
+    stats (dict) を渡すと stats["rescued"] に救済した数、stats["ring"] にリング気泡を拾った数を足す"""
     inst, k_main = _wall_main(prob, min_area, band, edge_thr, close_it)
     off = 1 << 24                                          # 救済した気泡は一時的に大きい番号にしておく
     inst, k_off, n_res = _rescue_leaked(prob, inst, off, min_area, band, edge_thr, close_it, seed_thr,
                                         core_min, core_frac)
     inst, k = _tiny_path(prob, inst, k_main, edge_thr, min_area, tiny_max)
+    inst, k, n_ring = _ring_path(prob, inst, k, edge_thr, min_area, seed_thr, ring_max, ring_reach)
     if n_res:
         m = inst > off
         inst[m] = inst[m] - off + k
     if stats is not None:
         stats["rescued"] = stats.get("rescued", 0) + n_res
+        stats["ring"] = stats.get("ring", 0) + n_ring
     return inst
 
 
@@ -609,16 +682,19 @@ def extract_instances_seed(prob, min_area=4, edge_thr=0.5, tiny_max=300, seed_th
 
 def unet_instances(prob, mode=None, stats=None):
     """確率マップを気泡ラベルマップにする。mode: "wall" / "hybrid" / "seed" (None なら UNET_INSTANCE_MODE)。
-    stats (dict): "hybrid" で救済した数を stats["rescued"] に足す"""
+    stats (dict): "hybrid" で救済した数を stats["rescued"] に、UNET_RING_RESCUE で拾ったリング気泡の数を stats["ring"] に足す"""
     mode = UNET_INSTANCE_MODE if mode is None else mode
+    ring_max = UNET_RING_MAX if UNET_RING_RESCUE else 0
     if mode not in ("wall", "hybrid", "seed"):
         raise ValueError(f'UNET_INSTANCE_MODE は "wall" / "hybrid" / "seed": {mode!r}')
     if mode == "seed":
         return extract_instances_seed(prob, UNET_MIN_AREA, UNET_EDGE_THR, UNET_TINY_MAX, UNET_SEED_THR, UNET_CLOSE)
     if mode == "hybrid":
         return extract_instances_hybrid(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
-                                        UNET_SEED_THR, UNET_RESCUE_CORE_MIN, UNET_RESCUE_CORE_FRAC, stats)
-    return extract_instances(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX)
+                                        UNET_SEED_THR, UNET_RESCUE_CORE_MIN, UNET_RESCUE_CORE_FRAC, stats,
+                                        ring_max, UNET_RING_REACH)
+    return extract_instances(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
+                             ring_max, UNET_RING_REACH, UNET_SEED_THR, stats)
 
 
 def unmatched_instances(a: np.ndarray, b: np.ndarray, iou_thr: float = 0.5) -> List[int]:
@@ -2164,9 +2240,9 @@ def run_detection_phase(cache_dir: str):
 
         gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
         prob = detector.prob(gray)
-        n_res0 = inst_stats.get("rescued", 0)
+        n_res0, n_ring0 = inst_stats.get("rescued", 0), inst_stats.get("ring", 0)
         inst = unet_instances(prob, stats=inst_stats)
-        n_res = inst_stats.get("rescued", 0) - n_res0
+        n_res, n_ring = inst_stats.get("rescued", 0) - n_res0, inst_stats.get("ring", 0) - n_ring0
         if not filenames:   # 最初のフレームだけ入力の健全性チェック
             check_unet_input(gray, prob, inst, detector, filename)
         if SAVE_INSTANCE_MASKS:
@@ -2200,7 +2276,7 @@ def run_detection_phase(cache_dir: str):
         filenames.append(filename)
         total_areas.append(total_area)
         roi_counts.append(roi_count)
-        res_msg = f"  | 救済 {n_res}個" if n_res else ""
+        res_msg = (f"  | 救済 {n_res}個" if n_res else "") + (f"  | リング気泡 {n_ring}個" if n_ring else "")
         print(f"  [{filename}] 検出{len(dets)}個 (ROI内{roi_count}個), ROI内合計面積 {total_area:.0f}px{res_msg}{diff_msg}")
 
     DETECTION_STATS.clear()
@@ -2208,6 +2284,9 @@ def run_detection_phase(cache_dir: str):
     if UNET_INSTANCE_MODE == "hybrid":
         DETECTION_STATS["rescued"] = inst_stats.get("rescued", 0)
         print(f"\n  hybrid: 壁の切れ目から背景に漏れていた気泡を {inst_stats.get('rescued', 0)} 個 取り戻しました")
+    if UNET_RING_RESCUE and UNET_INSTANCE_MODE != "seed":
+        DETECTION_STATS["ring"] = inst_stats.get("ring", 0)
+        print(f"  穴の小さいリング気泡の取りこぼしを {inst_stats.get('ring', 0)} 個 拾いました (UNET_RING_RESCUE)")
     if SAVE_PROB_MAPS:
         print(f"\n  確率マップを {n_prob_saved} フレーム分保存: {os.path.abspath(prob_dir)}"
               "  (npz = 解析用 / png = 確認用: 入力 | 内部確率 | 境界確率)")
@@ -2231,7 +2310,8 @@ def used_params(roi_rect, preprocess_params) -> dict:
         "UNET": {"min_area": UNET_MIN_AREA, "band": UNET_BAND, "edge_thr": UNET_EDGE_THR,
                  "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX,
                  "mode": UNET_INSTANCE_MODE, "seed_thr": UNET_SEED_THR, "rescue_core_min": UNET_RESCUE_CORE_MIN,
-                 "rescue_core_frac": UNET_RESCUE_CORE_FRAC, "detection": dict(DETECTION_STATS)},
+                 "rescue_core_frac": UNET_RESCUE_CORE_FRAC, "ring_rescue": UNET_RING_RESCUE,
+                 "ring_max": UNET_RING_MAX, "ring_reach": UNET_RING_REACH, "detection": dict(DETECTION_STATS)},
         "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,
         "MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "POS_GATE_SIZE_FRAC": POS_GATE_SIZE_FRAC,
         "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
