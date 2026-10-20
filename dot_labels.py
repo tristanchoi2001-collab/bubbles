@@ -48,6 +48,8 @@ CAND_PEAK = 60                # 塊の一番明るい画素がこれ以上 (Nois
 CAND_MIN_AREA = 5             # 光っている画素の数の下限 (tracker3 の IGNORE_PARTICLE_AREA = 4 より大きい)
 CAND_MAX_AREA = 600           # 塗りつぶした面積の上限 (これより大きい塊は小さい点ではないので候補にしない)
 LABEL_GAP = 2                 # ラベル済みの気泡からこの px 以内に掛かる塊は候補にしない (その気泡の輪郭の一部のことが多い)
+PAIR_MIN_HOLE = 3             # 穴がこの px 以上の輪を「輪」とみなす。輪を 2つ以上含む塊 (くっついた輪) は輪ごとの候補に分ける
+                              # (1つのラベルにすると「くっついた2個 = 1個」を教えてしまう)。0 なら分けない
 
 # [3] 書き出し
 IGNORE_PAD = 2                # 無視する範囲を候補の周りにこの px 広げる (点のぼやけた縁も背景として教えない)
@@ -56,7 +58,8 @@ GROW_PX = 0                   # 「気泡」にした点のマスクを広げる
 
 # [2] 確認画面
 GRID = (5, 4)                 # 1ページのタイルの数 (横, 縦)
-TILE = 180                    # タイル1枚の大きさ (画面の px)
+TILE = 140                    # タイル1枚の大きさ (画面の px)。窓は 横 GRID[0]×(TILE+2) / 縦 52 + GRID[1]×(TILE+2) px
+                              # (既定 708×618)。下の段が画面からはみ出すなら小さくする (見えないタイルも Enter で「気泡」になる)
 MIN_CROP = 33                 # タイルに映す範囲の最小 (元画像の px)。点の周りの様子も見えるように
 # ======================================================================
 
@@ -64,6 +67,7 @@ import json
 import os
 import shutil
 import sys
+import time
 from collections import Counter, OrderedDict
 from datetime import datetime
 from pathlib import Path
@@ -114,24 +118,53 @@ def labelled_mask(anns, H, W):
     return m > 0
 
 
-def fill_dot(cm):
+def fill_dot(cm, closed=(False, False, False, False)):
     """光っている画素の塊 (bool) -> 気泡の範囲。輪の穴と、切れた輪 (C 字、切れ目 約4px まで) を埋める。
-    埋めるのは塊の凸包の中だけ (小さい気泡はほぼ円なので)"""
-    p = np.pad(cm, 3).astype(np.uint8)
-    c = cv2.morphologyEx(p, cv2.MORPH_CLOSE, _disk(2))
+    膨張 -> 穴埋め -> 収縮 の順 (膨張で切れ目をふさいでから穴を埋める)。埋めるのは塊の凸包の中だけ (小さい気泡はほぼ円)。
+    closed: 塊が画像の (上, 下, 左, 右) の端に接しているか。接している側は画像の端を輪の一部とみなす (端で切れた輪)"""
+    r = 2
+    e = r + 1
+    p = np.pad(cm, e).astype(np.uint8)
+    d = cv2.dilate(p, _disk(r))
+    for side, on in zip(((slice(0, e), slice(None)), (slice(-e, None), slice(None)),
+                         (slice(None), slice(0, e)), (slice(None), slice(-e, None))), closed):
+        if on:
+            d[side] = 1
+    d = ndimage.binary_fill_holes(d).astype(np.uint8)
+    c = cv2.erode(d, _disk(r), borderType=cv2.BORDER_CONSTANT, borderValue=0)
     hull = np.zeros_like(p)
     cv2.fillConvexPoly(hull, cv2.convexHull(cv2.findNonZero(p)), 1)
-    f = (ndimage.binary_fill_holes(c > 0) & (hull > 0)) | (p > 0)
-    return f[3:-3, 3:-3]
+    f = ((c > 0) & (hull > 0)) | (p > 0)
+    return f[e:-e, e:-e]
+
+
+def split_pairs(cm, f, min_hole=PAIR_MIN_HOLE):
+    """くっついた輪 (穴が min_hole px 以上の輪を 2つ以上含む塊) を、輪ごとに分ける (画素は一番近い穴の輪へ)。
+    戻り値: [(範囲, 光っている画素)]。分けないときは [(f, cm)]"""
+    if min_hole <= 0:
+        return [(f, cm)]
+    holes = ndimage.binary_fill_holes(cm) & ~cm
+    lab, n = ndimage.label(holes)
+    if n < 2:
+        return [(f, cm)]
+    sizes = ndimage.sum(holes, lab, range(1, n + 1))
+    strong = [k + 1 for k, sz in enumerate(sizes) if sz >= min_hole]
+    if len(strong) < 2:
+        return [(f, cm)]
+    seeds = np.where(np.isin(lab, strong), lab, 0)
+    _, (iy, ix) = ndimage.distance_transform_edt(seeds == 0, return_indices=True)
+    owner = seeds[iy, ix]
+    return [(f & (owner == k), cm & (owner == k)) for k in strong]
 
 
 class Cand:
     """候補1つ。mask は (y0, x0) から始まる切り出し (bool)"""
-    __slots__ = ('split', 'file', 'x0', 'y0', 'mask', 'lit', 'peak', 'ring')
+    __slots__ = ('split', 'file', 'x0', 'y0', 'mask', 'lit', 'peak', 'ring', 'pair')
 
-    def __init__(self, split, file, x0, y0, mask, lit, peak, ring):
+    def __init__(self, split, file, x0, y0, mask, lit, peak, ring, pair=False):
         self.split, self.file, self.x0, self.y0 = split, file, int(x0), int(y0)
         self.mask, self.lit, self.peak, self.ring = mask, int(lit), int(peak), bool(ring)
+        self.pair = bool(pair)          # くっついた輪を分けた片方
 
     @property
     def area(self):
@@ -139,14 +172,16 @@ class Cand:
 
     @property
     def id(self):
-        """判定の保存に使う名前。条件を変えて探し直しても、同じ塊なら同じ名前になる"""
+        """判定の保存に使う名前。条件を変えて探し直しても、同じ塊なら同じ名前になる
+        (位置・大きさ・光っている画素の数。埋め方を変えても変わらない)"""
         h, w = self.mask.shape
-        return f'{self.split}/{self.file}@{self.x0},{self.y0},{w}x{h},{self.area}'
+        return f'{self.split}/{self.file}@{self.x0},{self.y0},{w}x{h},{self.lit}'
 
 
 def find_candidates(gray, labelled, split='', file='', low=CAND_LOW, peak=CAND_PEAK, min_area=CAND_MIN_AREA,
-                    max_area=CAND_MAX_AREA, label_gap=LABEL_GAP):
+                    max_area=CAND_MAX_AREA, label_gap=LABEL_GAP, pair_min_hole=PAIR_MIN_HOLE):
     """学習画像 1枚の候補。gray: uint8, labelled: ラベル済み気泡の画素 (bool)"""
+    H, W = gray.shape
     near = labelled
     if label_gap > 0:
         near = cv2.dilate(labelled.astype(np.uint8), _disk(label_gap)) > 0
@@ -159,13 +194,18 @@ def find_candidates(gray, labelled, split='', file='', low=CAND_LOW, peak=CAND_P
         cm = lab[y:y + h, x:x + w] == i
         if near[y:y + h, x:x + w][cm].any():
             continue
-        pk = int(gray[y:y + h, x:x + w][cm].max())
-        if pk < peak:
-            continue
-        f = fill_dot(cm)
-        if f.sum() > max_area:
-            continue
-        out.append(Cand(split, file, x, y, f, a, pk, f.sum() > cm.sum()))
+        f = fill_dot(cm, (y == 0, y + h == H, x == 0, x + w == W))
+        parts = split_pairs(cm, f, pair_min_hole)
+        for pf, pc in parts:
+            lit = int(pc.sum())
+            if lit < min_area or pf.sum() > max_area:
+                continue
+            ys, xs = np.nonzero(pf)
+            y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+            pk = int(gray[y:y + h, x:x + w][pc].max())
+            if pk < peak:
+                continue
+            out.append(Cand(split, file, x + x0, y + y0, pf[y0:y1, x0:x1], lit, pk, pf.sum() > lit, len(parts) > 1))
     out.sort(key=lambda c: (c.y0, c.x0))
     return out
 
@@ -333,7 +373,8 @@ class Review:
             cv2.line(out, (t - 9, 8), (8, t - 9), col, 3)
         elif st == 'u':
             cv2.putText(out, '?', (t - 30, 34), cv2.FONT_HERSHEY_SIMPLEX, 1.1, col, 3)
-        cv2.putText(out, f'{c.area}px / {c.peak}', (6, t - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
+        cv2.putText(out, f'{c.area}px / {c.peak}' + (' pair' if c.pair else ''), (6, t - 8),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
         return out
 
     def render(self, note=''):
@@ -350,7 +391,7 @@ class Review:
         head = pc[0] if pc else None
         line1 = (f'{head.split if head else "-"}  {Path(head.file).name if head else ""}   page {self.page + 1}/{self.n_pages}'
                  f'   checked {done}/{len(self.cands)} (y {cnt["y"]} / n {cnt["n"]} / u {cnt["u"]})  {note}')
-        line2 = 'L-click: NOT bubble   R-click: unsure   Enter/Space: others = bubble, next page   b: back   q: save+quit'
+        line2 = 'L: NOT bubble  R: unsure (2 dots in 1 outline too)  Enter/Space: rest = bubble, next  b: back  q: quit'
         cv2.putText(canvas, line1, (6, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         cv2.putText(canvas, line2, (6, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (180, 220, 255), 1)
         return canvas
@@ -366,11 +407,16 @@ class Review:
         return int(r * self.cols + q)
 
 
+ENTER_GUARD_S = 0.4            # ページが変わってからこの秒数の Enter/Space は無視 (押しっぱなし・二度押しで次のページを見ずに確定しない)
+
+
 def run_review(rv, dec_path):
     """確認の画面 (OpenCV のウィンドウ)。終わったら判定を保存する"""
     win = 'dot review'
     cv2.namedWindow(win, cv2.WINDOW_AUTOSIZE)
-    state = {'dirty': True}
+    h0, w0 = rv.render().shape[:2]
+    print(f'  確認の窓 {w0}×{h0} px (下の段が画面に入らなければ GRID / TILE を小さくしてください)')
+    state = {'dirty': True, 'shown': 0.0}
 
     def on_mouse(event, x, y, flags, param):
         if event in (cv2.EVENT_LBUTTONDOWN, cv2.EVENT_RBUTTONDOWN):
@@ -390,7 +436,10 @@ def run_review(rv, dec_path):
             if cv2.getWindowProperty(win, cv2.WND_PROP_VISIBLE) < 1:
                 break
             if key in (10, 13, 32):
+                if time.monotonic() - state['shown'] < ENTER_GUARD_S:
+                    continue
                 last = rv.confirm()
+                state['shown'] = time.monotonic()
                 save_decisions(dec_path, rv.dec)
                 if last:
                     print('  最後のページまで確認しました')
@@ -399,7 +448,7 @@ def run_review(rv, dec_path):
             elif key == ord('b'):
                 rv.back()
                 save_decisions(dec_path, rv.dec)
-                state['dirty'] = True
+                state['dirty'], state['shown'] = True, time.monotonic()
             elif key in (ord('q'), 27):
                 break
     finally:
@@ -435,6 +484,9 @@ def export(src, out, cands, cocos, dec, grow_px=GROW_PX, ignore_pad=IGNORE_PAD):
     """OUT/coco (元のラベル + y の点) と OUT/ignore (u と未確認の候補) を作り直す。戻り値: 集計"""
     src, out = Path(src), Path(out)
     for sub in ('coco', 'ignore'):
+        t = (out / sub).resolve()
+        if t == src.resolve() or t in src.resolve().parents:
+            raise ValueError(f'{t} は SRC ({src}) を含むので消せません。OUT を別のフォルダにしてください')
         if (out / sub).exists():
             shutil.rmtree(out / sub)
     by_img = {}
@@ -444,6 +496,7 @@ def export(src, out, cands, cocos, dec, grow_px=GROW_PX, ignore_pad=IGNORE_PAD):
     for split, d in cocos.items():
         cdir, idir = out / 'coco' / split, out / 'ignore' / split
         cdir.mkdir(parents=True, exist_ok=True)
+        idir.mkdir(parents=True, exist_ok=True)       # 無視する所が無くても作る (IGNORE_SRC に指定しても止まらない)
         anns = list(d['annotations'])
         next_id = max((int(a.get('id', 0)) for a in anns), default=0) + 1
         cat_count = Counter(a.get('category_id') for a in anns)
@@ -451,6 +504,10 @@ def export(src, out, cands, cocos, dec, grow_px=GROW_PX, ignore_pad=IGNORE_PAD):
         s = Counter()
         for im in d['images']:
             fn = im['file_name']
+            if not (src / split / fn).exists():           # 学習スクリプトと同じく飛ばす (COCO の記載はそのまま)
+                print(f'    画像がありません (飛ばします): {src / split / fn}')
+                s['missing_images'] += 1
+                continue
             (cdir / fn).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src / split / fn, cdir / fn)
             H, W = int(im['height']), int(im['width'])
@@ -472,7 +529,6 @@ def export(src, out, cands, cocos, dec, grow_px=GROW_PX, ignore_pad=IGNORE_PAD):
                     h, w = m.shape
                     ign[y0:y0 + h, x0:x0 + w][m] = IGNORE_VALUE
             if ign.any():
-                idir.mkdir(parents=True, exist_ok=True)
                 cv2.imwrite(str(idir / (Path(fn).stem + '.png')), ign)
                 s['ignore_images'] += 1
         nd = dict(d)
@@ -497,8 +553,10 @@ def main():
     src, out = resolve(SRC), resolve(OUT)
     if not src.exists():
         raise FileNotFoundError(f'SRC フォルダがありません: {src}')
-    if out.resolve() == src.resolve() or src.resolve() in out.resolve().parents:
-        raise ValueError('OUT は SRC と別のフォルダにしてください (SRC は変更しません)')
+    rs, ro = src.resolve(), out.resolve()
+    if rs == ro or rs in ro.parents or ro in rs.parents:
+        raise ValueError('OUT と SRC は、片方がもう片方の中に入らない別のフォルダにしてください '
+                         '(書き出しで OUT/coco, OUT/ignore を作り直すので、SRC が OUT の中にあると消えてしまう)')
     splits = [s for s in SPLIT_ORDER if (src / s / ANN_NAME).exists()]
     others = sorted(p.name for p in src.iterdir() if p.is_dir() and (p / ANN_NAME).exists() and p.name not in splits)
     splits += others
@@ -536,6 +594,8 @@ def main():
     print('\n1_tau_unet_train.py の設定をこう変えてください:')
     print(f"  SRC = r'{out / 'coco'}'")
     print(f"  IGNORE_SRC = r'{out / 'ignore'}'")
+    print("  USE_PRIOR = False          # ラベル補充の効果だけを比べる (3チャンネル。watershed.py でそのまま使える)")
+    print("  REBUILD_DATASET = True")
 
 
 if __name__ == '__main__':

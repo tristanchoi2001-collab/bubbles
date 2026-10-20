@@ -388,7 +388,7 @@ class TauDetector:
         self.model, ck, self.uses_prior = load_tau_model(ckpt_path, self.dev)
         self.mean = np.array(ck["mean"], np.float32)
         self.std = np.array(ck["std"], np.float32)
-        self.edge_px = int(ck.get("prior_edge_px", PRIOR_EDGE_PX))
+        self.edge_px = int(ck.get("prior_edge_px") or PRIOR_EDGE_PX)   # 3チャンネルの ckpt には無い/None のことがある
         hw = ck.get("train_hw") or train_hw
         self.train_hw = (int(hw[0]), int(hw[1])) if hw else None
         self.epoch = ck.get("epoch")

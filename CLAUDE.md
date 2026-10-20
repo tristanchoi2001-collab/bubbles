@@ -318,17 +318,26 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - [1] 후보
     - Roboflow 학습 화상에서 `CAND_LOW`=30 이상인 화소의 8-연결 덩어리를 찾는다.
     - 조건: 광화소 ≥ `CAND_MIN_AREA`=5, 최대 밝기 ≥ `CAND_PEAK`=60, 채운 면적 ≤ `CAND_MAX_AREA`=600, 라벨된 기포에서 `LABEL_GAP`=2 px 안쪽에 걸치지 않음.
-    - 채우기 `fill_dot`: radius-2 closing → fill holes → 볼록 껍질 안쪽으로 제한한다. 링과 4 px 이하 틈의 C자 링이 채워진다.
+    - 채우기 `fill_dot`: radius-2 팽창 → fill holes → 수축 → 볼록 껍질 안쪽으로 제한한다.
+      - closing 뒤에 채우면 1 px 굵기 링은 1~2 px 틈도 안 채워졌다(점검에서 발견).
+      - 화상 끝에 닿은 쪽은 화상 끝을 링의 일부로 보고 채운다.
+    - 붙은 링 분리 `split_pairs`: 진짜 구멍(≥ `PAIR_MIN_HOLE`=3 px)이 2개 이상인 덩어리는 가장 가까운 구멍 기준으로 링마다 나눠 후보로 만든다(타일에 "pair" 표시).
+      하나로 받아들이면 "붙은 쌍 = 1개"를 학습시키기 때문이다. 실프레임 60장에서는 0건이었다.
     - U-Net은 쓰지 않는다.
   - [2] 확인 GUI (OpenCV, 문자열은 ASCII)
     - 5×4 타일. 좌클릭 = n, 우클릭 = u, 다시 클릭하면 취소, Enter/Space = 페이지의 나머지를 y로 하고 다음 페이지, b = 이전 페이지, q = 저장 후 종료.
+    - TILE=140이라 창은 708×618 px다. 화면 밖으로 나간 타일까지 Enter로 y가 되는 것을 막으려고 줄였다.
+    - 페이지가 바뀐 뒤 0.4초 동안은 Enter를 무시한다(누르고 있거나 두 번 누른 경우).
     - 순서: split(test → valid → train) 안에서 밝은 후보부터.
-    - 판정은 `OUT/decisions.json`에 저장한다. 키는 후보 ID `split/file@x0,y0,wxh,area`라서 다시 찾아도 같은 덩어리면 같은 ID가 된다.
+    - 판정은 `OUT/decisions.json`에 저장한다. 키는 후보 ID `split/file@x0,y0,wxh,광화소수`라서 다시 찾거나 채우는 방식을 바꿔도 같은 덩어리면 같은 ID가 된다.
     - 상태와 그리기는 `Review` 클래스에 있어 GUI 없이 테스트할 수 있다.
   - [3] 내보내기
     - `OUT/coco/<split>/`: 원래 라벨 + y. 화소 중심을 지나는 외곽 폴리곤, category는 기존 다수값, `"source": "dot_labels"`.
     - `OUT/ignore/<split>/<stem>.png`: u와 미확인 후보를 `IGNORE_PAD`=2 px만큼 넓힌 영역(255).
     - n은 아무것도 하지 않는다(배경으로 학습).
+    - ignore 폴더는 비어 있어도 만든다.
+    - 화상 파일이 없는 항목은 건너뛴다.
+    - SRC와 OUT이 서로 포함하는 관계면 실행을 멈춘다. 예: `SRC=OUT\coco`로 두면 원본이 지워진다(점검에서 발견).
   - 폴리곤은 학습 변환(make_target)을 거치면 원래 마스크로 돌아온다.
     - bbox가 12 px 미만이면 정확히 같다.
     - 그보다 크면 경계선 두께 3~4 px의 바깥 절반만큼 넓어진다. 사용자 라벨과 같은 규약이다.
@@ -344,9 +353,14 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     - 사전 마스크, 화상 망가뜨리기, BEST_BY를 쓰지 않는다. best는 val 점수로 고르고, test는 열 2개다.
     - 출력은 `in_channels`=3, `tau`=False라서 tracker3/watershed의 UNET_CKPT에 그대로 쓸 수 있다.
     - 라벨 보충의 효과만 비교할 때 이것을 권장한다.
+  - 3ch 출력도 meta에 `prior_edge_px`를 숫자로 기록한다. TauDetector는 None도 허용한다. 예전에는 tau_tracker에서 int(None)로 실패했다.
+  - test의 `n_pred`도 ignore에 걸친 예측을 뺀다. 손실은 `make_losses(dev)`로 만든다.
   - 기본값(USE_PRIOR=True, IGNORE_SRC=None)의 동작은 변하지 않는다.
-- 회귀 테스트: `tests/test_dots.py` a~g.
-  - a 후보, b 폴리곤 왕복, c 내보내기→데이터셋, d 손실·평가의 ignore, e 3ch+ignore 학습 스모크 + UNetDetector 읽기, f 확인 GUI 상태, g ID와 저장.
+- 회귀 테스트: `tests/test_dots.py` a~g + a2.
+  - a 후보와 LABEL_GAP, a2 끊긴 링·끝에서 잘린 링·붙은 링, b 폴리곤 왕복, c 내보내기→데이터셋(IGNORE_PAD, valid→val, 빈 ignore, 없는 화상, SRC 보호)
+  - d 학습 손실·평가·test 매칭·paste 재료의 ignore, e 3ch+ignore 학습 스모크 + UNetDetector·TauDetector 읽기 + 평가로 ignore가 전달되는지, f 확인 GUI 상태, g ID와 저장
+  - 독립 점검(리뷰 4방향 + 회의적 검증) 결과는 위의 수정에 반영했다.
+  - 변이 20종 중 18종을 잡는다. 남은 1종(prior_edge None)은 TauDetector를 고쳐서 생긴 이중 방어다.
 - 사용자 작업 순서
   1. `python dot_labels.py`: test를 전부 확인하고, 이어서 train도 가능한 만큼 확인한다(목표 100~150장).
   2. `1_tau_unet_train.py`를 `SRC=dot_labels\coco`, `IGNORE_SRC=dot_labels\ignore`, `USE_PRIOR=False`로 학습한다.

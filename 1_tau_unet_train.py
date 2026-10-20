@@ -577,6 +577,12 @@ def evaluate_both(model, ds, dev):
     return out
 
 
+def make_losses(dev):
+    """(CE, Dice)。どちらも学習しない画素 (IGNORE_LABEL) を除く。学習しない画素が無ければ今までと同じ値"""
+    w = torch.tensor([1.0, 1.0, EDGE_W], device=dev)
+    return nn.CrossEntropyLoss(weight=w, ignore_index=IGNORE_LABEL), make_dice()
+
+
 def make_dice():
     """Dice 損失。学習しない画素 (IGNORE_LABEL) を除く (学習しない画素が無ければ今までと同じ値)"""
     try:
@@ -653,9 +659,7 @@ def train(root, out, dev):
     save_cp_preview(tr, out / 'aug_preview', CP_SAVE_PREVIEW)
 
     model, encoder, epochs, lr = make_model(dev)
-    w = torch.tensor([1.0, 1.0, EDGE_W], device=dev)
-    ce = nn.CrossEntropyLoss(weight=w, ignore_index=IGNORE_LABEL)   # 学習しない画素が無ければ今までと同じ
-    dice = make_dice()
+    ce, dice = make_losses(dev)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
     first_conv = next(p for n, p in model.encoder.named_parameters() if p.ndim == 4)
@@ -663,7 +667,7 @@ def train(root, out, dev):
     meta = {'encoder': encoder, 'classes': 3, 'mean': MEAN, 'std': STD,
             'in_channels': tau_unet.IMAGE_CHANNELS + (tau_unet.PRIOR_CHANNELS if USE_PRIOR else 0), 'tau': USE_PRIOR,
             'prior_channels': ['interior', 'outline'] if USE_PRIOR else [],
-            'prior_edge_px': tau_unet.PRIOR_EDGE_PX if USE_PRIOR else None,
+            'prior_edge_px': tau_unet.PRIOR_EDGE_PX,
             'prior_aug': aug.as_dict() if USE_PRIOR else None,
             'degrade': dict(degrade_cfg().as_dict(), p=DEGRADE_P) if USE_PRIOR else None,
             'ignore_src': str(IGNORE_SRC) if IGNORE_SRC else None,
@@ -901,7 +905,9 @@ def eval_ckpt(ckpt_path, root, dev, gt_inst, prior_mode, preview_dir=None):
             for k in per:
                 per[k] = [u + v for u, v in zip(per[k], st[k])]
             n_gt += len(gts)
-        n_pred += len(np.unique(inst)) - (1 if (inst == 0).any() else 0)
+        ign = m == IGNORE_LABEL                       # 学習しない画素に半分以上ある予測は数えない (match_by_size と同じ)
+        n_pred += sum(1 for k in np.unique(inst) if k > 0
+                      and not (ign.any() and np.count_nonzero((inst == k) & ign) * 2 >= np.count_nonzero(inst == k)))
         if preview_dir is not None:
             preview_dir.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(preview_dir / f'{ip.stem}_{prior_mode}.png'), instance_overlay(
