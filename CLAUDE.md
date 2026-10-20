@@ -403,6 +403,16 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     - 사용자 TAU ckpt: tau_tracker.main과 2_bin_track의 출력 151개가 같다. 단 pass_summary.json의 qc만 다르다.
       binarized/에 3_tracking_qc.py가 없어서 None이 됐기 때문이다. 입력인 패스별 CSV는 같다.
 - 3_tracking_qc.py는 입력과 상관없이 CSV만 다루므로 그대로 둔다(두 파일과 같은 폴더에 있으면 TAU 패스별 비교표도 나온다).
+- `binarized/0_prelabel.py` (손으로 쓴 파일, 생성 대상 아님): 라벨 초안 만들기.
+  - 처리: 원본 + 배경 → 2_bin_track의 전처리와 U-Net(TauDetector, 3/5ch 모두, 사전 마스크 없음)과 unet_instances.
+  - 마스크 보정: `GROW_PX`=1만큼 배경 쪽으로만 넓힌다. 검출 윤곽이 흰 링 바깥 가장자리보다 안쪽에 있기 때문이다.
+  - 폴리곤: 화소 중심을 지나는 외곽선이다. `SIMPLIFY_PX`=0.7로 점을 줄이되, 점이 24개 이하인 작은 기포는 그대로 둔다.
+  - 출력: OUT_FOLDER에 화상 + _annotations.coco.json(Roboflow Upload용)과 preview/를 만든다. EXPORT_IMAGE='raw'면 원본, 'binarized'면 이진화 png다.
+  - 한계: drop_nested로 지운 기포 안 링은 초안에 없다. 구멍은 외곽선만 내보낸다.
+  - 테스트 `tests/test_prelabel.py`
+    - a: 점을 줄이지 않은 폴리곤은 fillPoly+polylines로 원래 마스크가 된다(L자, 선, 화면 끝 포함).
+    - b: grow는 배경 쪽으로만 넓힌다.
+    - c: 가짜 ckpt로 main을 끝까지 돌리고, 결과를 학습 스크립트의 load_coco가 읽는다.
 
 ## 큰 복잡한 기포 (2026-10-20, 637~641 + 사용자 새 영상 750프레임 CSV 63eac985)
 - 637~641(1200×480)의 L자 슬러그(위쪽 띠 + 오른쪽 끝을 따라 내려가는 세로 띠)
@@ -436,4 +446,4 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `reference/piv_prior.py` — PIV 참고 구현(수정하지 않음).
 - `docs/PIV_TASK.md` — PIV prior 도입 작업 지시서 원문(5장 할 일, 6장 검증, 7장 주의, 8장 작업 방식).
 - 테스트 실행: `python -B tests/test_events.py`, `python -B tests/test_qc.py`, `python -B tests/test_instances.py`,
-  `python -B tests/test_tau.py`, `python -B tests/test_dots.py`, `python -B tests/test_binarized.py` (pytest로도 실행 가능).
+  `python -B tests/test_tau.py`, `python -B tests/test_dots.py`, `python -B tests/test_binarized.py`, `python -B tests/test_prelabel.py` (pytest로도 실행 가능).
