@@ -360,7 +360,7 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - a 후보와 LABEL_GAP, a2 끊긴 링·끝에서 잘린 링·붙은 링, b 폴리곤 왕복, c 내보내기→데이터셋(IGNORE_PAD, valid→val, 빈 ignore, 없는 화상, SRC 보호)
   - d 학습 손실·평가·test 매칭·paste 재료의 ignore, e 3ch+ignore 학습 스모크 + UNetDetector·TauDetector 읽기 + 평가로 ignore가 전달되는지, f 확인 GUI 상태, g ID와 저장
   - 독립 점검(리뷰 4방향 + 회의적 검증) 결과는 위의 수정에 반영했다.
-  - 변이 20종 중 18종을 잡는다. 남은 1종(prior_edge None)은 TauDetector를 고쳐서 생긴 이중 방어다.
+  - 변이 20종 중 19종을 잡는다. 남은 1종(prior_edge None)은 TauDetector를 고쳐서 생긴 이중 방어다.
 - 사용자 작업 순서
   1. `python dot_labels.py`: test를 전부 확인하고, 이어서 train도 가능한 만큼 확인한다(목표 100~150장).
   2. `1_tau_unet_train.py`를 `SRC=dot_labels\coco`, `IGNORE_SRC=dot_labels\ignore`, `USE_PRIOR=False`로 학습한다.
