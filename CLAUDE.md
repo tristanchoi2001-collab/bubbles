@@ -390,6 +390,10 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     - d: STEP 연결.
     - e: 3ch/5ch에 따라 main_single/main_tau를 고른다.
   - pyflakes에서 정의되지 않은 이름이 0이다.
+  - 실데이터 60프레임(731~790, scratchpad/bundle_e2e)
+    - best.pt: watershed.main과 2_bin_track의 출력 247개가 같다(JSON은 시간 항목만 빼고 비교).
+    - 사용자 TAU ckpt: tau_tracker.main과 2_bin_track의 출력 151개가 같다. 단 pass_summary.json의 qc만 다르다.
+      binarized/에 3_tracking_qc.py가 없어서 None이 됐기 때문이다. 입력인 패스별 CSV는 같다.
 - 3_tracking_qc.py는 입력과 상관없이 CSV만 다루므로 그대로 둔다(두 파일과 같은 폴더에 있으면 TAU 패스별 비교표도 나온다).
 
 ## 저장소 구성
