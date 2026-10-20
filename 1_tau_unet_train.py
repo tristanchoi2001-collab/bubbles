@@ -20,6 +20,10 @@
   - 画像を崩す増強 (DEGRADE_*): 学習画像の気泡の輪郭を一部消す / 途切れ途切れにし、その気泡は事前マスクに必ず残す
     (正解ラベルはそのまま)。学習画像は輪郭がはっきりしていて画像だけで正解が分かるため、崩さないと事前マスクを全く使わない
     ことが 1回目の学習 (80 epoch で事前の効果 +0.0001) で分かった。val も「崩した画像」で事前なし/ありを比べる
+  - 小さい点のラベル補充 (dot_labels.py) の結果を使える: SRC = dot_labels の coco/ (点を足したラベル)、
+    IGNORE_SRC = dot_labels の ignore/ (確認していない点の候補 = 学習しない画素)
+  - USE_PRIOR = False で事前マスクなしの普通の U-Net (3チャンネル) も学習できる (tracker3.py / watershed.py でそのまま使える)。
+    ラベル補充の効果だけを比べるときはこちら
 
 流れ
   [1] Roboflow の COCO-segmentation 書き出し → 3クラスのマスク (0=背景, 1=気泡内部, 2=気泡境界) + 気泡ごとのラベルマップ (DST)
@@ -40,6 +44,13 @@ OUT = r'runs/tau'             # 結果のフォルダ。既にあれば runs/tau
 
 REBUILD_DATASET = True        # True : 毎回 SRC から変換し直す (Roboflow のラベル修正が反映される)
                               # False: DST に変換済みのデータがあればそのまま使う (instances/ が無ければ作り直す)
+IGNORE_SRC = None             # dot_labels.py の書き出しの ignore フォルダ (例 r'dot_labels\ignore')。None なら使わない。
+                              # <split>/<画像名>.png の白い所 (ラベルされていない点の候補) を、背景としても気泡としても学習しない。
+                              # val/test の評価でもその画素と、そこに出た気泡は数えない。変えたら REBUILD_DATASET = True で
+USE_PRIOR = True              # True : TAU (画像 + 事前マスクの 5チャンネル) を学習 → tau_tracker.py で使う
+                              # False: 事前マスクなしの普通の U-Net (3チャンネル) を学習 → tracker3.py / watershed.py の
+                              #        UNET_CKPT にそのまま使える。ラベル (dot_labels.py) の効果だけを比べたいときはこちら。
+                              #        FINETUNE_FROM は 3チャンネルの best.pt。画像を崩す増強・事前マスクの設定は使わない
 
 # [1] ラベル変換 (1_unet_train.py と同じ)
 EDGE_PX   = 4                 # 大きい気泡の境界の太さ (px)。小さい気泡は自動で 1〜3px
@@ -139,6 +150,7 @@ MEAN = (0.485, 0.456, 0.406)
 STD = (0.229, 0.224, 0.225)
 IMG_EXT = {'.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff'}
 SPLIT_MAP = {'train': 'train', 'valid': 'val', 'val': 'val', 'test': 'test'}
+IGNORE_LABEL = 255            # マスクの「学習しない」画素 (IGNORE_SRC)。損失・評価で除く
 
 
 def prior_aug():
@@ -227,11 +239,12 @@ def make_target(anns, H, W, base_px):
 
 
 def label_preview(gray, lbl, prior=None):
-    """緑 = 内部, 赤 = 境界。prior があれば 黄 = 事前マスクの輪郭"""
+    """緑 = 内部, 赤 = 境界, 青 = 学習しない (IGNORE_SRC)。prior があれば 黄 = 事前マスクの輪郭"""
     bgr = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
     ov = bgr.copy()
     ov[lbl == 1] = (0, 160, 0)
     ov[lbl == 2] = (0, 0, 255)
+    ov[lbl == IGNORE_LABEL] = (255, 120, 0)
     out = cv2.addWeighted(bgr, 0.5, ov, 0.5, 0)
     if prior is not None:
         out[prior[1] > 0.5] = (0, 255, 255)
@@ -254,10 +267,20 @@ def load_coco(json_path):
     return d['images'], by_img
 
 
-def build_dataset(src, dst, edge_px, n_preview):
+def apply_ignore(lbl, ign):
+    """IGNORE_SRC の白い所のうち、ラベルが背景の画素だけを IGNORE_LABEL にする (ラベル済みの気泡はそのまま)"""
+    if ign.shape != lbl.shape:
+        raise ValueError(f'ignore マスクの大きさ {ign.shape} が画像 {lbl.shape} と違います')
+    lbl[(ign > 0) & (lbl == 0)] = IGNORE_LABEL
+    return lbl
+
+
+def build_dataset(src, dst, edge_px, n_preview, ignore_src=None):
     src, dst = Path(src), Path(dst)
     if not src.exists():
         raise FileNotFoundError(f'SRC フォルダがありません: {src}')
+    if ignore_src is not None and not Path(ignore_src).exists():
+        raise FileNotFoundError(f'IGNORE_SRC フォルダがありません: {ignore_src}')
     for sub in ('images', 'masks', 'instances', 'preview'):
         if (dst / sub).exists():
             shutil.rmtree(dst / sub)
@@ -277,7 +300,7 @@ def build_dataset(src, dst, edge_px, n_preview):
             p.mkdir(parents=True, exist_ok=True)
         images, by_img = load_coco(jp)
         stats = np.zeros(3, np.int64)
-        n_inst = n_tiny = n_ok = 0
+        n_inst = n_tiny = n_ok = n_ign_img = n_ign_px = 0
         for i, im in enumerate(images):
             ip = sdir / im['file_name']
             gray = cv2.imread(str(ip), cv2.IMREAD_GRAYSCALE)
@@ -290,6 +313,12 @@ def build_dataset(src, dst, edge_px, n_preview):
                 raise RuntimeError(f'{ip}: 気泡が多すぎます ({len(anns)}個)')
             lbl, ins = make_target(anns, H, W, edge_px)
             stem = Path(im['file_name']).stem
+            if ignore_src is not None:
+                ign = cv2.imread(str(Path(ignore_src) / sdir.name / (stem + '.png')), cv2.IMREAD_GRAYSCALE)
+                if ign is not None:
+                    lbl = apply_ignore(lbl, ign)
+                    n_ign_img += 1
+                    n_ign_px += int((lbl == IGNORE_LABEL).sum())
             shutil.copy2(ip, outs['images'] / (stem + ip.suffix))
             cv2.imwrite(str(outs['masks'] / (stem + '.png')), lbl)
             cv2.imwrite(str(outs['instances'] / (stem + '.png')), ins)      # uint16 PNG
@@ -302,7 +331,8 @@ def build_dataset(src, dst, edge_px, n_preview):
                 cv2.imwrite(str(outs['preview'] / (stem + '.png')), label_preview(gray, lbl))
         frac = stats / max(stats.sum(), 1)
         print(f'  [{sdir.name} -> {split}] 画像 {n_ok}枚  気泡 {n_inst}個 (一辺 12px 未満 {n_tiny}個)'
-              f'   画素の割合 背景 {frac[0]:.3f} 内部 {frac[1]:.3f} 境界 {frac[2]:.4f}')
+              f'   画素の割合 背景 {frac[0]:.3f} 内部 {frac[1]:.3f} 境界 {frac[2]:.4f}'
+              + (f'   学習しない画素 {n_ign_px}個 ({n_ign_img}枚)' if ignore_src is not None else ''))
     if not found:
         raise FileNotFoundError(f'{src} の中に train/ valid/ test/ と _annotations.coco.json がありません')
 
@@ -334,7 +364,7 @@ def build_paste_bank(imgs, mask_dir, max_area):
         if g is None or m is None:
             continue
         H, W = m.shape
-        n, lab, st, _ = cv2.connectedComponentsWithStats((m >= 1).astype(np.uint8), 8)
+        n, lab, st, _ = cv2.connectedComponentsWithStats(((m == 1) | (m == 2)).astype(np.uint8), 8)
         for i in range(1, n):
             x, y, w, h, a = st[i]
             if a < 4 or a >= max_area:
@@ -382,7 +412,7 @@ class BubbleDS(Dataset):
         g, m, ins = g.copy(), m.copy(), ins.copy()
         H, W = g.shape
         nxt = int(ins.max()) + 1
-        occ = cv2.dilate((m >= 1).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0   # 今ある気泡 + 2px の余裕
+        occ = cv2.dilate((m >= 1).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0   # 今ある気泡・学習しない所 + 2px の余裕
         for _ in range(np.random.randint(1, CP_MAX + 1)):
             gp, lp, cp = self.bank[np.random.randint(len(self.bank))]
             if np.random.rand() < 0.5:
@@ -458,7 +488,7 @@ class BubbleDS(Dataset):
 
     def prior_for(self, i, ins, keep=()):
         """事前マスク。keep (画像を崩した気泡) は消さず、事前マスクなしにもしない"""
-        if self.prior_mode == 'empty':
+        if self.prior_mode == 'empty' or not USE_PRIOR:
             return None
         rng = np.random.default_rng(np.random.randint(0, 2 ** 31 - 1)) if self.train else np.random.default_rng((SEED, i))
         aug = replace(self.aug, p_empty=0.0) if keep else self.aug
@@ -469,7 +499,9 @@ class BubbleDS(Dataset):
         g, m, ins = self.load(i)
         g, m, ins = self._augment(g, m, ins) if self.train else self._pad32(g, m, ins)
         keep = ()
-        if self.train and (force_degrade or (DEGRADE_P > 0 and np.random.rand() < DEGRADE_P)):
+        if not USE_PRIOR:             # 3チャンネル: 画像を崩さない (事前マスクで補えないので、正解と画像が合わなくなるだけ)
+            pass
+        elif self.train and (force_degrade or (DEGRADE_P > 0 and np.random.rand() < DEGRADE_P)):
             g, keep = tau_unet.degrade_image(g, ins, np.random.default_rng(np.random.randint(0, 2 ** 31 - 1)), degrade_cfg())
         elif not self.train and self.val_degrade:
             g, keep = tau_unet.degrade_image(g, ins, np.random.default_rng((SEED, i, 7)), degrade_cfg())
@@ -477,7 +509,7 @@ class BubbleDS(Dataset):
 
     def __getitem__(self, i):
         g, m, ins, keep, prior = self.sample(i)
-        x = tau_unet.make_input(g, prior, self.mean, self.std)
+        x = tau_unet.make_input(g, prior, self.mean, self.std, uses_prior=USE_PRIOR)
         return torch.from_numpy(x), torch.from_numpy(m.astype(np.int64))
 
 
@@ -504,13 +536,15 @@ def save_cp_preview(ds, folder, n):
 
 @torch.no_grad()
 def evaluate(model, dl, dev, n_cls=3):
-    """クラスごとの画素 IoU [背景, 内部, 境界] と「写し」(事前マスクにあって正解は背景の画素を気泡と出した割合)"""
+    """クラスごとの画素 IoU [背景, 内部, 境界] と「写し」(事前マスクにあって正解は背景の画素を気泡と出した割合)。
+    学習しない画素 (IGNORE_LABEL) は数えない"""
     model.eval()
     conf = torch.zeros(n_cls, n_cls, dtype=torch.long)
     copy_hit = copy_all = 0
     for x, y in dl:
         p = model(x.to(dev)).argmax(1).cpu()
-        idx = y.view(-1) * n_cls + p.view(-1)
+        ok = y.view(-1) != IGNORE_LABEL
+        idx = y.view(-1)[ok] * n_cls + p.view(-1)[ok]
         conf += torch.bincount(idx, minlength=n_cls ** 2).view(n_cls, n_cls)
         if x.shape[1] > tau_unet.IMAGE_CHANNELS:
             ph = (x[:, tau_unet.IMAGE_CHANNELS] > 0.5) & (y == 0)
@@ -527,7 +561,12 @@ def score_of(ev):
 
 def evaluate_both(model, ds, dev):
     """val を3通りで評価: empty = 元の画像・事前なし (今までどおり出せているか) /
-    deg_empty = 崩した画像・事前なし / deg_synth = 崩した画像・事前あり (事前マスクで補えているか)"""
+    deg_empty = 崩した画像・事前なし / deg_synth = 崩した画像・事前あり (事前マスクで補えているか)。
+    USE_PRIOR = False なら empty だけ"""
+    if not USE_PRIOR:
+        ds.prior_mode, ds.val_degrade = 'empty', False
+        ev = evaluate(model, DataLoader(ds, 1, shuffle=False, num_workers=WORKERS), dev)
+        return {'empty': ev, 'score': score_of(ev)}
     out = {}
     for name, mode, deg in (('empty', 'empty', False), ('deg_empty', 'empty', True), ('deg_synth', 'synth', True)):
         ds.prior_mode, ds.val_degrade = mode, deg
@@ -538,6 +577,17 @@ def evaluate_both(model, ds, dev):
     return out
 
 
+def make_dice():
+    """Dice 損失。学習しない画素 (IGNORE_LABEL) を除く (学習しない画素が無ければ今までと同じ値)"""
+    try:
+        return smp.losses.DiceLoss(mode='multiclass', ignore_index=IGNORE_LABEL)
+    except TypeError:             # 古い segmentation_models_pytorch
+        if IGNORE_SRC:
+            raise SystemExit('この segmentation_models_pytorch は DiceLoss の ignore_index に対応していません。'
+                             'pip install -U segmentation-models-pytorch で更新してください')
+        return smp.losses.DiceLoss(mode='multiclass')
+
+
 def prior_weight(first_conv):
     """最初の畳み込みの事前マスク用の重みの大きさ (平均, 最大)。開始時は 0。小さいままなら事前マスクを使っていない"""
     w = first_conv.detach()[:, tau_unet.IMAGE_CHANNELS:].abs()
@@ -545,6 +595,9 @@ def prior_weight(first_conv):
 
 
 def fmt_eval(ev):
+    if 'deg_synth' not in ev:     # USE_PRIOR = False
+        e = ev['empty']['iou']
+        return f'[val] 内部 {e[1]:.3f} 境界 {e[2]:.3f}'
     e, de, ds_ = ev['empty']['iou'], ev['deg_empty']['iou'], ev['deg_synth']['iou']
     cp = ev['deg_synth']['copy']
     return (f'[元の画像・事前なし] 内部 {e[1]:.3f} 境界 {e[2]:.3f} | [崩した画像] 境界 事前なし {de[2]:.3f} -> '
@@ -552,16 +605,24 @@ def fmt_eval(ev):
 
 
 def make_model(dev):
-    """FINETUNE_FROM (3チャンネル) から 5チャンネルのモデルを作る (事前マスクの重み = 0)。None なら ImageNet から"""
+    """FINETUNE_FROM (3チャンネル) から 5チャンネルのモデルを作る (事前マスクの重み = 0)。None なら ImageNet から。
+    USE_PRIOR = False なら 3チャンネルのまま"""
+    in_ch = tau_unet.IMAGE_CHANNELS + (tau_unet.PRIOR_CHANNELS if USE_PRIOR else 0)
     if FINETUNE_FROM:
         path = resolve(FINETUNE_FROM)
         if not path.exists():
             raise FileNotFoundError(f'FINETUNE_FROM が見つかりません: {path}  (今の best.pt のパスを入れてください)')
+        if not USE_PRIOR:
+            model, ck0, uses = tau_unet.load_tau_model(str(path), dev, force_prior=False)
+            if uses:
+                raise ValueError(f'USE_PRIOR = False には 3チャンネルの ckpt が要ります ({path} は事前マスク付きの TAU)')
+            print(f'  開始モデル: {path} (epoch {ck0.get("epoch")}, エンコーダ {ck0["encoder"]}) — 3チャンネル (事前マスクなし)')
+            return model.train(), ck0['encoder'], FINETUNE_EPOCHS, FINETUNE_LR
         model, ck0, _ = tau_unet.load_tau_model(str(path), dev, force_prior=True)
         print(f'  開始モデル: {path} (epoch {ck0.get("epoch")}, エンコーダ {ck0["encoder"]})'
               f' — 事前マスクの重みを 0 で足した 5チャンネル版 (学習前は元のモデルと同じ結果)')
         return model.train(), ck0['encoder'], FINETUNE_EPOCHS, FINETUNE_LR
-    model = tau_unet.build_model(ENCODER, 3, tau_unet.IMAGE_CHANNELS + tau_unet.PRIOR_CHANNELS, 'imagenet')
+    model = tau_unet.build_model(ENCODER, 3, in_ch, 'imagenet')
     return model.to(dev).train(), ENCODER, EPOCHS, LR
 
 
@@ -582,25 +643,30 @@ def train(root, out, dev):
         print('  ※ GPU が見つかりません。CPU での学習はとても遅いです (torch の CUDA 版を確認)')
     on = [n for n, f in (('ランダムクロップ', AUG_RANDOM_CROP), ('左右反転', AUG_FLIP), ('回転', AUG_ROTATE),
                          ('明るさ', AUG_BRIGHTNESS), ('Copy-Paste', COPY_PASTE)) if f]
-    print(f'  学習中の増強: {", ".join(on) if on else "なし"}  + 事前マスク {aug.as_dict()}')
-    print(f'  画像を崩す: 確率 {DEGRADE_P}, {degrade_cfg().as_dict()}')
+    if USE_PRIOR:
+        print(f'  学習中の増強: {", ".join(on) if on else "なし"}  + 事前マスク {aug.as_dict()}')
+        print(f'  画像を崩す: 確率 {DEGRADE_P}, {degrade_cfg().as_dict()}')
+    else:
+        print(f'  学習中の増強: {", ".join(on) if on else "なし"}  (USE_PRIOR = False: 事前マスクなしの 3チャンネル)')
     if COPY_PASTE:
         print(f'  Copy-Paste の材料: 小さい気泡 {len(tr.bank)}個')
     save_cp_preview(tr, out / 'aug_preview', CP_SAVE_PREVIEW)
 
     model, encoder, epochs, lr = make_model(dev)
     w = torch.tensor([1.0, 1.0, EDGE_W], device=dev)
-    ce = nn.CrossEntropyLoss(weight=w)
-    dice = smp.losses.DiceLoss(mode='multiclass')
+    ce = nn.CrossEntropyLoss(weight=w, ignore_index=IGNORE_LABEL)   # 学習しない画素が無ければ今までと同じ
+    dice = make_dice()
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
     first_conv = next(p for n, p in model.encoder.named_parameters() if p.ndim == 4)
 
     meta = {'encoder': encoder, 'classes': 3, 'mean': MEAN, 'std': STD,
-            'in_channels': tau_unet.IMAGE_CHANNELS + tau_unet.PRIOR_CHANNELS, 'tau': True,
-            'prior_channels': ['interior', 'outline'], 'prior_edge_px': tau_unet.PRIOR_EDGE_PX,
-            'prior_aug': aug.as_dict(),
-            'degrade': dict(degrade_cfg().as_dict(), p=DEGRADE_P),
+            'in_channels': tau_unet.IMAGE_CHANNELS + (tau_unet.PRIOR_CHANNELS if USE_PRIOR else 0), 'tau': USE_PRIOR,
+            'prior_channels': ['interior', 'outline'] if USE_PRIOR else [],
+            'prior_edge_px': tau_unet.PRIOR_EDGE_PX if USE_PRIOR else None,
+            'prior_aug': aug.as_dict() if USE_PRIOR else None,
+            'degrade': dict(degrade_cfg().as_dict(), p=DEGRADE_P) if USE_PRIOR else None,
+            'ignore_src': str(IGNORE_SRC) if IGNORE_SRC else None,
             'edge_px': EDGE_PX, 'edge_w': EDGE_W, 'crop': list(CROP), 'seed': SEED,
             'train_hw': train_hw, 'n_train': len(tr), 'n_val': len(va),
             'src': str(SRC), 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
@@ -610,12 +676,12 @@ def train(root, out, dev):
             'copy_paste': {'on': COPY_PASTE, 'prob': CP_PROB, 'max': CP_MAX,
                            'max_area': CP_MAX_AREA, 'alpha': list(CP_ALPHA)} if COPY_PASTE else None}
 
-    meta['best_by'] = BEST_BY
+    meta['best_by'] = BEST_BY if USE_PRIOR else 'val'
     best, best_ep, empty_floor = -1.0, 0, None
     if FINETUNE_FROM:      # 開始モデル自体を基準にする → 学習で悪くなったら best.pt は開始モデルのまま
         ev0 = evaluate_both(model, va, dev)
         best = ev0['score']
-        if BEST_BY == 'prior':
+        if USE_PRIOR and BEST_BY == 'prior':
             empty_floor = score_of(ev0['empty']) - BEST_EMPTY_TOL
         torch.save(dict(meta, state_dict=model.state_dict(), epoch=0, val=ev0), out / 'best.pt')
         print(f'  開始モデル val {fmt_eval(ev0)} (score {best:.4f}) — これより良くなったときだけ best を更新'
@@ -626,7 +692,8 @@ def train(root, out, dev):
         frozen = ep <= FREEZE_ENCODER_EPOCHS
         for prm in model.encoder.parameters():
             prm.requires_grad = not frozen
-        first_conv.requires_grad = True              # 事前マスクの入口は固定しない
+        if USE_PRIOR:
+            first_conv.requires_grad = True          # 事前マスクの入口は固定しない
         model.train()
         tl, t0 = 0.0, time.time()
         for x, y in dl_tr:
@@ -639,13 +706,18 @@ def train(root, out, dev):
             tl += loss.item()
         sched.step()
         ev = evaluate_both(model, va, dev)
-        pw_mean, pw_max = prior_weight(first_conv)
         ok_empty = empty_floor is None or score_of(ev['empty']) >= empty_floor
-        log.append({'ep': ep, 'loss': tl / len(dl_tr), 'score': ev['score'], 'empty_iou': ev['empty']['iou'],
-                    'deg_empty_iou': ev['deg_empty']['iou'], 'deg_synth_iou': ev['deg_synth']['iou'],
-                    'copy': ev['deg_synth']['copy'],
-                    'prior_effect_edge': ev['deg_synth']['iou'][2] - ev['deg_empty']['iou'][2],
-                    'prior_w_mean': pw_mean, 'prior_w_max': pw_max, 'empty_ok': ok_empty})
+        entry = {'ep': ep, 'loss': tl / len(dl_tr), 'score': ev['score'], 'empty_iou': ev['empty']['iou'],
+                 'empty_ok': ok_empty}
+        pw_txt = ''
+        if USE_PRIOR:
+            pw_mean, pw_max = prior_weight(first_conv)
+            entry.update({'deg_empty_iou': ev['deg_empty']['iou'], 'deg_synth_iou': ev['deg_synth']['iou'],
+                          'copy': ev['deg_synth']['copy'],
+                          'prior_effect_edge': ev['deg_synth']['iou'][2] - ev['deg_empty']['iou'][2],
+                          'prior_w_mean': pw_mean, 'prior_w_max': pw_max})
+            pw_txt = f'  事前の重み {pw_mean:.4f}/{pw_max:.4f}'
+        log.append(entry)
         mark = '' if ok_empty else '  (事前なしの点数が下がりすぎ: best の候補外)'
         ck = dict(meta, state_dict=model.state_dict(), epoch=ep, val=ev)
         torch.save(ck, out / 'last.pt')
@@ -654,11 +726,11 @@ def train(root, out, dev):
             torch.save(ck, out / 'best.pt')
             mark = '  ← best'
         print(f'  ep {ep:3d}/{epochs}{" (エンコーダ固定)" if frozen else ""}  loss {tl / len(dl_tr):.4f}  '
-              f'{fmt_eval(ev)}  事前の重み {pw_mean:.4f}/{pw_max:.4f}   {time.time() - t0:.0f}s{mark}')
+              f'{fmt_eval(ev)}{pw_txt}   {time.time() - t0:.0f}s{mark}')
         (out / 'log.json').write_text(json.dumps(log, indent=1), encoding='utf-8')
     print(f'  学習完了。best = epoch {best_ep} (score {best:.4f})'
-          + ('  ※ 開始モデルより良くならなかったので、best.pt は開始モデル (事前マスクを使わない) のまま'
-             if FINETUNE_FROM and best_ep == 0 else ''))
+          + ('  ※ 開始モデルより良くならなかったので、best.pt は開始モデル' + (' (事前マスクを使わない)' if USE_PRIOR else '')
+             + ' のまま' if FINETUNE_FROM and best_ep == 0 else ''))
     return out / 'best.pt'
 
 
@@ -772,10 +844,13 @@ def load_gt_instances(src):
     return out
 
 
-def match_by_size(gt_masks, inst, thr):
-    """正解と予測の気泡を IoU で1対1に対応 → 大きさごとに [正解数, 見つけた正解数, 予測数, 当たった予測数]"""
+def match_by_size(gt_masks, inst, thr, ignore=None):
+    """正解と予測の気泡を IoU で1対1に対応 → 大きさごとに [正解数, 見つけた正解数, 予測数, 当たった予測数]。
+    ignore (学習しない画素) があれば、画素の半分以上がそこにある予測の気泡は数えない (ラベルされていない点の候補)"""
     from scipy.optimize import linear_sum_assignment
     pred = [q for q in (inst == i for i in range(1, int(inst.max()) + 1)) if q.any()]
+    if ignore is not None and ignore.any():
+        pred = [q for q in pred if np.count_nonzero(q & ignore) * 2 < np.count_nonzero(q)]
     st = {n: [0, 0, 0, 0] for n, _, _ in SIZE_CLASSES}
     gcls = [_size_cls(int(g.sum())) for g in gt_masks]
     pcls = [_size_cls(int(q.sum())) for q in pred]
@@ -822,7 +897,7 @@ def eval_ckpt(ckpt_path, root, dev, gt_inst, prior_mode, preview_dir=None):
                                  TINY_MAX)
         gts = gt_inst.get(ip.stem)
         if gts is not None:
-            st = match_by_size(gts, inst, IOU_MATCH)
+            st = match_by_size(gts, inst, IOU_MATCH, m == IGNORE_LABEL)
             for k in per:
                 per[k] = [u + v for u, v in zip(per[k], st[k])]
             n_gt += len(gts)
@@ -861,8 +936,10 @@ def test_check(ckpt_path, root, out, dev):
     cols = []
     if FINETUNE_FROM:
         cols.append(('開始モデル', eval_ckpt(resolve(FINETUNE_FROM), root, dev, gt_inst, 'empty')))
-    cols.append(('新 事前なし', eval_ckpt(ckpt_path, root, dev, gt_inst, 'empty', out / 'test_preview')))
-    cols.append(('新 事前あり', eval_ckpt(ckpt_path, root, dev, gt_inst, 'synth', out / 'test_preview')))
+    cols.append(('新 事前なし' if USE_PRIOR else '新',
+                 eval_ckpt(ckpt_path, root, dev, gt_inst, 'empty', out / 'test_preview')))
+    if USE_PRIOR:
+        cols.append(('新 事前あり', eval_ckpt(ckpt_path, root, dev, gt_inst, 'synth', out / 'test_preview')))
 
     def fmt(x):
         return '   -  ' if x is None else f'{100 * x:5.1f}%'
@@ -880,7 +957,11 @@ def test_check(ckpt_path, root, out, dev):
         pi = r['pixel_iou']
         cp = '' if r['copy'] is None else f', 写し {100 * r["copy"]:.1f}%'
         print(f'  [{name}] 予測 {r["n_pred"]}個 / 正解 {r["n_gt"]}個, 画素 IoU 内部 {pi["in"]:.3f} 境界 {pi["edge"]:.3f}{cp}')
-    print('  「事前あり」は正解から作った事前マスクなので甘めの評価。本当の効果は tau_tracker.py の動画で確認すること')
+    if USE_PRIOR:
+        print('  「事前あり」は正解から作った事前マスクなので甘めの評価。本当の効果は tau_tracker.py の動画で確認すること')
+    if IGNORE_SRC:
+        print('  学習しない画素 (IGNORE_SRC) に半分以上ある予測の気泡は数えていない。test の点の候補を dot_labels.py で'
+              '全部確認してあれば、tiny の再現率はラベルし直した点も含めた値')
     report = {'columns': {name: r for name, r in cols}, 'iou_match': IOU_MATCH,
               'postprocess': {'min_area': MIN_AREA, 'band': BAND, 'edge_thr': EDGE_THR,
                               'close': CLOSE, 'tiny_max': TINY_MAX}}
@@ -897,7 +978,7 @@ def main():
     print('\n[1] データセットの変換')
     have = list_images(dst / 'images' / 'train') and (dst / 'instances' / 'train').exists()
     if REBUILD_DATASET or not have:
-        build_dataset(resolve(SRC), dst, EDGE_PX, N_PREVIEW)
+        build_dataset(resolve(SRC), dst, EDGE_PX, N_PREVIEW, resolve(IGNORE_SRC) if IGNORE_SRC else None)
     else:
         print(f'  変換済みのデータセットを使います: {dst}')
 
@@ -909,7 +990,8 @@ def main():
     print('\n[3] test で確認')
     test_check(best, dst, out, dev)
 
-    print('\n完了。tau_tracker.py の設定をこう変えてください:')
+    print('\n完了。' + ('tau_tracker.py' if USE_PRIOR else 'tracker3.py / watershed.py / tau_tracker.py')
+          + ' の設定をこう変えてください:')
     print(f"  UNET_CKPT = r'{best}'")
 
 

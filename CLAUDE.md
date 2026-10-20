@@ -307,6 +307,51 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - 합성 벤치마크(sim_*)의 수치는 다시 돌리지 않았다. 화면 끝 3 px 이내 기포가 touch가 되므로 약간 달라질 수 있다.
   - 사용자 데이터로 효과를 확인하는 실행은 아직 하지 않았다(사용자 요청 전에는 검증 실행 금지).
 
+## 작은 점 라벨 보충 (2026-10, 진행 순서 1번)
+- 근거
+  - 작은 기포 검출 실패의 주원인은 라벨 누락으로 본다. U-Net은 또렷한 점에 대해 약한 출력이 아니라 거의 0(확실한 배경)을 낸다.
+  - 문헌 조사 결론
+    - 체계적인 라벨 누락은 어떤 모델로 바꿔도 그대로 학습된다.
+    - 자기 예측으로 다시 학습(self-training)하는 방법이나 손실 가중치 조정은 통하지 않는다(모델 출력이 ≈0이라 건질 신호가 없다).
+    - 가장 효율적인 방법: U-Net과 독립적인 방식으로 후보를 만들고 사람은 y/n만 확인한다(후보당 약 2초). 확인하지 않은 후보는 ignore로 둔다.
+- `dot_labels.py` (사용자 PC에서 실행. 설정은 파일 맨 위)
+  - [1] 후보
+    - Roboflow 학습 화상에서 `CAND_LOW`=30 이상인 화소의 8-연결 덩어리를 찾는다.
+    - 조건: 광화소 ≥ `CAND_MIN_AREA`=5, 최대 밝기 ≥ `CAND_PEAK`=60, 채운 면적 ≤ `CAND_MAX_AREA`=600, 라벨된 기포에서 `LABEL_GAP`=2 px 안쪽에 걸치지 않음.
+    - 채우기 `fill_dot`: radius-2 closing → fill holes → 볼록 껍질 안쪽으로 제한한다. 링과 4 px 이하 틈의 C자 링이 채워진다.
+    - U-Net은 쓰지 않는다.
+  - [2] 확인 GUI (OpenCV, 문자열은 ASCII)
+    - 5×4 타일. 좌클릭 = n, 우클릭 = u, 다시 클릭하면 취소, Enter/Space = 페이지의 나머지를 y로 하고 다음 페이지, b = 이전 페이지, q = 저장 후 종료.
+    - 순서: split(test → valid → train) 안에서 밝은 후보부터.
+    - 판정은 `OUT/decisions.json`에 저장한다. 키는 후보 ID `split/file@x0,y0,wxh,area`라서 다시 찾아도 같은 덩어리면 같은 ID가 된다.
+    - 상태와 그리기는 `Review` 클래스에 있어 GUI 없이 테스트할 수 있다.
+  - [3] 내보내기
+    - `OUT/coco/<split>/`: 원래 라벨 + y. 화소 중심을 지나는 외곽 폴리곤, category는 기존 다수값, `"source": "dot_labels"`.
+    - `OUT/ignore/<split>/<stem>.png`: u와 미확인 후보를 `IGNORE_PAD`=2 px만큼 넓힌 영역(255).
+    - n은 아무것도 하지 않는다(배경으로 학습).
+  - 폴리곤은 학습 변환(make_target)을 거치면 원래 마스크로 돌아온다.
+    - bbox가 12 px 미만이면 정확히 같다.
+    - 그보다 크면 경계선 두께 3~4 px의 바깥 절반만큼 넓어진다. 사용자 라벨과 같은 규약이다.
+  - 실제 프레임 60장(731~790, hybrid 검출을 "라벨"로 대신 사용): 후보 프레임당 19개. 최대 밝기 ≥160이 66%, 100~160이 31%.
+- `1_tau_unet_train.py`
+  - `IGNORE_SRC`
+    - 데이터셋 변환에서 ignore 화소 중 라벨이 배경인 곳만 255(`IGNORE_LABEL`)로 만든다(`apply_ignore`).
+    - CE와 Dice에 ignore_index를 준다. ignore 화소가 없으면 값은 종래와 같다(테스트로 확인).
+    - evaluate는 255를 세지 않는다.
+    - test의 크기별 매칭은 ignore에 절반 이상 걸친 예측 기포를 세지 않는다.
+    - copy-paste 재료는 m ∈ {1,2}로 만든다. 붙일 자리 판정은 ignore도 점유로 본다.
+  - `USE_PRIOR = False`: 3채널 U-Net으로 학습한다.
+    - 사전 마스크, 화상 망가뜨리기, BEST_BY를 쓰지 않는다. best는 val 점수로 고르고, test는 열 2개다.
+    - 출력은 `in_channels`=3, `tau`=False라서 tracker3/watershed의 UNET_CKPT에 그대로 쓸 수 있다.
+    - 라벨 보충의 효과만 비교할 때 이것을 권장한다.
+  - 기본값(USE_PRIOR=True, IGNORE_SRC=None)의 동작은 변하지 않는다.
+- 회귀 테스트: `tests/test_dots.py` a~g.
+  - a 후보, b 폴리곤 왕복, c 내보내기→데이터셋, d 손실·평가의 ignore, e 3ch+ignore 학습 스모크 + UNetDetector 읽기, f 확인 GUI 상태, g ID와 저장.
+- 사용자 작업 순서
+  1. `python dot_labels.py`: test를 전부 확인하고, 이어서 train도 가능한 만큼 확인한다(목표 100~150장).
+  2. `1_tau_unet_train.py`를 `SRC=dot_labels\coco`, `IGNORE_SRC=dot_labels\ignore`, `USE_PRIOR=False`로 학습한다.
+  3. test 표에서 tiny 재현율을 시작 모델과 비교한다.
+
 ## 저장소 구성
 - `tracker2.py` — 트래커 v2(지시서의 `tracker.py`). 선단부 vy만으로 예측, 간격 게이트, Union IoU 기반 합체·분열.
 - `tracker3.py` — v2 이후의 개선판. 지시서 1~4장 이후에 만들었으므로 지시서가 전제하는 v2와 구조가 다르다.
@@ -317,7 +362,8 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `piv_field.py`, `fake_detector.py`, `sim_piv.py`, `qc_compare.py`, `tests/` — 위 "PIV 초기 속도 추정 구현 현황" 참고.
 - `3_tracking_qc.py` — 추적 QC. SWAP_LIKELY 상대 후보는 면적비 ≤ 3, 반경 min(2×등가직경, 200 px), 상세는 ID 중복 제거 후 최대 5개 + 「他N件」.
 - `tau_unet.py`, `1_tau_unet_train.py`, `tau_tracker.py`, `tests/test_tau.py` — 위 "Tracking-aware U-Net" 참고.
+- `dot_labels.py`, `tests/test_dots.py` — 위 "작은 점 라벨 보충" 참고.
 - `reference/piv_prior.py` — PIV 참고 구현(수정하지 않음).
 - `docs/PIV_TASK.md` — PIV prior 도입 작업 지시서 원문(5장 할 일, 6장 검증, 7장 주의, 8장 작업 방식).
 - 테스트 실행: `python -B tests/test_events.py`, `python -B tests/test_qc.py`, `python -B tests/test_instances.py`,
-  `python -B tests/test_tau.py` (pytest로도 실행 가능).
+  `python -B tests/test_tau.py`, `python -B tests/test_dots.py` (pytest로도 실행 가능).
