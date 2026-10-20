@@ -431,6 +431,26 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - 기체 내부가 액체보다 어둡게 남으면 안/밖을 국소적으로 구분할 수 있다(731~790에서 raw diff AUC 0.91, 이진화 0.53).
   - 후처리 규칙(다른 기포를 품지 않은 닫힌 영역 = 기체 등)은 보조 후보로만 둔다.
 
+## 비이진화 버전 2파일 (raw/, 2026-10-20)
+- 사용자가 배경이 남은 원본 약 50장을 Roboflow에서 라벨링했다(옛 46~47 조건처럼 노출이 적당한 영상). "학습용과 검출용 둘 다" 요청.
+- 입력: 원본 + 배경 → B(지금과 같은 이진화) + D(Noise Cut만 뺀 차분, 기포 내부가 액체보다 약간 어두운 정보가 남음). `bin_diff`.
+  - `INPUT_MODE`: `'bin+diff'`(권장, 4ch = B×3 + D, best.pt에서 D 가중치 0으로 시작 → 학습 전에는 best.pt와 같은 결과) / `'diff'`(D×3) / `'bin'`(대조군).
+  - ckpt에 `input: {mode, preproc}`를 기록하고, 검출 쪽 `RawDetector`가 그것으로 같은 입력을 다시 만든다. 기록 없는 ckpt(지금 best.pt)는 'bin' + PREPROC_FIXED(기본 (15,4,0)).
+- `raw/1_raw_train.py`
+  - SRC = Roboflow 내보내기(원본 화상). 배경은 `BACKGROUNDS`(원래 파일명 앞부분 → 배경 경로, 가장 길게 일치하는 것). 원래 이름은 `extra.name` 또는 `<name>_jpg.rf.<hash>`에서 복원. 배경을 못 정한 화상이 있으면 목록을 내고 멈춘다.
+  - DST/{bin,diff,masks}/<split>/. valid가 없으면 train의 10%를 val로. `meta.json`에 train_hw(새 train 화상의 최빈 크기)와 preproc.
+  - `OLD_BIN_SRC`: 예전 이진화 내보내기의 train만 split 'old'로 섞는다(D = B). `OLD_SHARE`=0.5로 WeightedRandomSampler.
+  - FINETUNE_FROM=best.pt, epoch 0(시작 모델)을 기준으로 best를 고른다. 'bin+diff'는 epoch마다 D 가중치 크기 표시.
+  - test: 시작 모델(그 ckpt의 입력) vs 새 모델의 화소 IoU + 크기별 재현율/적합율, test_preview(배경 D).
+  - dot 라벨/ignore, TAU는 넣지 않았다.
+- `raw/2_raw_track.py`: binarized/2_bin_track.py에서 TAU(설정, [B] 부품, [D] 다중 패스, 디스패처)를 빼고 UNetDetector를 RawDetector로 바꾼 것.
+  - 전처리 값은 ckpt 기록을 쓰고 슬라이더는 안 띄운다. 배경 화상은 필수. 오버레이/확률맵 png 배경은 B. qc_report의 used_params.UNET.detection.input에 입력 기록.
+- 생성: `python tools/build_raw.py`(`--check`). 재료는 `tools/raw_parts/`(train.py 본체, raw_input.py, raw_detector.py) + binarized/1_bin_train.py의 공통 부품(AST로 복사) + binarized/2_bin_track.py. **binarized/를 다시 만들면 이것도 다시 만든다.**
+- 테스트 `tests/test_raw.py` a~e
+  - a 최신, b bin_diff의 B = preprocess_image, c RawDetector = UNetDetector(완전 일치, 리사이즈 포함)·4ch 0 초기화 = 3ch·채널 불일치 오류
+  - d 학습 스모크(3모드, Roboflow 이름, OLD_BIN_SRC, 배경 누락 오류, 학습한 4ch에서 이어 학습), e 기록 없는 3ch ckpt면 2_bin_track과 CSV 바이트 동일 + 학습한 bin+diff ckpt로 끝까지 실행.
+- 실데이터 학습·검증은 하지 않았다(사용자 PC에서).
+
 ## 저장소 구성
 - `tracker2.py` — 트래커 v2(지시서의 `tracker.py`). 선단부 vy만으로 예측, 간격 게이트, Union IoU 기반 합체·분열.
 - `tracker3.py` — v2 이후의 개선판. 지시서 1~4장 이후에 만들었으므로 지시서가 전제하는 v2와 구조가 다르다.
@@ -443,7 +463,8 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `tau_unet.py`, `1_tau_unet_train.py`, `tau_tracker.py`, `tests/test_tau.py` — 위 "Tracking-aware U-Net" 참고.
 - `dot_labels.py`, `tests/test_dots.py` — 위 "작은 점 라벨 보충" 참고.
 - `binarized/1_bin_train.py`, `binarized/2_bin_track.py`, `tools/build_binarized.py`, `tests/test_binarized.py` — 위 "이진화 버전 2파일" 참고.
+- `raw/1_raw_train.py`, `raw/2_raw_track.py`, `tools/build_raw.py`, `tools/raw_parts/`, `tests/test_raw.py` — 위 "비이진화 버전 2파일" 참고.
 - `reference/piv_prior.py` — PIV 참고 구현(수정하지 않음).
 - `docs/PIV_TASK.md` — PIV prior 도입 작업 지시서 원문(5장 할 일, 6장 검증, 7장 주의, 8장 작업 방식).
 - 테스트 실행: `python -B tests/test_events.py`, `python -B tests/test_qc.py`, `python -B tests/test_instances.py`,
-  `python -B tests/test_tau.py`, `python -B tests/test_dots.py`, `python -B tests/test_binarized.py`, `python -B tests/test_prelabel.py` (pytest로도 실행 가능).
+  `python -B tests/test_tau.py`, `python -B tests/test_dots.py`, `python -B tests/test_binarized.py`, `python -B tests/test_prelabel.py`, `python -B tests/test_raw.py` (pytest로도 실행 가능).
