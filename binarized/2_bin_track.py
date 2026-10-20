@@ -1,0 +1,3756 @@
+#!/usr/bin/env python
+"""
+二値化画像版 — 気泡の検出と追跡 (1ファイル)
+=====================================================================
+    python 2_bin_track.py
+
+背景差分 + 二値化した画像 -> U-Net (背景 / 気泡内部 / 気泡境界) -> 気泡ごとのマスク -> トラッキング
+-> result_tracking.csv / result_area_count.csv / オーバーレイ / qc_report.json
+このファイルだけで動く (3_tracking_qc.py が同じフォルダにあれば、TAU のパスごとの比較表も出す)。
+
+使うモデル (UNET_CKPT) は自動で見分ける:
+  - 普通の U-Net (3チャンネル。1_bin_train.py の USE_PRIOR = False、または今の best.pt)
+      -> 1回だけ検出して追跡 (元の watershed.py と同じ。確率マップの保存・分け方の比較もここ)
+  - TAU (5チャンネル。1_bin_train.py の USE_PRIOR = True)
+      -> 前のパスの追跡結果を事前マスクにして PRIOR_PASSES 回 検出し直す (元の tau_tracker.py と同じ)
+
+設定はこの下にまとめてある (パス・気泡の分け方・トラッキング・PIV・TAU の多パス)。
+
+中身 (tools/build_binarized.py が元のファイルからまとめたもの。処理は元と同じ):
+  [A] PIV (大きさ別の速度場。新しい気泡の初速度)                 元 piv_field.py
+  [B] TAU の部品 (事前マスク・TAU モデルの読み込み)               元 tau_unet.py
+  [C] 前処理・U-Net・気泡の分け方・トラッカー・CSV/オーバーレイ/QC   元 watershed.py (= tracker3.py の既定値違い)
+  [D] TAU の多パス検出                                            元 tau_tracker.py
+  [E] 起動 (モデルを見て [C] か [D] を動かす)
+"""
+
+
+# ======================================================================
+# 設定 (元 watershed.py)
+# ======================================================================
+# ------------------------------------------------------------
+# パスの設定 (自分の環境に合わせて変更すること)
+# ------------------------------------------------------------
+UNET_CKPT = r"C:\Users\inoue-2024-01\Desktop\U-net\best.pt"   # U-Netの学習結果 (best.pt)
+IMAGE_FOLDER = r"C:\Users\inoue-2024-01\Desktop\U-net\test w0.7 a0.5"                          # 分析する画像があるフォルダ
+BACKGROUND_PATH = r"C:\Users\inoue-2024-01\Desktop\U-net\bg2real\image0000000.jpg"  # 背景画像のパス
+OUTPUT_FOLDER = r"C:\Users\inoue-2024-01\Desktop\U-net\output_bin"                   # 結果を保存するフォルダ
+
+# 前処理(背景差分 + Noise Cut + Median + 明度増幅)を有効にするか。
+# U-Netは2値化済み画像で学習しているので、基本は True のまま。
+ENABLE_PREPROCESSING = True
+
+# 前処理パラメータ (Noise Cut, Brightness, Median)。学習画像を作ったときと同じ値にすること。
+#   None : 最初のフレームでスライダー調整 (初期値は PREPROC_DEFAULT)
+#   固定 : 例) PREPROC_FIXED = (40, 3, 1)  -> スライダーを出さずにこの値を使う (再現性のため推奨)
+PREPROC_FIXED = None
+PREPROC_DEFAULT = (30, 3, 0)
+
+# 入力チェック: 前処理後の画像は学習画像と同じく「ほぼ黒い背景 + 白い輪郭」でなければならない
+MIN_BLACK_FRACTION = 0.7   # 黒画素(<15)の割合がこれ未満なら警告 (学習画像は約0.94)
+SAVE_DEBUG_FIRST_FRAME = True   # 最初のフレームの U-Net 入力画像と確率マップを OUTPUT_FOLDER/debug に保存
+
+# ------------------------------------------------------------
+# U-Net 検出パラメータ (1_unet_train.py の [3] と同じ値にすること)
+# ------------------------------------------------------------
+UNET_MIN_AREA = 4       # これより小さい気泡は捨てる (px)
+IGNORE_PARTICLE_AREA = 4  # 面積がこの値 (px) 以下の検出は粒子 (ゴミ・ノイズ) として無視する。
+                          # 面積・個数の集計 (ROI)、トラッキング、PIV、オーバーレイ、CSV のすべてから除く。0 で無効。
+                          # SAVE_INSTANCE_MASKS の npz には U-Net の結果をそのまま (除く前) 保存する
+UNET_BAND = 25          # 壁近傍の判定帯の幅 (px)
+UNET_EDGE_THR = 0.5     # 境界確率のしきい値
+UNET_CLOSE = 2          # 境界の途切れを塞ぐ closing 回数
+UNET_TINY_MAX = 300     # 境界の塊として拾う小気泡の最大面積 (px)
+UNET_INSTANCE_MODE = "hybrid"  # 確率マップ -> 気泡の分け方
+                             #   "wall"  : 境界 (> UNET_EDGE_THR) を壁にして閉じた領域を気泡とする (従来)。
+                             #             壁が途切れると気泡の内部が背景とつながり、気泡ごと消えることがある
+                             #   "hybrid": "wall" の結果はそのまま使い、壁の切れ目から背景に漏れて消えた気泡だけを
+                             #             壁を強く閉じ直して取り戻す (推奨。救済がないフレームは "wall" と完全に同じ)
+                             #   "seed"  : 内部確率の「芯」(内部 > UNET_SEED_THR かつ 境界 <= UNET_EDGE_THR) を種にした watershed。
+                             #             輪郭が途切れても漏れないが、大きい気泡の奥は内部確率が下がるので
+                             #             気泡がギザギザに切られる (実データで確認)。比較用
+                             #   U-Net がそもそも反応していない気泡は どの方式でも拾えない
+UNET_SEED_THR = 0.5          # "seed" / "hybrid" の芯の内部確率のしきい値
+UNET_RESCUE_CORE_MIN = 100   # "hybrid": 救済を試す芯の最小面積 (px)。小さい芯 (小気泡・ノイズ) は救済しない
+UNET_RESCUE_CORE_FRAC = 0.5  # "hybrid": 閉じ直した領域のうち芯が占める割合の下限 (液の領域を気泡にしないため)
+UNET_RING_RESCUE = True      # 穴の小さいリング気泡の取りこぼしを拾う ("wall" / "hybrid" 共通。False なら従来どおり)。
+                             # 主経路の closing で穴が埋まり、小気泡の経路でも「くっついたリング2個で面積 > UNET_TINY_MAX」
+                             # 「隣の気泡から 2px 以内」のために捨てられていた (U-Net は内部・境界とも確率 ≈ 1 で出していた)。
+                             # 既にある気泡は変えずに足す。ただし小気泡の経路で1個にしていた「くっついたリング」は穴ごとに分ける
+UNET_RING_MAX = 600          # この方法で拾う気泡1個の最大面積 (px)。実データで拾った気泡は最大 374px
+UNET_RING_REACH = 8          # リングの穴からこの距離 (px) 以内の境界だけを気泡に含める (隣の大きい気泡の輪郭の残りを含めない)
+UNET_DROP_NESTED = True      # 別の気泡の中にある気泡を除く (大きい気泡の中に見える液滴・壁の点など。形は気泡と同じなので
+                             # ラベルも U-Net も気泡として扱い、ここで除く)。外側の気泡の形はそのまま (除いた分は穴のまま)。
+                             # 「中にある」= 外側 2px の画素の UNET_NESTED_SURROUND 以上が 自分より大きい1個の気泡。
+                             # 液の島 (周りが背景) の中の気泡や、大きい気泡に接しているだけの気泡は残る。画面端の気泡は対象外
+UNET_NESTED_SURROUND = 0.9   # 実データ 731〜790 では最大 0.76 (液の島の中の気泡)、接しているだけの気泡は 0.5 以下
+TRAIN_IMAGE_HW = None   # 学習画像のサイズ (H, W)。best.pt に記録があればそちらを使う。
+                        # 古い best.pt で、撮影画像と学習画像のサイズが違う場合のみ指定。例: (1080, 416)
+SAVE_INSTANCE_MASKS = False  # True ならフレームごとの気泡ラベルマップを OUTPUT_FOLDER/instances/*.npz に保存
+SAVE_PROB_MAPS = True        # True ならフレームごとの U-Net 確率マップを OUTPUT_FOLDER/prob/ に保存
+                             #   *.npz : 解析用 (キー: p_in = 内部確率, p_edge = 境界確率 (どちらも 0〜255 の uint8), u_input = U-Net 入力画像)
+                             #   *.png : 確認用 (左から U-Net 入力 | 内部確率 | 境界確率。白 = 確率 1)
+                             # 検出漏れが U-Net 自体か後処理 (気泡の分け方) かを調べる用
+COMPARE_INSTANCE_MODES = True   # True なら毎フレーム 使っている分け方と もう1つの分け方 (使っているのが "wall" 以外なら
+                                # "wall"、"wall" なら "hybrid") の両方で気泡を分け、違う気泡の数をログに出す。
+                                # 違いのあったフレームは OUTPUT_FOLDER/mode_diff/*.png に保存
+                                # (緑 = 使っている方式だけにある気泡, 赤 = 比べた方式だけにある気泡)。最大 COMPARE_SAVE_MAX 枚
+COMPARE_SAVE_MAX = 30
+
+# ------------------------------------------------------------
+# ROI (関心領域) 設定
+#   - 検出とトラッキングは画面全体で実行
+#   - 「合計面積」は各気泡マスクがROIと重なる部分のピクセルのみ合算
+#   - 「個数」はROIに少しでもかかった気泡を1個としてカウント
+# ------------------------------------------------------------
+ENABLE_ROI = True    # Falseなら画面全体基準
+ROI_RECT = None      # Noneなら最初のフレームでマウスドラッグで選択。
+                     # 再現性が必要なら (x, y, w, h) タプルで固定。例: ROI_RECT = (100, 200, 400, 600)
+ROI_SAVE_PATH = None # 選択したROIを保存/再利用するファイルパス。NoneならOUTPUT_FOLDER/roi_saved.jsonを使用
+
+# ------------------------------------------------------------
+# トラッキングパラメータ（気泡のスケール・撮影fpsに合わせて調整すること）
+# ------------------------------------------------------------
+LEADING_EDGE_PERCENTILE = 5.0
+
+# --- 1対1対応のゲート (ブートストラップで自動算出できる) ---
+MAX_SPEED = 70.0             # 1フレームで気泡が動ける最大距離 (px)。速度がまだ分からないトラック(新規・分裂直後)の探索半径
+POS_GATE = 15.0              # 速度が分かっているトラック: 予測位置からのずれの許容 (px)
+POS_GATE_SIZE_FRAC = 0.25    # 予測ずれの許容に「等価直径 × この値」を足す (大きい気泡ほど変形で位置が揺れる)
+AREA_RATIO_GATE = 1.8        # 1対1対応で許す面積比。これを超える変化は合体/分裂として扱う
+                             # (画面端で切れている気泡は この2倍まで許す。小さい側が画面端で切れているとき
+                             #  = 画面に入ってくる途中/出ていく途中 は、見えている面積がいくらでも変わるので面積ゲートなし)
+AREA_RELAX_RATIO = 4.0       # 位置がぴったり合うときに 1対1対応で許す面積比 (AREA_RATIO_GATE より大きくする)。
+                             # U-Net が同じ気泡を内側/外側の輪郭で切り替えると、位置はそのままで面積だけが大きく変わり、
+                             # 「消失 + 同じ場所に新規」になる。合体/分裂の判定の後に残った「速度既知のトラック」と「検出」で、
+                             # 予測位置のずれが AREA_RELAX_POS 以内・互いにほかの候補がない・合体/分裂の相手になりうる
+                             # 別の気泡が重なっていない組だけをつなぐ (速度は更新しない)。画面端で切れている気泡は対象外。
+                             # AREA_RATIO_GATE 以下 (0 など) で無効
+AREA_RELAX_POS = 6.0         # 上の「ぴったり」の位置ずれの許容 (px)。+ 小さい側の等価直径 × POS_GATE_SIZE_FRAC。
+                             # 見失っている間は COAST_GATE_GROWTH で広げる
+OVERLAP_ACCEPT_IOU = 0.4     # 予測マスクとの IoU がこれ以上なら、位置ゲートの外でも対応候補にする (大きく変形する大気泡用)
+MAX_AGE = 3                  # 見失ってから何フレームまで復帰を待つか
+MAX_AGE_NEW = 1              # 1回しか観測していない (速度未知の) トラックは このフレーム数まで。
+                             # 探索半径が MAX_SPEED と広いので、長く残すとノイズや画面端の切れ端のトラックが
+                             # 後から通りかかった別の気泡を奪う
+MAX_AGE_NEW_LARGE = 3        # 速度未知のトラックでも、面積が LARGE_NEW_AREA 以上で画面端に接していなければ このフレーム数まで待つ。
+                             # 大きい気泡の1回だけの観測はノイズではなく、検出が1〜2フレーム抜けただけのことが多い
+                             # (実データ: 約35000 px のスラグが2フレーム抜けて別IDになった)。面積ゲートで別の気泡とは区別する。
+                             # 画面端の切れ端は上の理由で対象外。MAX_AGE_NEW 以下 (0 など) で無効
+LARGE_NEW_AREA = 2000        # 上の「大きい」の面積 (px)
+COAST_GATE_GROWTH = 0.5      # 見失っている間、1フレームごとに位置ゲートを何倍ずつ広げるか
+VELOCITY_EMA_ALPHA = 0.5
+EDGE_TOUCH_PX = 3            # 外接矩形が画面端からこの px 以内なら「画面端に接している (切れた気泡)」とみなす。
+                             # U-Net の気泡は画面端の 1〜2 px 手前で止まることが多い (実データで確認)。ぴったり接するときだけだと、
+                             # 入ってくる途中/出ていく途中の大きい気泡が画面内の気泡として扱われ、見えている面積が増減するたびに
+                             # 面積ゲート (AREA_RATIO_GATE) で途切れて毎フレーム新しいIDになる。0 で従来どおり (ぴったり接するときだけ)
+MIN_TRACK_AREA = 10          # これより小さい検出はトラッキングしない (数px のノイズの点滅で新規/消失が大量に出るため)。
+                             # 面積・個数の集計 (ROI) には含まれる。0 なら全てトラッキング
+
+# --- 1対1対応のコストの重み (各項は 0〜1 に正規化済み) ---
+W_POS = 1.0                  # 予測位置からのずれ (ゲート半径で正規化)
+W_AREA = 1.0                 # 面積変化
+W_OVERLAP = 1.0              # 予測マスクとの重なり (1 - IoU)。位置と形を同時に見る
+W_SHAPE = 0.5                # 形状 (重心を合わせた IoU)。形だけを見る
+W_COAST = 0.3                # 見失っていたフレーム1つあたりのペナルティ (見失い中のトラックが通りすがりの気泡を奪うのを防ぐ)
+W_UNKNOWN_V = 0.3            # 速度未知トラックのペナルティ (速度既知のトラックと同じ検出を取り合ったら既知側を優先)
+SHAPE_AREA_REF = 300.0       # 面積がこれより小さい気泡では重なり/形状の重みを面積に比例して下げる (小さい気泡は形がどれも似ているため)
+
+# --- 速度未知トラックの初速度の推定 ---
+USE_FLOW_PRIOR = True        # 新しく現れた気泡は「静止」と「周りの気泡と同じ速度で移動」の2仮説で次の位置を探す (False なら静止のみ)
+FLOW_PRIOR_RADIUS = 150.0    # 「周り」とみなす半径 (px)
+PRIOR_AREA_RATIO = 3.0       # 「周りの気泡」は面積比がこれ以内の気泡だけ (大きさで速度が違う流れで、スラグの速度を
+                             # 小さい気泡に当てはめないため)。周りに該当がなければ 0 (静止のみ)。0 なら大きさを問わない (旧動作)
+
+# --- PIV 速度場による初速度の推定 (docs/PIV_TASK.md, piv_field.py) ---
+# 新しく現れた気泡の初速度を、フレーム t と t+1 の「同じ大きさ区分の気泡だけの画像」の相互相関 (PIV) で求める。
+# 追跡の履歴を使わないので、速い気泡が新しく現れても その場所・その大きさの気泡の速度で次の位置を予測できる。
+# 速度場は予測専用。CSV の速度 (計測値) は従来どおり個々の追跡だけから出す。
+USE_PIV_PRIOR = True         # 沸騰 (加熱) 実験では核生成気泡が静止から動き出し PIV の初速度が外れるので False にすること
+                             # (PIV 導入前の tracker3 と完全に同じ動作にするには PRIOR_AREA_RATIO = 0 も必要)
+                             # TODO: 同じ位置で繰り返し発生する気泡 (核生成点) は初速度 0 にする
+PIV_GATE = 10.0              # PIV で初速度が分かった新規トラック: 予測位置からのずれの許容 (px)。+ 等価直径 × POS_GATE_SIZE_FRAC。
+                             # 速度未知トラックの MAX_SPEED より狭い。PIV が外れたときは「つながずに途切れさせる」
+                             # (途切れ = 標本が減るだけ、誤接続 = 誤った速度が混入する)。ブートストラップで自動算出できる
+PIV_GATE_HARD = True         # True: PIV_GATE の外の候補はつながない (誤接続より途切れ)。
+                             # False: MAX_SPEED までは認めるが W_PIV_OUTSIDE のペナルティを足す
+PIV_STATIC_SPEED = 3.0       # PIV の移動量がこれ未満 (px/frame) の場所では PIV_GATE_HARD でもペナルティ付きで MAX_SPEED まで認める。
+                             # 止まった気泡が大半の窓では、少数の速い気泡の動きが相関に現れず PIV が ≈0 になるため
+                             # (合成データで確認: ここを硬いゲートにすると途切れだけが増え、誤連結は減らなかった)。0 で無効
+W_PIV_OUTSIDE = 1.0          # PIV の予測から外れた候補 (上の2つで認める場合) に足すコスト
+PIV_KEEP_STATIC = True       # PIV の予測に加えて「静止」も候補にする (壁に付いて止まっている気泡が多い視野向け)。
+                             # どちらの候補も PIV_GATE で絞る
+PIV_USE_DX = True            # PIV の横方向 (x) の移動量も使う (False なら縦だけ)
+PIV_MODE = "improved"        # "improved" (piv_field.py の変更1〜4 あり) / "faithful" (reference/piv_prior.py と同じ計算)
+PIV_RASTER = "outline"       # 相関に使う画像: "outline" (気泡マスクの輪郭) / "filled" (塗りつぶし。大きい気泡で無効になりやすい)
+PIV_SIZE_CLASSES = (50, 500) # 大きさ区分の境界 (面積 px): tiny < 50 <= small < 500 <= large (QC と同じ)
+PIV_WINDOWS = {              # 区分ごとの窓 (1パス目の窓, 間隔, 2パス目の窓, 間隔) [px]
+    "tiny": (256, 128, 128, 64), "small": (256, 128, 128, 64), "large": (256, 128, 128, 64)}
+SAVE_PIV_DEBUG = False       # True なら速度場のベクトル図を OUTPUT_FOLDER/piv/ に保存 (黄 = 実測, 赤 = 周りから補間)
+
+# --- 合体/分裂 ---
+EVENT_OVERLAP_MIN = 0.3      # 候補条件: 吸収される側/分裂した子 の面積のうち、相手(の予測マスク)と重なっている割合の下限
+EVENT_MARGIN = 5             # 候補条件(その2): 中心が相手の予測マスクを この幅(px) だけ膨らませた範囲に入っていれば候補にする
+EVENT_AREA_TOL = 1.35        # 確定条件: 面積保存。合体後の面積 / 合体前の面積の和 (分裂は逆) が 1/この値 〜 この値 の範囲
+                             # (画面端で切れている気泡が絡むときは この値の2乗 まで許す)
+EVENT_MINOR_FRAC = 0.1       # 相手の面積のこの割合より小さい気泡は面積保存で確認できない (誤差に埋もれる) ので、
+EVENT_MINOR_OVERLAP = 0.5    #   重なり割合がこの値以上 (または中心が相手の中) のときだけ合体/分裂に含める
+TRANSIENT_MERGE_FRAMES = 2   # 合体からこのフレーム数以内に分かれ直したら「接触しただけ」とみなし元のIDに戻す。0 で無効
+
+# ------------------------------------------------------------
+# 自動ブートストラップキャリブレーション設定
+# ------------------------------------------------------------
+ENABLE_BOOTSTRAP = True       # Trueなら本トラッキング前にパラメータ自動算出 + ユーザー承認ステップを経る
+BOOTSTRAP_NUM_SEGMENTS = 20   # 映像全体を何等分して均等サンプリングするか
+# tracker2 は移動量の 90 パーセンタイルをゲートにしていたため、静止した気泡が大半だと
+# 少数の速い気泡の移動量がゲートの外になり、毎フレーム新規トラックになっていた。
+# ここでは「最大移動量 (速度未知のとき)」と「予測ずれ (速度既知のとき)」を分けて求める。
+BOOTSTRAP_SPEED_PERCENTILE = 99   # 最大移動量 MAX_SPEED: 移動量分布のこのパーセンタイル × 安全係数
+BOOTSTRAP_RESID_PERCENTILE = 95   # 予測ずれ POS_GATE: 3フレーム連続で対応した気泡の「等速と仮定した予測からのずれ」のこのパーセンタイル × 安全係数
+BOOTSTRAP_AREA_PERCENTILE = 99    # 面積比ゲート
+BOOTSTRAP_JUMP_MARGIN = 1.3  # 位置ゲートの安全係数 (パーセンタイル値 × この値)
+BOOTSTRAP_AREA_MARGIN = 1.1  # 面積比ゲートの安全係数
+BOOTSTRAP_MIN_JUMP = 5.0     # 位置ゲートの下限(px)。移動が非常に安定していてもゲートが0近くに潰れないように
+BOOTSTRAP_LOOSE_GATE = 120.0     # 仮マッチング用の緩い探索半径 (px)。本ゲートより広め → 循環問題の回避
+BOOTSTRAP_LOOSE_AREA_GATE = 3.0
+BOOTSTRAP_RATIO_TEST = 0.7   # 仮マッチングは「1番手のコスト < 2番手 × この値」かつ相互に1番手のときだけ採用 (曖昧な対応を統計に入れない)
+BOOTSTRAP_PREVIEW_FRAMES = 4  # 承認画面に表示するサンプルオーバーレイのフレーム数
+
+
+# ======================================================================
+# TAU の多パス検出の設定 (元 tau_tracker.py)
+# ======================================================================
+# ------------------------------------------------------------
+# TAU (5チャンネルのモデル) の多パス検出の設定。普通の U-Net では使わない
+# ------------------------------------------------------------
+PRIOR_PASSES = 2          # 事前マスク付きで検出し直す回数 (0 なら tracker3.py と同じ 1回だけ)
+PRIOR_FROM = "both"       # "both" = 前後のフレームから予測 / "forward" = 前のフレームだけ (オンライン処理と同じ情報。比較用)
+PRIOR_MIN_HITS = 2        # 事前マスクに入れるトラックの観測回数の下限 (そのフレーム自身を除く)
+SAVE_PASS_RESULTS = True  # パスごとの result_tracking.csv / qc_report.json を OUTPUT_FOLDER/passes/pass<k>/ に保存
+SAVE_PRIOR_DEBUG = True   # 前のパスと検出が変わったフレームの確認画像を OUTPUT_FOLDER/prior_debug/ に保存
+PRIOR_DEBUG_MAX = 30      # 確認画像の上限 (パスごと)
+
+
+# ======================================================================
+# import
+# ======================================================================
+import cv2
+import math
+import numpy as np
+import os
+import glob
+import csv
+import json
+import time
+from collections import defaultdict, Counter
+from dataclasses import dataclass, field, replace
+from typing import Dict, List, Optional, Tuple, Sequence, Callable
+from scipy import ndimage
+from scipy.optimize import linear_sum_assignment
+from skimage.segmentation import watershed
+import shutil
+
+
+# ======================================================================
+# [A] PIV — 元 piv_field.py
+# ======================================================================
+# 元 piv_field.py の説明:
+# 気泡の大きさ別 PIV 速度場 (docs/PIV_TASK.md 5-1)
+# =====================================================================
+# reference/piv_prior.py (相互相関法) をトラッカー用に移植したもの。
+# 個々の気泡は形が似ていて区別できなくても、窓の中の「気泡の並び方」は1フレームの間ほぼ保たれる。
+# フレーム t と t+1 の同じ位置の窓を相互相関し、ピーク位置 = その窓の移動量 とする。
+# 追跡結果を使わないので、新しく現れた気泡にも その場所・その大きさの気泡の速度を与えられる (予測専用)。
+#
+# 入力は 2値化画像ではなく、U-Net の気泡マスク (Detection) から作った「大きさ区分ごとの画像」。
+#   - 区分は QC と同じ面積: tiny < 50 <= small < 500 <= large (px)
+#   - 窓の相関は画素の多い気泡 (= 大きい気泡) に引っ張られるので、区分ごとに別々に相関を取る
+#   - 既定はマスクの輪郭 (raster="outline")。塗りつぶし (filled) だと大きい気泡の相関ピークが幅広くなり、
+#     1位/2位ピーク比の判定 (±2px の外の2位) で全ての窓が無効になる (合成・実画像の両方で確認)
+#
+# 手順 (piv_prior.py と同じ)
+#   1パス目: 大きい窓 (win1, step1) で粗い移動量
+#   2パス目: 小さい窓 (win2, step2) を、1パス目の移動量だけ t+1 側でずらして比較 (window offset)
+#   ピーク位置はガウス3点近似でサブピクセル化。1位/2位ピーク比 < min_peak_ratio の窓は無効
+#   周り 3×3 の中央値から外れたベクトルは無効 (縦横どちらかが外れたら両方)。無効は周りの中央値で埋める
+#
+# piv_prior.py からの変更 (mode="improved" で有効。mode="faithful" なら piv_prior.py と同じ計算):
+#   1. lobe_peak        : 2位ピークを「1位ピークの主ローブ (0.5×1位 を超える連結領域)」の外で探す
+#                          (±2px の外だと、幅広いピークの肩を2位と数えて正しい窓まで無効になる)
+#      lobe_max_frac    : 主ローブが縦または横に 窓 × この値 より長い窓は無効 (開口問題: スラグの胴体のように
+#                          平行な輪郭しか見えない窓は、相関が稜線になり移動量が決まらない)
+#   2. max_disp_frac    : 2パス目で、ずらした後に残る移動量が窓の この割合 を超えたら無効
+#      pass1_disp_frac  : 1パス目 (ずらしなし) は ±窓/2 の端に出る循環相関の偽ピークだけを除く (窓 × この値)
+#      require_guide    : (既定は無効) 2パス目は、1パス目で実測できた場所だけを有効にする
+#   3. validate_isolated: 3×3 に有効な隣が3つ未満のベクトルも、5×5 に有効な隣が2つ以上あれば中央値で検査する
+#   4. clamp_offset     : 2パス目でずらした窓が画像からはみ出すとき、ずらしを 0 に戻さず画像内に寄せる
+#      edge_windows     : 右端・下端に揃えた窓を追加し、端の帯 (下端 = 気泡が入ってくる場所) も計測する
+#   5. sample() は (dy, dx, 有効か) を返す。周りに実測の窓がない (埋めた値しかない) 場所・区分全体で実測が0の
+#      ときは「無効」とし、トラッカー側で代わりの推定 (大きさの近い周りの気泡の速度 -> 0) に回す
+#
+# 速度場は予測 (新規トラックの初速度) にだけ使う。気泡の速度の計測値は個々の追跡からだけ出す。
+
+try:                  # scipy.fft はマルチスレッドで速い。なければ numpy.fft
+    import scipy.fft as _fft
+    _FFT_KW = {"workers": -1}
+except ImportError:
+    _fft = np.fft
+    _FFT_KW = {}
+
+CLASS_NAMES = ("tiny", "small", "large")
+
+
+def size_class(area: float, bounds: Tuple[float, float] = (50.0, 500.0)) -> str:
+    """面積 (px) -> 大きさ区分 (QC と同じ区分)"""
+    if area < bounds[0]:
+        return "tiny"
+    return "small" if area < bounds[1] else "large"
+
+
+@dataclass
+class PIVSettings:
+    size_bounds: Tuple[float, float] = (50.0, 500.0)
+    # 区分ごとの窓: (1パス目の窓, 間隔, 2パス目の窓, 間隔) [px]。移動量が窓の 1/4 以下になる大きさにする
+    windows: Dict[str, Tuple[int, int, int, int]] = field(default_factory=lambda: {
+        "tiny": (256, 128, 128, 64), "small": (256, 128, 128, 64), "large": (256, 128, 128, 64)})
+    raster: str = "outline"         # "outline" (マスクの輪郭) / "filled" (塗りつぶし)
+    outline_px: int = 2             # 輪郭の太さ (px)。画面端で切れた辺は輪郭にしない
+    min_area: float = 0.0           # これより小さい検出は使わない (トラッカーの MIN_TRACK_AREA)
+    min_peak_ratio: float = 1.2
+    median_k: float = 3.0           # 正規化中央値検査: |v - 中央値| > k × (周りの中央値偏差 + eps) なら無効
+    median_eps: float = 1.0
+    lobe_peak: bool = True          # 変更1
+    lobe_max_frac: float = 0.25     # 変更1 (0 で無効)
+    max_disp_frac: float = 0.25     # 変更2 (0 で無効)
+    pass1_disp_frac: float = 0.45   # 変更2 (0 で無効)
+    require_guide: bool = False     # 変更2 (実画像では 1パス目の大きい窓が流れの場所による違いで無効になりやすく、
+                                    # 正しい 2パス目まで捨てて誤差が増えたので既定は無効。pass1_disp_frac で折り返しは防げる)
+    validate_isolated: bool = True  # 変更3
+    clamp_offset: bool = True       # 変更4
+    edge_windows: bool = True       # 変更4
+
+    @staticmethod
+    def faithful(**kw) -> "PIVSettings":
+        """piv_prior.py と同じ計算 (変更1〜4 なし。入力の画像の作り方は raster で別に指定)"""
+        base = dict(lobe_peak=False, lobe_max_frac=0.0, max_disp_frac=0.0, pass1_disp_frac=0.0, require_guide=False,
+                    validate_isolated=False, clamp_offset=False, edge_windows=False)
+        base.update(kw)
+        return PIVSettings(**base)
+
+
+# ==============================================================
+# 1. 大きさ区分ごとの画像
+# ==============================================================
+def rasterize(dets, image_hw: Tuple[int, int], s: PIVSettings) -> Dict[str, np.ndarray]:
+    """Detection のリスト -> {区分: uint8 画像 (気泡=255)}"""
+    H, W = image_hw
+    out = {c: np.zeros((H, W), np.uint8) for c in CLASS_NAMES}
+    for d in dets:
+        if d.area < s.min_area:
+            continue
+        m, x0, y0 = d.shape
+        if s.raster == "outline":
+            m = _outline(m, getattr(d, "touch", (False, False, False, False)), s.outline_px)
+        img = out[size_class(d.area, s.size_bounds)]
+        h, w = m.shape
+        ys, xs = max(0, -y0), max(0, -x0)
+        ye, xe = min(h, H - y0), min(w, W - x0)
+        if ye > ys and xe > xs:
+            img[y0 + ys:y0 + ye, x0 + xs:x0 + xe][m[ys:ye, xs:xe]] = 255
+    return out
+
+
+def _outline(m: np.ndarray, touch, width: int) -> np.ndarray:
+    """マスクの内側 width px の輪郭。画面端で切れた辺 (touch = 上/下/左/右) は輪郭にしない"""
+    if width <= 0:
+        return m
+    p = width
+    pad = np.zeros((m.shape[0] + 2 * p, m.shape[1] + 2 * p), bool)
+    pad[p:-p, p:-p] = m
+    if touch[0]:
+        pad[:p, p:-p] = m[:1]
+    if touch[1]:
+        pad[-p:, p:-p] = m[-1:]
+    if touch[2]:
+        pad[:, :p] = pad[:, p:p + 1]
+    if touch[3]:
+        pad[:, -p:] = pad[:, -p - 1:-p]
+    core = ndimage.binary_erosion(pad, iterations=width)[p:-p, p:-p]
+    return m & ~core
+
+
+# ==============================================================
+# 2. 相互相関
+# ==============================================================
+def _gauss3(m, c, p):
+    """ガウス3点近似 (値が正のときのみ)"""
+    if min(m, c, p) <= 0:
+        return 0.0
+    lm, lc, lp = math.log(m), math.log(c), math.log(p)
+    den = 2 * lm - 4 * lc + 2 * lp
+    return (lm - lp) / den if den != 0 else 0.0
+
+
+INVALID_EMPTY, INVALID_RATIO, INVALID_DISP, INVALID_MEDIAN, INVALID_NOGUIDE, INVALID_APERTURE = 1, 2, 3, 4, 5, 6
+
+
+def _lobe_mask(R: np.ndarray, py: int, px: int, p1: float):
+    """1位ピークの主ローブ (0.5×1位 を超える 4連結の領域)。戻り値: (2px 膨らませたマスク, 縦の長さ, 横の長さ)"""
+    hi = R > 0.5 * p1
+    if cv2 is not None:
+        _, lab = cv2.connectedComponents(hi.astype(np.uint8), connectivity=4)
+        lobe = (lab == lab[py, px]).astype(np.uint8)
+        k = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+        grown = cv2.dilate(lobe, k, iterations=2).astype(bool)
+        lobe = lobe.astype(bool)
+    else:
+        lab, _ = ndimage.label(hi)
+        lobe = lab == lab[py, px]
+        grown = ndimage.binary_dilation(lobe, iterations=2)
+    ys = np.flatnonzero(lobe.any(axis=1))
+    xs = np.flatnonzero(lobe.any(axis=0))
+    return grown, ys[-1] - ys[0] + 1, xs[-1] - xs[0] + 1
+
+
+def _peak(R: np.ndarray, s: PIVSettings, disp_frac: float):
+    """相互相関 R (fftshift 済み) のピーク。戻り値: (dy, dx, ピーク比, 無効の理由 or 0)"""
+    h, w = R.shape
+    py, px = np.unravel_index(np.argmax(R), R.shape)
+    p1 = R[py, px]
+    R2 = R.copy()
+    elongated = False
+    if s.lobe_peak and p1 > 0:   # 主ローブの外の最大値
+        mask, ly, lx = _lobe_mask(R, py, px, p1)
+        R2[mask] = -np.inf
+        elongated = s.lobe_max_frac > 0 and (ly > s.lobe_max_frac * h or lx > s.lobe_max_frac * w)
+    else:                        # piv_prior.py: 1位の周り ±2px の外の最大値
+        R2[max(0, py - 2):py + 3, max(0, px - 2):px + 3] = -np.inf
+    p2 = R2.max()
+    ratio = p1 / p2 if p2 > 0 else np.inf
+    sy = _gauss3(R[py - 1, px], p1, R[py + 1, px]) if 0 < py < h - 1 else 0.0
+    sx = _gauss3(R[py, px - 1], p1, R[py, px + 1]) if 0 < px < w - 1 else 0.0
+    dy, dx = py - h // 2 + sy, px - w // 2 + sx
+    if ratio < s.min_peak_ratio:
+        return dy, dx, ratio, INVALID_RATIO
+    if elongated:
+        return dy, dx, ratio, INVALID_APERTURE
+    if disp_frac > 0 and (abs(dy) > disp_frac * h or abs(dx) > disp_frac * w):
+        return dy, dx, ratio, INVALID_DISP
+    return dy, dx, ratio, 0
+
+
+def _correlate(WA: np.ndarray, WB: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """窓の束 (N, h, w) どうしの相互相関をまとめて FFT で計算。戻り値: (R (N,h,w) fftshift 済み, 空の窓か (N,))"""
+    empty = ((WA.max(axis=(1, 2)) == WA.min(axis=(1, 2))) | (WB.max(axis=(1, 2)) == WB.min(axis=(1, 2))))
+    A = WA.astype(np.float64)
+    B = WB.astype(np.float64)
+    A -= A.mean(axis=(1, 2), keepdims=True)
+    B -= B.mean(axis=(1, 2), keepdims=True)
+    h, w = A.shape[1:]
+    R = _fft.irfft2(np.conj(_fft.rfft2(A, **_FFT_KW)) * _fft.rfft2(B, **_FFT_KW), s=(h, w), **_FFT_KW)
+    return np.fft.fftshift(R, axes=(1, 2)), empty
+
+
+def _starts(n: int, win: int, step: int, edge: bool):
+    if n <= win:
+        return [0]
+    st = list(range(0, n - win + 1, step))
+    if edge and st[-1] != n - win:
+        st.append(n - win)
+    return st
+
+
+def _pass(a, b, win, step, s: PIVSettings, guess=None):
+    """1パス分。guess (_Interp) があれば t+1 側の窓をその分ずらす"""
+    H, W = a.shape
+    wy, wx = min(win, H), min(win, W)
+    # はみ出しの判定と窓の中心: faithful では piv_prior.py と同じく窓の公称サイズで判定する
+    by, bx = (wy, wx) if s.clamp_offset else (win, win)
+    ys, xs = _starts(H, wy, step, s.edge_windows), _starts(W, wx, step, s.edge_windows)
+    V = np.full((len(ys), len(xs)), np.nan)
+    U = np.full_like(V, np.nan)
+    why = np.zeros(V.shape, np.int8)
+    cells, WA, WB = [], [], []
+    for iy, y0 in enumerate(ys):
+        for ix, x0 in enumerate(xs):
+            oy = ox = 0
+            if guess is not None:
+                gdy, gdx = guess(y0 + wy / 2, x0 + wx / 2)
+                if np.isfinite(gdy):
+                    oy, ox = int(round(gdy)), int(round(gdx))
+            yb, xb = y0 + oy, x0 + ox
+            if yb < 0 or xb < 0 or yb + by > H or xb + bx > W:
+                if s.clamp_offset:
+                    yb, xb = min(max(yb, 0), H - wy), min(max(xb, 0), W - wx)
+                    oy, ox = yb - y0, xb - x0
+                else:
+                    oy = ox = 0
+                    yb, xb = y0, x0
+            guided = guess is None or not s.require_guide or guess.supported(y0 + wy / 2, x0 + wx / 2)
+            cells.append((iy, ix, oy, ox, guided))
+            WA.append(a[y0:y0 + wy, x0:x0 + wx])
+            WB.append(b[yb:yb + wy, xb:xb + wx])
+    R, empty = _correlate(np.stack(WA), np.stack(WB))
+    disp_frac = s.max_disp_frac if guess is not None else s.pass1_disp_frac
+    for k, (iy, ix, oy, ox, guided) in enumerate(cells):
+        if empty[k]:
+            why[iy, ix] = INVALID_EMPTY
+            continue
+        if not guided:
+            why[iy, ix] = INVALID_NOGUIDE
+            continue
+        dy, dx, _, bad = _peak(R[k], s, disp_frac)
+        if bad:
+            why[iy, ix] = bad
+        else:
+            V[iy, ix], U[iy, ix] = dy + oy, dx + ox
+    cy = np.array(ys, float) + (wy if s.clamp_offset else win) / 2
+    cx = np.array(xs, float) + (wx if s.clamp_offset else win) / 2
+    return cy, cx, V, U, why
+
+
+def _validate(V, U, why, s: PIVSettings):
+    """周りの中央値から大きく外れたベクトルを無効にする (縦横どちらかが外れたら両方無効)"""
+    V2, U2 = V.copy(), U.copy()
+    H, W = V.shape
+    for iy in range(H):
+        for ix in range(W):
+            if not np.isfinite(V[iy, ix]):
+                continue
+            nb = [(j, i) for j in range(max(0, iy - 1), min(H, iy + 2)) for i in range(max(0, ix - 1), min(W, ix + 2))
+                  if (j, i) != (iy, ix) and np.isfinite(V[j, i])]
+            if len(nb) < 3:
+                if not s.validate_isolated:
+                    continue
+                nb = [(j, i) for j in range(max(0, iy - 2), min(H, iy + 3)) for i in range(max(0, ix - 2), min(W, ix + 3))
+                      if (j, i) != (iy, ix) and np.isfinite(V[j, i])]
+                if len(nb) < 2:
+                    continue
+            for F in (V, U):
+                vals = np.array([F[j, i] for j, i in nb])
+                med = np.median(vals)
+                if abs(F[iy, ix] - med) > s.median_k * (np.median(np.abs(vals - med)) + s.median_eps):
+                    V2[iy, ix] = U2[iy, ix] = np.nan
+                    why[iy, ix] = INVALID_MEDIAN
+    return V2, U2
+
+
+def _fill(F):
+    """無効 (NaN) を周り3×3の有効値の中央値、それもなければ全体の中央値で埋める"""
+    G = F.copy()
+    med = np.nanmedian(F) if np.isfinite(F).any() else 0.0
+    for iy, ix in zip(*np.where(~np.isfinite(F))):
+        nb = F[max(0, iy - 1):iy + 2, max(0, ix - 1):ix + 2]
+        G[iy, ix] = np.nanmedian(nb) if np.isfinite(nb).any() else med
+    return G
+
+
+class _Interp:
+    """格子 (窓の中心) 上の値を双線形補間。格子の外は端の値"""
+
+    def __init__(self, cy, cx, V, U, valid=None):
+        self.cy, self.cx, self.V, self.U = cy, cx, V, U
+        self.valid = valid
+
+    def _corners(self, y, x):
+        fy = float(np.interp(y, self.cy, np.arange(len(self.cy))))
+        fx = float(np.interp(x, self.cx, np.arange(len(self.cx))))
+        y0, x0 = int(math.floor(fy)), int(math.floor(fx))
+        y1, x1 = min(y0 + 1, len(self.cy) - 1), min(x0 + 1, len(self.cx) - 1)
+        ty, tx = fy - y0, fx - x0
+        return [(y0, x0, (1 - ty) * (1 - tx)), (y0, x1, (1 - ty) * tx), (y1, x0, ty * (1 - tx)), (y1, x1, ty * tx)]
+
+    def __call__(self, y, x):
+        if self.V.size == 0:
+            return np.nan, np.nan
+        cs = self._corners(y, x)
+        return (float(sum(w * self.V[j, i] for j, i, w in cs)), float(sum(w * self.U[j, i] for j, i, w in cs)))
+
+    def supported(self, y, x) -> bool:
+        """補間に実測の窓 (重み > 0) が含まれるか"""
+        if self.valid is None or self.V.size == 0:
+            return False
+        return any(w > 1e-9 and self.valid[j, i] for j, i, w in self._corners(y, x))
+
+
+class DisplacementField:
+    """フレーム t -> t+1 の移動量場 (1つの大きさ区分)。sample(x, y) -> (dy, dx, 有効か)"""
+
+    def __init__(self, a: np.ndarray, b: np.ndarray, win1: int, step1: int, win2: int, step2: int,
+                 s: Optional[PIVSettings] = None):
+        s = s or PIVSettings()
+        cy1, cx1, V1, U1, why1 = _pass(a, b, win1, step1, s)
+        V1, U1 = _validate(V1, U1, why1, s)
+        f1 = _Interp(cy1, cx1, _fill(V1), _fill(U1), np.isfinite(V1))
+        self.cy, self.cx, V2, U2, self.why = _pass(a, b, win2, step2, s, guess=f1)
+        V2, U2 = _validate(V2, U2, self.why, s)
+        self.valid = np.isfinite(V2)
+        self.V, self.U = _fill(V2), _fill(U2)
+        self._f = _Interp(self.cy, self.cx, self.V, self.U, self.valid)
+
+    def sample(self, x: float, y: float):
+        """(dy, dx, 有効か)。周りに実測の窓がない (埋めた値しかない) 場所は無効"""
+        dy, dx = self._f(y, x)
+        return dy, dx, bool(self.valid.any()) and self._f.supported(y, x)
+
+    @property
+    def valid_fraction(self) -> float:
+        return float(self.valid.mean()) if self.valid.size else 0.0
+
+
+def compute_fields(dets_a, dets_b, image_hw: Tuple[int, int], s: Optional[PIVSettings] = None,
+                   rasters=None) -> Dict[str, Optional[DisplacementField]]:
+    """フレーム t の検出, t+1 の検出 -> {区分: DisplacementField (どちらかのフレームに その区分の気泡がなければ None)}
+    rasters = (t の画像, t+1 の画像) を渡すと作り直さない (フレームごとに1回だけ作るため)"""
+    s = s or PIVSettings()
+    ra, rb = rasters if rasters is not None else (rasterize(dets_a, image_hw, s), rasterize(dets_b, image_hw, s))
+    out = {}
+    for c in CLASS_NAMES:
+        if not ra[c].any() or not rb[c].any():
+            out[c] = None
+            continue
+        out[c] = DisplacementField(ra[c], rb[c], *s.windows[c], s=s)
+    return out
+
+
+def draw(img_gray: np.ndarray, fld: DisplacementField, scale: float = 1.0) -> np.ndarray:
+    """ベクトル図 (黄 = 実測, 赤 = 周りから補間)"""
+    out = cv2.cvtColor(img_gray, cv2.COLOR_GRAY2BGR)
+    for iy, y in enumerate(fld.cy):
+        for ix, x in enumerate(fld.cx):
+            dy, dx = fld.V[iy, ix], fld.U[iy, ix]
+            col = (0, 255, 255) if fld.valid[iy, ix] else (0, 0, 255)
+            cv2.arrowedLine(out, (int(x), int(y)), (int(x + scale * dx), int(y + scale * dy)), col, 2, tipLength=0.25)
+    return out
+
+
+# ======================================================================
+# [B] TAU の部品 — 元 tau_unet.py
+# ======================================================================
+# 元 tau_unet.py の説明:
+# Tracking-aware U-Net (TAU) の共通部品
+# =====================================================================
+# U-Net の入力に「このフレームに気泡がどこにあるはずか」(トラッカーが前後のフレームから予測した気泡マスク) を足す。
+#   ch 0-2 : 前処理画像 (グレーを3回。best.pt と同じ正規化)
+#   ch 3   : 事前マスク・内部 (予測した気泡の塗りつぶし 0/1)
+#   ch 4   : 事前マスク・輪郭 (予測した気泡ごとの内側の輪郭 PRIOR_EDGE_PX 幅 0/1。くっついた気泡の境目が分かる)
+# 出力は best.pt と同じ 3クラス (背景/内部/境界) なので、気泡の分け方 (wall / hybrid) とトラッカーはそのまま使う。
+#
+# best.pt (3チャンネル) から学習を始めるときは、最初の畳み込みの事前マスク用の重みを 0 で足す (expand_state_dict)。
+# 学習前のモデルは事前マスクに関係なく best.pt と同じ確率を出す (tests/test_tau.py の a で確認)。
+# 事前マスクが全部 0 のときは、学習後のモデルも事前マスクなしの検出器として働く (学習で PriorAug.p_empty の割合だけ練習する)。
+#
+# 学習用の事前マスクは、正解ラベルの気泡を崩して作る (synth_prior。MaskTrack, Perazzi et al., CVPR 2017 と同じ考え方)。
+# 連続フレームのラベルは要らない。崩し方 = 前のパスの検出・トラッカーの予測で起きる誤り:
+#   見落とし (消す) / 位置ずれ / 変形 (拡大縮小・膨張収縮) / 一部欠け / 隣と融合 / 割れ / 何も無い所の気泡
+#
+# 1_tau_unet_train.py (学習) と tau_tracker.py (推論) の両方が使う。2つと同じフォルダに置くこと。
+
+PRIOR_CHANNELS = 2       # 事前マスクのチャンネル数 (内部, 輪郭)
+PRIOR_EDGE_PX = 2        # 事前マスクの輪郭の幅 (px)。学習と推論で同じ値を使う (ckpt の prior_edge_px に記録)
+IMAGE_CHANNELS = 3       # 画像のチャンネル数 (グレーを3回。best.pt と同じ)
+
+Shape = Tuple[np.ndarray, int, int]   # (bbox で切り出した bool マスク, x0, y0)。tracker3.py と同じ
+
+
+# ==============================================================
+# 1. モデル
+# ==============================================================
+def build_model(encoder: str, classes: int = 3, in_channels: int = IMAGE_CHANNELS + PRIOR_CHANNELS,
+                encoder_weights=None):
+    import segmentation_models_pytorch as smp
+    return smp.Unet(encoder, encoder_weights=encoder_weights, in_channels=in_channels, classes=classes)
+
+
+def state_in_channels(sd) -> int:
+    """state_dict の入力チャンネル数 (最初の畳み込みの重みの2番目の次元)"""
+    for k, v in sd.items():
+        if k.startswith("encoder.") and v.ndim == 4:
+            return int(v.shape[1])
+    raise ValueError("state_dict にエンコーダの畳み込みが見つかりません")
+
+
+def expand_state_dict(sd, model):
+    """3チャンネルの state_dict を model (5チャンネル) に合わせる。
+    入力チャンネル数だけが違う重み (最初の畳み込み) は、足りないチャンネルを 0 で埋める
+    -> 足したチャンネル (事前マスク) は出力に全く影響しない (学習で少しずつ使い始める)"""
+    import torch
+    target = model.state_dict()
+    out = {}
+    for k, v in sd.items():
+        t = target.get(k)
+        if t is not None and v.ndim == 4 and t.ndim == 4 and v.shape[1] < t.shape[1] \
+                and v.shape[0] == t.shape[0] and v.shape[2:] == t.shape[2:]:
+            w = torch.zeros(t.shape, dtype=v.dtype)
+            w[:, :v.shape[1]] = v
+            out[k] = w
+        else:
+            out[k] = v
+    return out
+
+
+def load_tau_model(ckpt_path: str, dev: str = "cpu", force_prior: bool = False):
+    """ckpt を読み込む。戻り値 (model, ck, uses_prior)
+    5チャンネルの ckpt (1_tau_unet_train.py の出力) -> そのまま。uses_prior = True
+    3チャンネルの ckpt (best.pt)
+        force_prior = False -> 3チャンネルのまま (事前マスクは無視。tracker3.py の UNetDetector と完全に同じ確率)
+        force_prior = True  -> 5チャンネルにして事前マスクの重みを 0 で足す (学習の開始点)"""
+    import torch
+    ck = torch.load(ckpt_path, map_location="cpu")
+    sd = {k: (v.float() if v.is_floating_point() else v) for k, v in ck["state_dict"].items()}  # fp16 版も読める
+    src_ch = state_in_channels(sd)
+    in_ch = src_ch if (src_ch > IMAGE_CHANNELS or not force_prior) else IMAGE_CHANNELS + PRIOR_CHANNELS
+    if in_ch not in (IMAGE_CHANNELS, IMAGE_CHANNELS + PRIOR_CHANNELS):
+        raise ValueError(f"{ckpt_path}: 入力チャンネル数 {in_ch} には対応していません (3 か {IMAGE_CHANNELS + PRIOR_CHANNELS})")
+    model = build_model(ck["encoder"], ck.get("classes", 3), in_ch)
+    model.load_state_dict(expand_state_dict(sd, model) if in_ch > src_ch else sd)
+    return model.to(dev).eval(), ck, in_ch > IMAGE_CHANNELS
+
+
+# ==============================================================
+# 2. 入力
+# ==============================================================
+def make_input(gray: np.ndarray, prior: Optional[np.ndarray], mean, std, uses_prior: bool = True) -> np.ndarray:
+    """(H, W) uint8 + 事前マスク (2, H, W) -> ネットワーク入力 (C, H, W) float32。prior が None なら 0 (事前情報なし)"""
+    g = gray.astype(np.float32) / 255.0
+    x = [(g - float(m)) / float(s) for m, s in zip(mean, std)]
+    if uses_prior:
+        if prior is None:
+            x += [np.zeros_like(g)] * PRIOR_CHANNELS
+        else:
+            if prior.shape != (PRIOR_CHANNELS,) + gray.shape:
+                raise ValueError(f"事前マスクの形 {prior.shape} が画像 {gray.shape} と合いません")
+            x += [prior[c].astype(np.float32) for c in range(PRIOR_CHANNELS)]
+    return np.stack(x)
+
+
+def _paste_or(canvas: np.ndarray, m: np.ndarray, x0: int, y0: int):
+    """canvas[y0:, x0:] |= m (画面からはみ出す部分は切る)"""
+    H, W = canvas.shape
+    h, w = m.shape
+    ya, yb, xa, xb = max(y0, 0), min(y0 + h, H), max(x0, 0), min(x0 + w, W)
+    if ya < yb and xa < xb:
+        canvas[ya:yb, xa:xb] |= m[ya - y0:yb - y0, xa - x0:xb - x0]
+
+
+def render_prior(shapes: Sequence[Shape], H: int, W: int, edge_px: int = PRIOR_EDGE_PX) -> np.ndarray:
+    """気泡マスクの一覧 -> 事前マスク (2, H, W) float32 [内部(塗りつぶし), 輪郭(気泡ごとの内側 edge_px 幅)]
+    画面からはみ出す部分は切ってから輪郭を取る (画面端で切れた気泡は画面端にも輪郭が付く。学習と推論で同じ)"""
+    fill = np.zeros((H, W), bool)
+    ring = np.zeros((H, W), bool)
+    for m, x0, y0 in shapes:
+        if m is None or not m.any():
+            continue
+        h, w = m.shape
+        ya, yb, xa, xb = max(y0, 0), min(y0 + h, H), max(x0, 0), min(x0 + w, W)
+        if ya >= yb or xa >= xb:
+            continue
+        c = m[ya - y0:yb - y0, xa - x0:xb - x0]
+        if not c.any():
+            continue
+        fill[ya:yb, xa:xb] |= c
+        inner = ndimage.binary_erosion(np.pad(c, 1), iterations=edge_px)[1:-1, 1:-1] if edge_px > 0 else c
+        ring[ya:yb, xa:xb] |= c & ~inner
+    return np.stack([fill, ring]).astype(np.float32)
+
+
+def label_shapes(ins: np.ndarray) -> List[Shape]:
+    """気泡ラベルマップ (0 = 背景, 1..N) -> 気泡マスクの一覧"""
+    out = []
+    for k, sl in enumerate(ndimage.find_objects(ins), start=1):
+        if sl is None:
+            continue
+        m = ins[sl] == k
+        if m.any():
+            out.append((m, sl[1].start, sl[0].start))
+    return out
+
+
+# ==============================================================
+# 3. 学習用の事前マスク (正解ラベルを崩して作る)
+# ==============================================================
+@dataclass
+class PriorAug:
+    p_empty: float = 0.15          # 事前マスクを全部 0 にする割合 (1パス目・事前情報なしでも検出できるように)
+    p_drop: float = 0.2            # 気泡ごとに事前マスクから消す確率 (前のパスで見落とした気泡)
+    shift_px: float = 1.0          # 位置ずれの標準偏差 (px, x・y それぞれ) = shift_px + 等価直径 × shift_size
+    shift_size: float = 0.05       #   実データ (731〜790) の前後フレームからの予測と合わせた値 (CLAUDE.md 参照)
+    p_big_shift: float = 0.1       # 位置ずれを big_shift_mult 倍にする確率 (速度の予測の外れ・大きい気泡の変形)
+    big_shift_mult: float = 4.0
+    scale: Tuple[float, float] = (0.85, 1.15)   # 大きさの変化 (前後のフレームでの変形)
+    morph_px: int = 2              # 膨張/収縮の最大幅 (px)。輪郭の取り方の違い (正解ラベルは白い縁の外側、検出は少し内側)
+    p_trunc: float = 0.1           # 一部が欠ける確率 (前のパスで一部しか取れなかった気泡)
+    trunc_keep: Tuple[float, float] = (0.4, 0.9)  # 欠けたときに残す面積の割合
+    p_merge: float = 0.3           # 接している2個を1個にまとめる確率 (前のパスで融合していた)
+    p_split: float = 0.05          # 大きい気泡を2つに割る確率 (前のパスで割れていた)
+    split_min_area: int = 500      # 割るのはこの面積 (px) 以上の気泡だけ
+    phantom_rate: float = 2.0      # 1枚あたりの「何も無い所の気泡」の平均個数 (前のパスの誤検出・予測の外れ)。
+                                   #   形は正解の気泡からランダムに写すので、ほとんど tiny / small になる
+    touch_px: int = 2              # この距離 (px) 以内なら「接している」とみなす (融合の候補)
+
+    def as_dict(self):
+        return {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.__dict__.items()}
+
+
+def _deform(m: np.ndarray, x0: int, y0: int, rng, aug: PriorAug) -> Optional[Shape]:
+    """1個の気泡マスクを崩す (拡大縮小 -> 膨張/収縮 -> 一部欠け -> 位置ずれ)"""
+    area = int(m.sum())
+    if area == 0:
+        return None
+    eqd = 2.0 * math.sqrt(area / math.pi)
+    h, w = m.shape
+    s = float(rng.uniform(*aug.scale))
+    if abs(s - 1.0) > 0.02 and min(h, w) * s >= 2:
+        nh, nw = max(1, int(round(h * s))), max(1, int(round(w * s)))
+        m2 = cv2.resize(m.astype(np.uint8), (nw, nh), interpolation=cv2.INTER_NEAREST).astype(bool)
+        if m2.any():
+            x0, y0 = x0 + int(round((w - nw) / 2)), y0 + int(round((h - nh) / 2))
+            m = m2
+    r = int(rng.integers(-aug.morph_px, aug.morph_px + 1)) if aug.morph_px > 0 else 0
+    if r > 0:
+        m = ndimage.binary_dilation(np.pad(m, r), iterations=r)
+        x0, y0 = x0 - r, y0 - r
+    elif r < 0:
+        e = ndimage.binary_erosion(np.pad(m, 1), iterations=-r)[1:-1, 1:-1]
+        if e.sum() >= max(4, area // 4):
+            m = e
+    if rng.random() < aug.p_trunc and m.sum() >= 20:
+        ys, xs = np.nonzero(m)
+        th = rng.uniform(0, 2 * math.pi)
+        proj = xs * math.cos(th) + ys * math.sin(th)
+        keep = proj <= np.quantile(proj, rng.uniform(*aug.trunc_keep))
+        mt = np.zeros_like(m)
+        mt[ys[keep], xs[keep]] = True
+        m = mt
+    sig = aug.shift_px + aug.shift_size * eqd
+    if rng.random() < aug.p_big_shift:
+        sig *= aug.big_shift_mult
+    dx, dy = rng.normal(0.0, sig, 2)
+    return m, x0 + int(round(dx)), y0 + int(round(dy))
+
+
+def _split(m: np.ndarray, rng) -> List[np.ndarray]:
+    """重心を通る直線で2つに割る (間に 2px の隙間)"""
+    ys, xs = np.nonzero(m)
+    th = rng.uniform(0, math.pi)
+    proj = (xs - xs.mean()) * math.cos(th) + (ys - ys.mean()) * math.sin(th)
+    out = []
+    for sel in (proj < -1.0, proj > 1.0):
+        p = np.zeros_like(m)
+        p[ys[sel], xs[sel]] = True
+        if p.sum() >= 10:
+            out.append(p)
+    return out if len(out) == 2 else [m]
+
+
+def _touching_pairs(ins: np.ndarray, shapes: List[Shape], touch_px: int) -> List[Tuple[int, int]]:
+    pairs = set()
+    H, W = ins.shape
+    for i, (m, x0, y0) in enumerate(shapes):
+        r = touch_px + 1
+        d = ndimage.binary_dilation(np.pad(m, r), iterations=r)
+        ya, xa = y0 - r, x0 - r
+        yb, xb = ya + d.shape[0], xa + d.shape[1]
+        ca, cb, ra, rb = max(ya, 0), min(yb, H), max(xa, 0), min(xb, W)
+        sub = ins[ca:cb, ra:rb][d[ca - ya:cb - ya, ra - xa:rb - xa]]
+        for j in np.unique(sub):
+            if j > 0 and j - 1 != i:
+                pairs.add((min(i, j - 1), max(i, j - 1)))
+    return sorted(pairs)
+
+
+def synth_prior(ins: np.ndarray, rng, aug: Optional[PriorAug] = None, edge_px: int = PRIOR_EDGE_PX,
+                keep_ids=()) -> np.ndarray:
+    """正解の気泡ラベルマップ (0 = 背景, 1..N の連番) を崩して学習用の事前マスク (2, H, W) を作る。
+    rng = np.random.default_rng(...) (同じ rng の状態なら同じ結果)。
+    keep_ids の気泡は消さない (degrade_image で画像を崩した気泡。事前マスクで補えるようにする)"""
+    aug = aug or PriorAug()
+    H, W = ins.shape
+    if rng.random() < aug.p_empty:
+        return np.zeros((PRIOR_CHANNELS, H, W), np.float32)
+    ins = ins.astype(np.int32)
+    ids = np.unique(ins)
+    ids = ids[ids > 0]
+    keep = {int(k) for k in keep_ids}
+    if ids.size and (ids[-1] != ids.size):     # 連番に詰める (_touching_pairs が番号 = 位置 + 1 を使うため)
+        lut = np.zeros(int(ids[-1]) + 1, np.int32)
+        lut[ids] = np.arange(1, ids.size + 1)
+        ins = lut[ins]
+        keep = {int(lut[k]) for k in keep if 0 < k < lut.size}
+    shapes = label_shapes(ins)
+    # 接している2個を1個に (前のパスの融合)
+    groups = [[i] for i in range(len(shapes))]
+    if aug.p_merge > 0 and len(shapes) > 1:
+        pairs = _touching_pairs(ins, shapes, aug.touch_px)
+        used = set()
+        for k in rng.permutation(len(pairs)) if pairs else []:
+            i, j = pairs[k]
+            if i in used or j in used or rng.random() >= aug.p_merge:
+                continue
+            used.update((i, j))
+            groups[i] = [i, j]
+            groups[j] = []
+    objs: List[Shape] = []
+    for g in groups:
+        if not g:
+            continue
+        if len(g) == 1:
+            m, x0, y0 = shapes[g[0]]
+        else:
+            (ma, xa, ya), (mb, xb, yb) = shapes[g[0]], shapes[g[1]]
+            x0, y0 = min(xa, xb), min(ya, yb)
+            x1, y1 = max(xa + ma.shape[1], xb + mb.shape[1]), max(ya + ma.shape[0], yb + mb.shape[0])
+            p = aug.touch_px + 1
+            m = np.zeros((y1 - y0 + 2 * p, x1 - x0 + 2 * p), bool)
+            m[ya - y0 + p:ya - y0 + p + ma.shape[0], xa - x0 + p:xa - x0 + p + ma.shape[1]] |= ma
+            m[yb - y0 + p:yb - y0 + p + mb.shape[0], xb - x0 + p:xb - x0 + p + mb.shape[1]] |= mb
+            m = ndimage.binary_closing(m, iterations=p)
+            x0, y0 = x0 - p, y0 - p
+        if rng.random() < aug.p_drop and not any(i + 1 in keep for i in g):
+            continue
+        pieces = [m]
+        if m.sum() >= aug.split_min_area and rng.random() < aug.p_split:
+            pieces = _split(m, rng)
+        for pc in pieces:
+            d = _deform(pc, x0, y0, rng, aug)
+            if d is not None:
+                objs.append(d)
+    # 何も無い所の気泡 (正解の気泡の形を写すか、無ければ楕円)
+    occ = ndimage.binary_dilation(ins > 0, iterations=3)
+    for _ in range(int(rng.poisson(aug.phantom_rate)) if aug.phantom_rate > 0 else 0):
+        if shapes:
+            m = shapes[int(rng.integers(len(shapes)))][0]
+        else:
+            a, b = rng.uniform(2, 12, 2)
+            yy, xx = np.mgrid[-int(b) - 1:int(b) + 2, -int(a) - 1:int(a) + 2]
+            m = (xx / a) ** 2 + (yy / b) ** 2 <= 1.0
+        h, w = m.shape
+        for _try in range(10):
+            x0 = int(rng.integers(-(w // 2), max(1, W - w // 2)))
+            y0 = int(rng.integers(-(h // 2), max(1, H - h // 2)))
+            ya, yb, xa, xb = max(y0, 0), min(y0 + h, H), max(x0, 0), min(x0 + w, W)
+            if ya >= yb or xa >= xb:
+                continue
+            sub = m[ya - y0:yb - y0, xa - x0:xb - x0]
+            if sub.any() and (occ[ya:yb, xa:xb] & sub).sum() <= 0.2 * sub.sum():
+                d = _deform(m, x0, y0, rng, aug)
+                if d is not None:
+                    objs.append(d)
+                break
+    return render_prior(objs, H, W, edge_px)
+
+
+@dataclass
+class ImageDegrade:
+    """学習画像の崩し方 (degrade_image)。前のフレームでは見えていたが このフレームでは輪郭が切れた/薄い 気泡を真似る"""
+    n_max: int = 4                 # 1枚で崩す気泡の最大数
+    min_area: int = 300            # 崩す気泡の最小面積 (px)。小さい点は崩さない
+    p_fade: float = 0.3            # 崩す気泡のうち「輪郭全体を薄くする」の割合 (残りは「輪郭の一部を消す」)
+    gap_frac: Tuple[float, float] = (0.1, 0.35)   # 消す輪郭の割合 (周の何割。1〜2か所に分ける)
+    fade_keep: Tuple[float, float] = (0.25, 0.6)  # 薄くするとき残す画素の割合 (2値化画像では薄い輪郭は途切れ途切れになる)
+
+    def as_dict(self):
+        return {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.__dict__.items()}
+
+
+def degrade_image(g: np.ndarray, ins: np.ndarray, rng, cfg: Optional[ImageDegrade] = None):
+    """画像 g (2値化画像: 輪郭が明るい) のうち、面積 cfg.min_area 以上の気泡を 1〜cfg.n_max 個選んで輪郭を崩す。
+    輪郭の帯 (気泡のマスクの縁から内側 6px・外側 2px の明るい画素) の一部を 0 にする (切れ目) か、
+    全体を途切れ途切れにする (薄い輪郭)。正解ラベルは変えない。
+    戻り値: (崩した画像, 崩した気泡のラベルの組) -> synth_prior(keep_ids=...) に渡して事前マスクには残す"""
+    cfg = cfg or ImageDegrade()
+    ins = ins.astype(np.int32)
+    ids, area = np.unique(ins[ins > 0], return_counts=True)
+    cand = ids[area >= cfg.min_area]
+    if cand.size == 0:
+        return g, ()
+    chosen = rng.choice(cand, int(rng.integers(1, min(cfg.n_max, cand.size) + 1)), replace=False)
+    g = g.copy()
+    H, W = g.shape
+    objs = ndimage.find_objects(ins)
+    done = []
+    for k in chosen:
+        sl = objs[int(k) - 1]
+        y0, y1, x0, x1 = max(sl[0].start - 3, 0), min(sl[0].stop + 3, H), max(sl[1].start - 3, 0), min(sl[1].stop + 3, W)
+        m = ins[y0:y1, x0:x1] == k
+        sub = g[y0:y1, x0:x1]
+        band = ndimage.binary_dilation(m, iterations=2) & ~ndimage.binary_erosion(m, iterations=6) & (sub > 0)
+        if band.sum() < 10:
+            continue
+        if rng.random() < cfg.p_fade:
+            band &= rng.random(band.shape) >= rng.uniform(*cfg.fade_keep)
+            sub[band] = 0
+        else:
+            ys, xs = np.nonzero(m)
+            by, bx = np.nonzero(band)
+            ang = np.arctan2(by - ys.mean(), bx - xs.mean())
+            n_gap = int(rng.integers(1, 3))
+            total = rng.uniform(*cfg.gap_frac)
+            for _ in range(n_gap):
+                d = (ang - rng.uniform(-math.pi, math.pi)) % (2 * math.pi)
+                sel = d < 2 * math.pi * total / n_gap
+                sub[by[sel], bx[sel]] = 0
+        done.append(int(k))
+    return g, tuple(done)
+
+
+# ==============================================================
+# 4. 推論
+# ==============================================================
+class TauDetector:
+    """ckpt を読み込み、prob(gray, prior) で 背景/内部/境界 の確率 (3, H, W) を返す。
+    tracker3.py の UNetDetector と同じ前後処理 (32 の倍数への反射パディング、学習画像サイズへの拡大縮小)。
+    3チャンネルの ckpt (best.pt) なら事前マスクは無視する (UNetDetector と全く同じ結果)。"""
+
+    def __init__(self, ckpt_path, train_hw=None, dev=None):
+        import torch
+        self.torch = torch
+        self.dev = dev or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.model, ck, self.uses_prior = load_tau_model(ckpt_path, self.dev)
+        self.mean = np.array(ck["mean"], np.float32)
+        self.std = np.array(ck["std"], np.float32)
+        self.edge_px = int(ck.get("prior_edge_px") or PRIOR_EDGE_PX)   # 3チャンネルの ckpt には無い/None のことがある
+        hw = ck.get("train_hw") or train_hw
+        self.train_hw = (int(hw[0]), int(hw[1])) if hw else None
+        self.epoch = ck.get("epoch")
+        self._resize_notice = False
+        print(f"  U-Net: {ckpt_path}  (epoch {ck.get('epoch')}, device {self.dev}, "
+              f"学習画像サイズ {self.train_hw if self.train_hw else '記録なし'}, "
+              f"事前マスク入力 {'あり' if self.uses_prior else 'なし (3チャンネルのモデル)'})")
+        if self.dev == "cpu":
+            print("  ※ GPUが見つかりません。CPUでも動きますが遅くなります。")
+
+    def _forward(self, gray, prior):
+        torch = self.torch
+        H, W = gray.shape
+        ph, pw = (-H) % 32, (-W) % 32
+        g = cv2.copyMakeBorder(gray, 0, ph, 0, pw, cv2.BORDER_REFLECT_101)
+        p = None
+        if self.uses_prior and prior is not None:
+            p = np.pad(prior.astype(np.float32), ((0, 0), (0, ph), (0, pw)))   # 事前マスクのパディングは 0 (学習と同じ)
+        x = make_input(g, p, self.mean, self.std, self.uses_prior)
+        x = torch.from_numpy(x)[None].to(self.dev)
+        with torch.no_grad():
+            out = self.model(x).softmax(1)[0].cpu().numpy()
+        return out[:, :H, :W]
+
+    def prob(self, gray, prior=None):
+        H, W = gray.shape
+        if self.train_hw is None or (H, W) == self.train_hw:
+            return self._forward(gray, prior)
+        th, tw = self.train_hw
+        if not self._resize_notice:
+            print(f"  ※ 画像サイズ {H}x{W} が学習画像 {th}x{tw} と異なるため、学習サイズに合わせて推論します")
+            self._resize_notice = True
+        interp = cv2.INTER_AREA if th * tw < H * W else cv2.INTER_LINEAR
+        pr = None
+        if self.uses_prior and prior is not None:
+            pr = np.stack([cv2.resize(c.astype(np.float32), (tw, th), interpolation=interp) for c in prior])
+        p = self._forward(cv2.resize(gray, (tw, th), interpolation=interp), pr)
+        return np.stack([cv2.resize(c, (W, H), interpolation=cv2.INTER_LINEAR) for c in p])
+
+
+# ======================================================================
+# [C] 検出・追跡 — 元 watershed.py (tracker3.py)
+# ======================================================================
+# 元 watershed.py の説明:
+# Microgap Bubble Tracking - U-Net版 (watershed.py = tracker3 の気泡の分け方を改良した版)
+# =====================================================================
+# tracker3.py と同じプログラムで、次の既定値だけが違う (どれも下の設定で変えられる):
+#   UNET_INSTANCE_MODE = "hybrid"    従来 ("wall") の結果はそのまま使い、輪郭 (境界確率) の切れ目から背景に漏れて
+#                                    消えた気泡だけを、壁を強く閉じ直して取り戻す。
+#                                    ("seed" = 芯を種にした watershed は、大きい気泡の奥で内部確率が下がるため
+#                                     気泡をギザギザに切ることが実データで分かったので既定にしない)
+#   SAVE_PROB_MAPS = True            U-Net の確率マップを OUTPUT_FOLDER/prob/ に保存 (npz = 解析用, png = 確認用)
+#   COMPARE_INSTANCE_MODES = True    毎フレーム従来 ("wall") とも比べ、違う気泡の数をログと OUTPUT_FOLDER/mode_diff/ に出す
+#   OUTPUT_FOLDER = ...\output_watershed   tracker3.py の結果を上書きしないよう別フォルダ
+# piv_field.py を同じフォルダに置いて実行すること。起動時に「watershed.py」と分け方がログに出るので、
+# 実行しているファイルを確認できる。
+#
+# microgaptracker3.py の検出部(YOLO)を、1_unet_train.py で学習した U-Net に置き換えたもの。
+# 前処理・ROI・ブートストラップ・CSV/オーバーレイ出力は microgaptracker3.py の構成を引き継ぐ。
+#
+# 処理の流れ:
+#   1) 前処理(2値化) : 背景差分 -> Median -> Noise Cut -> 明度増幅   ※学習画像と同じ処理
+#   2) 検出(U-Net)   : 画素ごとに 背景/気泡内部/気泡境界 の確率を出力
+#                      -> 境界を壁として領域分割 -> 壁で囲まれた領域 = 気泡1個 (画素マスク)
+#   3) トラッキング   : LeadingEdgeLapTracker
+#        同一気泡 : 2次元速度で予測した位置からのずれ・面積変化・予測マスクとの重なり・形状 のコストで
+#                   ハンガリアン法により1対1対応
+#        合体     : 対応の取れなかったトラックの予測マスクが検出と重なり、
+#                   「面積(A) + 面積(B) ≈ 面積(X)」(面積保存) が確認できた場合
+#        分裂     : 対応の取れなかった検出が親トラックの予測マスクと重なり、
+#                   「面積(X) ≈ 面積(A') + 面積(B')」(面積保存) が確認できた場合
+#        接触     : 合体の直後 (TRANSIENT_MERGE_FRAMES 以内) に元の気泡に分かれ直したら、
+#                   2値化で境界が一時的に消えただけとみなし、元のIDに戻す (合体/分裂として記録しない)
+#   4) 後処理       : 速度(EMA) -> CSV -> オーバーレイ画像 -> QCレポート
+#
+# tracker2.py からの変更点 (QC で多かった 新規発生/消失・ID乗り移り・合体分裂の誤判定への対策):
+#   - 予測を「先端部の y 速度だけ」から「x, y の2次元速度」に変更
+#       斜めに動く気泡 (1フレームで x にも 15〜40px) が MAX_CENTER_X_JUMP で毎回切れていた
+#   - 見失った後に復帰したときの速度更新で、移動量をフレーム数で割っていなかったバグを修正
+#       (2フレームぶりなら速度が約2倍になり、次のフレームでまた見失っていた)
+#   - ゲートを px の固定値から「予測ずれの許容 POS_GATE + 等価直径に比例する分」に変更し、
+#     速度がまだ分からないトラック (新規・分裂直後) は「静止」と「周りの流れ」の2仮説 +
+#     物理的に動ける最大距離 MAX_SPEED で探索
+#       tracker2 では速い気泡 (30〜60px/frame) が新規トラックになると、初速度が周りの静止気泡から
+#       0 と推定されてゲートを外れ、毎フレーム新しいIDになっていた (QC の新規発生の約半数)
+#   - SPACING_GATE_FRAC (隣の気泡との距離によるゲート) を廃止
+#       移動量が気泡間隔より大きいと正しい対応まで捨てていた。乗り移りはコスト(面積・形状・予測ずれ)と
+#       ハンガリアン法の全体最適で防ぐ
+#   - 予測マスクとの IoU (重心合わせなし = 位置と形を同時に見る) をコストに追加し、
+#     IoU が OVERLAP_ACCEPT_IOU 以上なら位置ゲートの外でも対応候補にする (大きく変形する大気泡用)
+#   - 画面端で切れた気泡は、重心ではなく切れていない側の端で位置を比べる
+#   - 合体/分裂の確定条件を Union IoU から面積保存に変更
+#       合体した気泡は丸くなるので「A∪B の形 ≈ X の形」は成り立たない
+#       (同じ大きさの円2つが合体して円になると Union IoU は約0.52 で、しきい値 0.6 に届かない)
+#       逆に、接している2つの気泡の境界が一時的に消えただけのときに合体と判定されていた
+#   - 合体で吸収されたトラックを TRANSIENT_MERGE_FRAMES の間保持し、分かれ直したら元のIDに戻す
+#   - MIN_TRACK_AREA 未満の検出 (数px のノイズ) はトラッキングしない (面積・個数の集計には含む)
+#   - ブートストラップで 最大移動量 MAX_SPEED / 予測ずれ POS_GATE / 面積比 を自動算出
+#
+# tracker2.py での変更点 (microgaptracker3.py から。一部は上記の tracker3 の変更で置き換え):
+#   - ultralytics(YOLO) 不要。torch + segmentation_models_pytorch を使用
+#   - 形状比較(IoU)をポリゴンではなく画素マスクで計算
+#   - 合体/分裂の候補探索を「先端部ゲート」から「マスクの重なり」に変更
+#       前後に並んだ気泡の合体/分裂では、両者の先端部が気泡長だけ離れているため先端部ゲートを通らない。
+#       旧方式では、合体は後方気泡が見失われてゲートが広がった後に遅れて検出され
+#       (気泡長が約160pxを超えると検出不可)、前後方向の分裂は「new」と判定されていた
+#   - 分裂にも合体と同じ Union IoU 検証を追加 (近くに新しく現れた気泡を分裂と誤判定しない)
+#   - 合体メンバーは直前フレームで観測されたトラックに限定 (同じ気泡の重複トラックを合体と誤判定しない)
+#   - 3個以上の同時合体・同時分裂に対応
+#   - 生まれたばかりのトラック(速度未知)は初回のみ先端部ゲートを NEW_TRACK_GATE_SCALE 倍に拡大
+#   - ブートストラップの位置ゲートに下限 BOOTSTRAP_MIN_JUMP を設定
+#   - トラッキングCSVの末尾に 周長(px)・フレーム接触 の列を追加
+#   - 画面端の判定に余裕 EDGE_TOUCH_PX (画面端の 1〜2 px 手前で止まる気泡も「切れた気泡」として扱う)
+#   - 面積の大きい新規トラックは MAX_AGE_NEW_LARGE フレームまで復帰を待つ
+
+Shape = Tuple[np.ndarray, int, int]   # (bboxで切り出したboolマスク, x0, y0)
+
+
+# ==============================================================
+# 1. 前処理 (microgaptracker3.py と同一。UI調整は最初の1枚のみ)
+# ==============================================================
+def preprocess_image(img_path, bg_img, filename="Image", show_ui=False,
+                      current_thresh_val=30, current_bright_val=3, current_median_val=0):
+    img = cv2.imread(img_path)
+    if img is None:
+        return None, None, current_thresh_val, current_bright_val, current_median_val
+
+    if not ENABLE_PREPROCESSING:
+        return img, img.copy(), current_thresh_val, current_bright_val, current_median_val
+
+    if img.shape != bg_img.shape:
+        bg_img_resized = cv2.resize(bg_img, (img.shape[1], img.shape[0]))
+    else:
+        bg_img_resized = bg_img
+
+    diff = cv2.absdiff(img, bg_img_resized)
+    gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+
+    final_thresh = current_thresh_val
+    final_bright = current_bright_val
+    final_median = current_median_val
+
+    if show_ui:
+        hist = cv2.calcHist([gray_diff], [0], None, [256], [0, 256])
+        hist_img_base = np.zeros((256, 256, 3), dtype=np.uint8)
+        cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
+        for x, y in enumerate(hist):
+            cv2.line(hist_img_base, (x, 256), (x, 256 - int(y.item())), (200, 200, 200), 1)
+
+        window_name = f"Preview - {filename} (Adjust Sliders & Press ENTER)"
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+
+        ready = [False]   # 3つのトラックバーが揃うまで True にしない
+
+        def update_preview(*args):
+            # OpenCV 4.11 はトラックバーを作った瞬間にもこの関数を呼ぶ。そのときはまだ他のトラックバーが無く
+            # getTrackbarPos がエラーになるので、全部作り終わるまで何もしない
+            if not ready[0]:
+                return
+            th = cv2.getTrackbarPos("Noise Cut", window_name)
+            br = cv2.getTrackbarPos("Brightness", window_name)
+            md = cv2.getTrackbarPos("Median Filter", window_name)
+            if br < 1:
+                br = 1
+            ksize = md * 2 + 1
+            preview_blur = cv2.medianBlur(gray_diff, ksize)
+            _, preview_clean = cv2.threshold(preview_blur, th, 255, cv2.THRESH_TOZERO)
+            preview_bright = cv2.convertScaleAbs(preview_clean, alpha=br, beta=0)
+            temp_hist = hist_img_base.copy()
+            cv2.line(temp_hist, (th, 0), (th, 256), (0, 0, 255), 2)
+            cv2.imshow("Histogram", temp_hist)
+            preview_bgr = cv2.cvtColor(preview_bright, cv2.COLOR_GRAY2BGR)
+            cv2.imshow(window_name, preview_bgr)
+
+        cv2.createTrackbar("Noise Cut", window_name, current_thresh_val, 100, update_preview)
+        cv2.createTrackbar("Brightness", window_name, current_bright_val, 10, update_preview)
+        cv2.createTrackbar("Median Filter", window_name, current_median_val, 5, update_preview)
+        ready[0] = True
+        update_preview()
+        print(f"{filename}: ヒストグラム, 明るさ, Medianフィルターを調整してENTERを押してください.")
+
+        while True:
+            key = cv2.waitKey(1) & 0xFF
+            if key in [13, 32]:
+                break
+
+        final_thresh = cv2.getTrackbarPos("Noise Cut", window_name)
+        final_bright = cv2.getTrackbarPos("Brightness", window_name)
+        final_median = cv2.getTrackbarPos("Median Filter", window_name)
+        if final_bright < 1:
+            final_bright = 1
+        cv2.destroyWindow(window_name)
+        try:
+            cv2.destroyWindow("Histogram")
+        except Exception:
+            pass
+
+    ksize_final = final_median * 2 + 1
+    blur_diff = cv2.medianBlur(gray_diff, ksize_final)
+    _, clean_diff = cv2.threshold(blur_diff, final_thresh, 255, cv2.THRESH_TOZERO)
+    bright_diff = cv2.convertScaleAbs(clean_diff, alpha=final_bright, beta=0)
+    processed_img = cv2.cvtColor(bright_diff, cv2.COLOR_GRAY2BGR)
+
+    return img, processed_img, final_thresh, final_bright, final_median
+
+
+# ==============================================================
+# 2. U-Net 検出
+# ==============================================================
+class UNetDetector:
+    """best.pt を読み込み、画素ごとの 背景/内部/境界 確率 (3, H, W) を返す。"""
+
+    def __init__(self, ckpt_path, train_hw=None):
+        import torch
+        import segmentation_models_pytorch as smp
+        self.torch = torch
+        self.dev = "cuda" if torch.cuda.is_available() else "cpu"
+        ck = torch.load(ckpt_path, map_location=self.dev)
+        self.model = smp.Unet(ck["encoder"], encoder_weights=None,
+                              in_channels=3, classes=ck["classes"]).to(self.dev)
+        self.model.load_state_dict(ck["state_dict"])
+        self.model.eval()
+        self.mean = np.array(ck["mean"], np.float32)
+        self.std = np.array(ck["std"], np.float32)
+        hw = ck.get("train_hw") or train_hw
+        self.train_hw = (int(hw[0]), int(hw[1])) if hw else None
+        self._resize_notice = False
+        print(f"  U-Net: {ckpt_path}  (epoch {ck.get('epoch')}, device {self.dev}, "
+              f"学習画像サイズ {self.train_hw if self.train_hw else '記録なし'})")
+        if self.dev == "cpu":
+            print("  ※ GPUが見つかりません。CPUでも動きますが遅くなります。")
+
+    def _forward(self, gray):
+        torch = self.torch
+        H, W = gray.shape
+        ph, pw = (-H) % 32, (-W) % 32
+        g = cv2.copyMakeBorder(gray, 0, ph, 0, pw, cv2.BORDER_REFLECT_101)
+        x = np.stack([g] * 3, -1).astype(np.float32) / 255.0
+        x = (x - self.mean) / self.std
+        x = torch.from_numpy(x).permute(2, 0, 1)[None].to(self.dev)
+        with torch.no_grad():
+            p = self.model(x).softmax(1)[0].cpu().numpy()
+        return p[:, :H, :W]
+
+    def prob(self, gray):
+        H, W = gray.shape
+        if self.train_hw is None or (H, W) == self.train_hw:
+            return self._forward(gray)
+        # 撮影画像と学習画像のサイズが違う → 学習サイズに合わせて推論し、確率マップを元のサイズに戻す
+        th, tw = self.train_hw
+        if not self._resize_notice:
+            print(f"  ※ 画像サイズ {H}x{W} が学習画像 {th}x{tw} と異なるため、学習サイズに合わせて推論します")
+            self._resize_notice = True
+        interp = cv2.INTER_AREA if th * tw < H * W else cv2.INTER_LINEAR
+        p = self._forward(cv2.resize(gray, (tw, th), interpolation=interp))
+        return np.stack([cv2.resize(c, (W, H), interpolation=cv2.INTER_LINEAR) for c in p])
+
+
+def _wall_regions(prob, edge_thr, close_iters):
+    """境界確率 > edge_thr を壁にして close_iters 回 closing し、壁で区切られた領域にラベルを付ける。
+    フレーム端も壁とする -> 画面で切れた気泡の領域も閉じる。戻り値: (領域ラベル, 領域数, 壁)"""
+    edge_raw = prob[2] > edge_thr
+    p = close_iters + 2                                    # closing がフレーム端の壁を削らないよう余白
+    ep = np.pad(edge_raw, p, constant_values=True)
+    if close_iters > 0:
+        ep = ndimage.binary_closing(ep, iterations=close_iters)
+    ep = ep[p - 1:-(p - 1), p - 1:-(p - 1)]                # 1px の外枠だけ残す
+    ep[0, :] = ep[-1, :] = ep[:, 0] = ep[:, -1] = True
+    lab, n = ndimage.label(~ep)
+    return lab[1:-1, 1:-1], n, ep[1:-1, 1:-1]
+
+
+def _band_accept(prob, lab, n, edge, band, min_area):
+    """領域の判定: 壁近傍の帯 (幅 band) で 内部確率の和 > 背景確率の和 なら気泡。戻り値: 領域ごとの bool"""
+    wall_band = ndimage.binary_dilation(edge, iterations=band)
+    size = np.bincount(lab.ravel(), minlength=n + 1)
+    lb = lab[wall_band]
+    cnt = np.bincount(lb, minlength=n + 1)
+    s_in = np.bincount(lb, weights=prob[1][wall_band].astype(np.float64), minlength=n + 1)
+    s_bg = np.bincount(lb, weights=prob[0][wall_band].astype(np.float64), minlength=n + 1)
+    ok = (size >= min_area) & (cnt > 0) & (s_in > s_bg)
+    ok[0] = False
+    return ok
+
+
+def _wall_main(prob, min_area, band, edge_thr, close_it):
+    """"wall" の主経路: 1) 壁で領域分割 2) 帯の判定 3) watershed で境界画素を隣接領域に配分。戻り値: (ラベルマップ, 気泡数)"""
+    H, W = prob.shape[1:]
+    lab, n, edge = _wall_regions(prob, edge_thr, close_it + 1)
+    inst = np.zeros((H, W), np.int32)
+    k = 0
+    if n > 0:
+        keep = np.nonzero(_band_accept(prob, lab, n, edge, band, min_area))[0]
+        if keep.size:
+            ws = watershed(prob[2], markers=lab)
+            lut = np.zeros(n + 1, np.int32)
+            lut[keep] = np.arange(1, keep.size + 1, dtype=np.int32)
+            inst = lut[ws]
+            k = int(keep.size)
+    return inst, k
+
+
+def _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max, ring=None, reach=8, stats=None):
+    """"wall" の 4) 内部画素が残らなかった小気泡: 閉じた境界の塊を塗りつぶして気泡とする。
+    既にある気泡から 2px 以内の塊 (大きい気泡のリングの外側半分) は拾わない。inst をその場で更新。
+    ring = _ring_inputs(...) を渡すと、芯のある穴が2つ以上ある塊 (くっついたリング) は穴ごとに分ける
+    (分けた数は stats["pair_split"] に足す)"""
+    H, W = inst.shape
+    edge_raw = prob[2] > edge_thr
+    assigned = inst > 0
+    near_assigned = ndimage.binary_dilation(assigned, iterations=2)
+    comp, nc = ndimage.label(edge_raw & ~assigned)         # closing 前の境界を使う (角の残骸を拾わない)
+    pad = int(np.ceil(reach)) + 2
+    for ci, sl in enumerate(ndimage.find_objects(comp), start=1):
+        if sl is None:
+            continue
+        y0, y1 = max(sl[0].start - 1, 0), min(sl[0].stop + 1, H)
+        x0, x1 = max(sl[1].start - 1, 0), min(sl[1].stop + 1, W)
+        c = comp[y0:y1, x0:x1] == ci
+        if (c & near_assigned[y0:y1, x0:x1]).any():         # 大きい気泡のリングの外側半分 -> 除外
+            continue
+        filled = ndimage.binary_fill_holes(c)
+        a = int(filled.sum())
+        if a < min_area or a > tiny_max:
+            continue
+        if ring is not None and int((filled & ~c).sum()) > 0:
+            ya, yb, xa, xb = max(sl[0].start - pad, 0), min(sl[0].stop + pad, H), max(sl[1].start - pad, 0), min(sl[1].stop + pad, W)
+            sub = inst[ya:yb, xa:xb]
+            pieces = [(w, pm) for w, pm, ncore in _ring_pieces(comp[ya:yb, xa:xb] == ci, sub, ring[0][ya:yb, xa:xb],
+                                                               ring[1][ya:yb, xa:xb], reach)
+                      if ncore > RING_WEAK_CORE and int(pm.sum()) >= min_area]
+            if len(pieces) >= 2:                           # くっついたリング -> 穴ごとに1個
+                for w, pm in pieces:
+                    k += 1
+                    sub[w][pm & (sub[w] == 0)] = k
+                if stats is not None:
+                    stats["pair_split"] = stats.get("pair_split", 0) + 1
+                continue
+        k += 1
+        inst[y0:y1, x0:x1][filled] = k
+    return inst, k
+
+
+# 5) リング気泡の取りこぼしの判定に使う定数
+RING_WEAK_CORE = 4         # 芯がこの画素数以下の穴は「弱い種」: 気泡の面積が RING_WEAK_MAX_AREA 以下のときだけ拾う
+RING_WEAK_MAX_AREA = 45    #   (太い境界の帯の中の小さい穴から、輪郭の破片が気泡になるのを防ぐ。実データ 731〜790 で
+                           #    芯 4px 以下の正しい小気泡は面積 41px 以下、誤検出は 51〜121px だった)
+RING_FRAME_MARGIN = 2      # 画面の端からこの幅 (px) にかかる気泡は 5) では拾わない (画面で切れた気泡の輪郭の破片が多いため)
+RING_MERGE_GAP = 2         # この幅 (px) 以下の境界の線で隔てられた穴は同じ気泡 (穴を横切る細い線で1個を2個に割らない)
+
+
+def _ring_inputs(prob, edge_thr, close_it, seed_thr):
+    """リング気泡の判定に使う (芯, closing 後も残った領域)。closing 後も残った領域の穴は主経路が判定済みなので種にしない"""
+    core = (prob[1] > seed_thr) & (prob[2] <= edge_thr)
+    regions = _wall_regions(prob, edge_thr, close_it + 1)[0] > 0
+    return core, regions
+
+
+def _ring_pieces(c, sub, cor, regions, reach):
+    """境界の塊 c (切り出し座標) をリングの穴ごとの気泡に分ける。
+    リングの穴 = c が囲む穴のうち、画素の半分以上が芯で、既にある気泡も closing 後に残った領域も含まない穴。
+    RING_MERGE_GAP px 以下の線で隔てられた穴は1つにまとめる。
+    境界の画素は いちばん近い穴 の気泡にする。ただし 穴から reach px より遠い画素と、
+    穴より既にある気泡の方が近い画素 (隣の気泡の輪郭の残り) は含めない。
+    戻り値: [(窓 (slice, slice), 窓の中の気泡マスク, 穴の芯の画素数), ...]"""
+    hole = ndimage.binary_fill_holes(c) & ~c
+    if not hole.any():
+        return []
+    hl, nh = ndimage.label(hole)
+    seed = np.zeros(c.shape, bool)
+    for h, hs in enumerate(ndimage.find_objects(hl), start=1):
+        if hs is None:
+            continue
+        hm = hl[hs] == h
+        if (hm & ((sub[hs] > 0) | regions[hs])).any() or 2 * int((hm & cor[hs]).sum()) < int(hm.sum()):
+            continue
+        seed[hs] |= hm
+    if not seed.any():
+        return []
+    g = RING_MERGE_GAP // 2
+    grown = (ndimage.binary_dilation(seed, iterations=g) & (seed | c)) if g > 0 else seed
+    glab, ns = ndimage.label(grown)
+    seeds = np.where(seed, glab, 0)
+    d_seed, idx = ndimage.distance_transform_edt(seeds == 0, return_indices=True)
+    near = seeds[idx[0], idx[1]]
+    mask = c & (d_seed <= reach)
+    if (sub > 0).any():
+        mask &= d_seed < ndimage.distance_transform_edt(sub == 0)
+    mask |= seeds > 0
+    r = int(np.ceil(reach)) + 1
+    out = []
+    for s_id, ss in enumerate(ndimage.find_objects(seeds), start=1):
+        if ss is None:
+            continue
+        w = (slice(max(ss[0].start - r, 0), ss[0].stop + r), slice(max(ss[1].start - r, 0), ss[1].stop + r))
+        sm = seeds[w] == s_id
+        pl, _ = ndimage.label(mask[w] & (near[w] == s_id))
+        pm = ndimage.binary_fill_holes(np.isin(pl, np.unique(pl[sm]))) & (sub[w] == 0)
+        out.append((w, pm, int((sm & cor[w]).sum())))
+    return out
+
+
+def _ring_path(prob, inst, k, edge_thr, min_area, ring_max, reach, ring):
+    """5) 穴の小さいリング気泡の取りこぼし (ring_max <= 0 なら何もしない)。既にある気泡の画素は変えない。
+    主経路の closing でリングの穴が埋まり、4) でも「くっついたリング2個で 面積 > tiny_max」「隣の気泡から 2px 以内」
+    のために捨てられた気泡を、まだ気泡でない境界の塊ごとに _ring_pieces で拾う。次のものは拾わない:
+      面積 < min_area または > ring_max / 弱い種 (芯 <= RING_WEAK_CORE px) で 面積 > RING_WEAK_MAX_AREA /
+      画面の端から RING_FRAME_MARGIN px にかかる
+    面積の決め方は 4) と同じく輪郭の外側まで。戻り値: (ラベルマップ, 最後のラベル番号, 追加した数)"""
+    if ring_max <= 0:
+        return inst, k, 0
+    H, W = inst.shape
+    comp, nc = ndimage.label((prob[2] > edge_thr) & ~(inst > 0))
+    pad = int(np.ceil(reach)) + 2
+    m = RING_FRAME_MARGIN
+    n_add = 0
+    for ci, sl in enumerate(ndimage.find_objects(comp), start=1):
+        if sl is None:
+            continue
+        ya, yb, xa, xb = max(sl[0].start - pad, 0), min(sl[0].stop + pad, H), max(sl[1].start - pad, 0), min(sl[1].stop + pad, W)
+        sub = inst[ya:yb, xa:xb]
+        for w, pm, ncore in _ring_pieces(comp[ya:yb, xa:xb] == ci, sub, ring[0][ya:yb, xa:xb], ring[1][ya:yb, xa:xb], reach):
+            pm = pm & (sub[w] == 0)
+            a = int(pm.sum())
+            if a < min_area or a > ring_max or (ncore <= RING_WEAK_CORE and a > RING_WEAK_MAX_AREA):
+                continue
+            ys, xs = np.nonzero(pm)
+            gy, gx = ya + w[0].start, xa + w[1].start
+            if gy + ys.min() < m or gx + xs.min() < m or gy + ys.max() >= H - m or gx + xs.max() >= W - m:
+                continue
+            k += 1
+            n_add += 1
+            sub[w][pm] = k
+    return inst, k, n_add
+
+
+def extract_instances(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_max=300,
+                      ring_max=0, ring_reach=8, seed_thr=0.5, stats=None):
+    """確率マップ (3,H,W) -> 気泡ラベルマップ (0=なし, 1..N=気泡)。UNET_INSTANCE_MODE = "wall" の方式
+    1) 境界(class 2)を壁として領域分割。フレーム端も壁とする -> 画面で切れた気泡の領域も閉じる
+    2) 領域の判定: 壁近傍の帯で 内部確率 > 背景確率 なら気泡
+    3) watershed で境界画素を隣接領域に配分
+    4) 内部画素が残らなかった小気泡: 閉じた境界の塊を塗りつぶして気泡とする
+    5) ring_max > 0 なら 穴の小さいリング気泡の取りこぼしを拾い (_ring_path)、4) のくっついたリングを分ける。
+       stats["ring"] に拾った数、stats["pair_split"] に分けた塊の数を足す
+    """
+    inst, k = _wall_main(prob, min_area, band, edge_thr, close_it)
+    ring = _ring_inputs(prob, edge_thr, close_it, seed_thr) if ring_max > 0 else None
+    inst, k = _tiny_path(prob, inst, k, edge_thr, min_area, tiny_max, ring, ring_reach, stats)
+    inst, k, n_ring = _ring_path(prob, inst, k, edge_thr, min_area, ring_max, ring_reach, ring)
+    if stats is not None:
+        stats["ring"] = stats.get("ring", 0) + n_ring
+    return inst
+
+
+# 救済で壁を閉じ直す段階 (境界確率のしきい値, closing の回数)。前から順に試し、最初に条件を満たした段階を使う
+RESCUE_SCHEDULE = ((0.5, 5), (0.3, 5), (0.2, 5), (0.1, 5), (0.5, 7), (0.3, 7), (0.2, 7), (0.1, 7))
+
+
+def _rescue_leaked(prob, inst, k, min_area, band, edge_thr, close_it, seed_thr, core_min, core_frac):
+    """"hybrid" の救済: 壁の切れ目から背景に漏れて消えた気泡を取り戻す。既にある気泡の画素は変えない。
+    1) 芯 = opening(内部 > seed_thr かつ 境界 <= edge_thr, close_it+1 回) のうち、どの気泡にも属さないもの。
+       面積 >= core_min のかたまりを大きい順に候補にする
+    2) 候補ごとに RESCUE_SCHEDULE の順に壁を強く閉じ直し (しきい値を下げる / closing を増やす)、
+       芯の半分以上を含む領域が 芯の割合 >= core_frac かつ wall と同じ帯の判定 を満たした最初の段階で
+       その領域を気泡にする。境界画素は wall と同じく境界確率の尾根で隣と分ける (まだ気泡でない画素の中だけ)
+    3) どの段階でも満たさなければ救済しない (芯を種にした "seed" のようなギザギザの形は作らない)
+    戻り値: (ラベルマップ, 最後のラベル番号, 救済した数)"""
+    H, W = inst.shape
+    free = inst == 0
+    core = (prob[1] > seed_thr) & (prob[2] <= edge_thr)
+    if close_it > 0:
+        core = ndimage.binary_opening(core, iterations=close_it + 1)
+    core &= free
+    cl, nc = ndimage.label(core)
+    if nc == 0:
+        return inst, k, 0
+    area = np.bincount(cl.ravel(), minlength=nc + 1)
+    cand = [int(c) for c in np.argsort(-area) if c > 0 and area[c] >= core_min]
+    out = inst.copy()
+    regions = {}
+    done = np.zeros(nc + 1, bool)
+    n_res = 0
+    for c in cand:
+        if done[c]:
+            continue
+        cm = cl == c
+        for thr, it in RESCUE_SCHEDULE:
+            if (thr, it) not in regions:
+                lab, n, _ = _wall_regions(prob, thr, it)
+                regions[(thr, it)] = (lab, n)
+            lab, n = regions[(thr, it)]
+            ov = np.bincount(lab[cm], minlength=n + 1)
+            ov[0] = 0
+            r = int(ov.argmax())
+            if ov[r] < 0.5 * area[c]:
+                continue
+            reg = lab == r
+            R = reg & free
+            a = int(R.sum())
+            if a == 0 or float((core & R).sum()) / a < core_frac:
+                continue
+            bnd = ndimage.binary_dilation(~reg, iterations=band) & R
+            if not (bnd.any() and float(prob[1][bnd].sum()) > float(prob[0][bnd].sum())):
+                continue
+            ws = watershed(prob[2], markers=np.where(free, lab, 0).astype(np.int32), mask=free)
+            m = ws == r
+            if int(m.sum()) >= min_area:
+                k += 1
+                n_res += 1
+                out[m] = k
+                free &= ~m
+                done[np.unique(cl[m & core])] = True
+            break
+    return out, k, n_res
+
+
+def extract_instances_hybrid(prob, min_area=4, band=25, edge_thr=0.5, close_it=2, tiny_max=300,
+                             seed_thr=0.5, core_min=100, core_frac=0.5, stats=None, ring_max=0, ring_reach=8):
+    """確率マップ (3,H,W) -> 気泡ラベルマップ。UNET_INSTANCE_MODE = "hybrid" の方式。
+    "wall" の結果はそのまま使い、壁の切れ目から背景に漏れて消えた気泡だけを _rescue_leaked で取り戻す。
+    順番: wall の主経路 -> 救済 -> wall の小気泡の経路 -> リング気泡 (救済した気泡の輪郭の破片は拾わない)。
+    救済がないフレームは "wall" と完全に同じ結果になる。ラベル番号は 主経路 -> 小気泡 -> リング -> 救済 の順。
+    stats (dict) を渡すと stats["rescued"] に救済した数、stats["ring"] / stats["pair_split"] にリング気泡を拾った数 /
+    くっついたリングを分けた数を足す"""
+    inst, k_main = _wall_main(prob, min_area, band, edge_thr, close_it)
+    off = 1 << 24                                          # 救済した気泡は一時的に大きい番号にしておく
+    inst, k_off, n_res = _rescue_leaked(prob, inst, off, min_area, band, edge_thr, close_it, seed_thr,
+                                        core_min, core_frac)
+    ring = _ring_inputs(prob, edge_thr, close_it, seed_thr) if ring_max > 0 else None
+    inst, k = _tiny_path(prob, inst, k_main, edge_thr, min_area, tiny_max, ring, ring_reach, stats)
+    inst, k, n_ring = _ring_path(prob, inst, k, edge_thr, min_area, ring_max, ring_reach, ring)
+    if n_res:
+        m = inst > off
+        inst[m] = inst[m] - off + k
+    if stats is not None:
+        stats["rescued"] = stats.get("rescued", 0) + n_res
+        stats["ring"] = stats.get("ring", 0) + n_ring
+    return inst
+
+
+def extract_instances_seed(prob, min_area=4, edge_thr=0.5, tiny_max=300, seed_thr=0.5, close_it=2):
+    """確率マップ (3,H,W) -> 気泡ラベルマップ (0=なし, 1..N=気泡)。UNET_INSTANCE_MODE = "seed" の方式。
+    1) 種 = 気泡の芯 (内部確率 > seed_thr かつ 境界確率 <= edge_thr) のかたまり。壁が閉じているかに関係なく決まる
+    2) 背景 (背景確率 >= 0.5) も種にして、境界確率を標高とする watershed で境界画素を両側に配分する
+       (従来の "wall" と同じく、境界の帯の尾根で分ける)。芯は固定なので、壁が途切れていても背景に漏れない
+    3) 芯のない前景 (背景確率 < 0.5) のかたまり = 内部確率が出ない小さい点 は、穴を埋めたかたまり全体を1個の気泡とする
+       (従来の小気泡の経路と同じ)。面積が min_area〜tiny_max のものだけ
+    芯は "wall" の closing と同じ回数の opening をかける: "wall" で閉じてしまう細い内部 (小さいリング気泡の穴) は芯にせず
+    3) で扱うので、気泡の面積の決め方 (輪郭の内側/外側) が "wall" と揃う"""
+    H, W = prob.shape[1:]
+    fg = prob[0] < 0.5
+    core = (prob[1] > seed_thr) & (prob[2] <= edge_thr)
+    if close_it > 0:
+        core = ndimage.binary_opening(core, iterations=close_it + 1)
+    markers, n = ndimage.label(core)
+    markers = markers.astype(np.int32)
+    fl, nf = ndimage.label(fg)
+    has_core = np.zeros(nf + 1, bool)
+    has_core[np.unique(fl[core])] = True
+    k = n
+    for ci, sl in enumerate(ndimage.find_objects(fl), start=1):
+        if sl is None or has_core[ci]:
+            continue
+        y0, y1 = max(sl[0].start - 1, 0), min(sl[0].stop + 1, H)
+        x0, x1 = max(sl[1].start - 1, 0), min(sl[1].stop + 1, W)
+        filled = ndimage.binary_fill_holes(fl[y0:y1, x0:x1] == ci)
+        a = int(filled.sum())
+        if a < min_area or a > tiny_max:
+            continue
+        k += 1
+        markers[y0:y1, x0:x1][filled & (markers[y0:y1, x0:x1] == 0)] = k
+    bg_id = k + 1
+    markers[~fg & (markers == 0)] = bg_id
+    ws = watershed(prob[2], markers=markers)
+    ws[ws == bg_id] = 0
+    area = np.bincount(ws.ravel(), minlength=bg_id + 1)
+    keep = np.nonzero(area[:bg_id] >= min_area)[0]
+    keep = keep[keep > 0]
+    lut = np.zeros(bg_id + 1, np.int32)
+    lut[keep] = np.arange(1, keep.size + 1, dtype=np.int32)
+    return lut[ws]
+
+
+def drop_nested(inst: np.ndarray, surround: float = 0.9, stats=None) -> np.ndarray:
+    """別の気泡の中にある気泡 (外側 2px の画素の surround 以上が 自分より大きい1個の気泡) を消す。
+    画面端に接する気泡は対象外。外側の気泡は変えない。stats["nested"] に消した数を足す"""
+    H, W = inst.shape
+    area = np.bincount(inst.ravel())
+    drop = []
+    for l, sl in enumerate(ndimage.find_objects(inst), start=1):
+        if sl is None or sl[0].start == 0 or sl[1].start == 0 or sl[0].stop == H or sl[1].stop == W:
+            continue
+        y0, y1, x0, x1 = max(sl[0].start - 3, 0), min(sl[0].stop + 3, H), max(sl[1].start - 3, 0), min(sl[1].stop + 3, W)
+        sub = inst[y0:y1, x0:x1]
+        m = sub == l
+        v = sub[ndimage.binary_dilation(m, iterations=2) & ~m]
+        ids, cnt = np.unique(v[v > 0], return_counts=True)
+        if ids.size and cnt.max() >= surround * v.size and area[ids[cnt.argmax()]] > area[l]:
+            drop.append(l)
+    if drop:
+        inst = np.where(np.isin(inst, drop), 0, inst)
+    if stats is not None:
+        stats["nested"] = stats.get("nested", 0) + len(drop)
+    return inst
+
+
+def unet_instances(prob, mode=None, stats=None):
+    """確率マップを気泡ラベルマップにする。mode: "wall" / "hybrid" / "seed" (None なら UNET_INSTANCE_MODE)。
+    stats (dict): "hybrid" で救済した数を stats["rescued"] に、UNET_RING_RESCUE で拾ったリング気泡の数を stats["ring"] に、
+    UNET_DROP_NESTED で除いた 気泡の中の気泡 の数を stats["nested"] に足す"""
+    mode = UNET_INSTANCE_MODE if mode is None else mode
+    ring_max = UNET_RING_MAX if UNET_RING_RESCUE else 0
+    if mode not in ("wall", "hybrid", "seed"):
+        raise ValueError(f'UNET_INSTANCE_MODE は "wall" / "hybrid" / "seed": {mode!r}')
+    if mode == "seed":
+        inst = extract_instances_seed(prob, UNET_MIN_AREA, UNET_EDGE_THR, UNET_TINY_MAX, UNET_SEED_THR, UNET_CLOSE)
+    elif mode == "hybrid":
+        inst = extract_instances_hybrid(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
+                                        UNET_SEED_THR, UNET_RESCUE_CORE_MIN, UNET_RESCUE_CORE_FRAC, stats,
+                                        ring_max, UNET_RING_REACH)
+    else:
+        inst = extract_instances(prob, UNET_MIN_AREA, UNET_BAND, UNET_EDGE_THR, UNET_CLOSE, UNET_TINY_MAX,
+                                 ring_max, UNET_RING_REACH, UNET_SEED_THR, stats)
+    return drop_nested(inst, UNET_NESTED_SURROUND, stats) if UNET_DROP_NESTED else inst
+
+
+def unmatched_instances(a: np.ndarray, b: np.ndarray, iou_thr: float = 0.5) -> List[int]:
+    """ラベルマップ a の気泡のうち、b に IoU >= iou_thr で対応する気泡がないもの (面積 > IGNORE_PARTICLE_AREA だけ)"""
+    na, nb = int(a.max()), int(b.max())
+    if na == 0:
+        return []
+    ov = np.bincount((a.astype(np.int64) * (nb + 1) + b).ravel(), minlength=(na + 1) * (nb + 1)).reshape(na + 1, nb + 1)
+    area_a, area_b = ov.sum(1), ov.sum(0)
+    iou = ov[1:, 1:] / np.maximum(area_a[1:, None] + area_b[None, 1:] - ov[1:, 1:], 1)
+    best = iou.max(1) if nb else np.zeros(na)
+    return [k + 1 for k in range(na) if area_a[k + 1] > IGNORE_PARTICLE_AREA and best[k] < iou_thr]
+
+
+def save_mode_diff(path: str, gray: np.ndarray, inst: np.ndarray, other: np.ndarray,
+                   only_inst: List[int], only_other: List[int], mode: str, other_mode: str):
+    """気泡の分け方の違いを描いた画像: 緑 = 使っている方式 (mode) だけにある気泡, 赤 = 比べた方式 (other_mode) だけ,
+    灰 = 使っている方式の全気泡の輪郭"""
+    vis = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    cs, _ = cv2.findContours((inst > 0).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(vis, cs, -1, (128, 128, 128), 1)
+    for lab_map, ids, col in ((inst, only_inst, (0, 255, 0)), (other, only_other, (0, 0, 255))):
+        if ids:
+            m = np.isin(lab_map, ids).astype(np.uint8)
+            cs, _ = cv2.findContours(m, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            cv2.drawContours(vis, cs, -1, col, 2)
+    cv2.putText(vis, f"green: {mode} only {len(only_inst)}  red: {other_mode} only {len(only_other)}", (6, 20),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+    cv2.imwrite(path, vis)
+
+
+DETECTION_STATS: Dict[str, object] = {}   # 検出ステップの集計 (qc_report の used_params に入れる)
+
+
+# ==============================================================
+# 3. 検出データ構造
+# ==============================================================
+@dataclass
+class Detection:
+    shape: Shape              # (boolマスク, x0, y0)。形状IoU・合体/分裂判定用
+    contours: list            # 画像座標の輪郭 (描画用。成分ごとに別々に描く)
+    area: float               # 全体面積 (トラッキングのゲート/コスト用 - ROIと無関係に維持)
+    cx: float
+    cy: float
+    leading_x: float
+    leading_y: float
+    perimeter: float = 0.0    # 輪郭長 (px)
+    touches_frame: bool = False  # 画面端に接している (切れた気泡: 面積・周長は不完全)
+    touch: Tuple[bool, bool, bool, bool] = (False, False, False, False)  # 画面の 上/下/左/右 端に接しているか
+    conf: float = 1.0
+    area_in_roi: float = 0.0  # ROIと重なる部分の面積 (統計用)
+    in_roi: bool = True       # ROIに少しでもかかっているか (個数カウント用)
+
+
+def leading_edge_from_points(pts: np.ndarray, percentile: float = LEADING_EDGE_PERCENTILE):
+    """輪郭点のうち上側(yが小さい)percentile%の平均 = 先端部"""
+    n = max(3, int(len(pts) * percentile / 100.0))
+    top = pts[np.argsort(pts[:, 1])[:n]]
+    return float(np.mean(top[:, 0])), float(np.mean(top[:, 1]))
+
+
+def instances_to_detections(inst: np.ndarray, roi_bool: np.ndarray) -> List[Detection]:
+    H, W = inst.shape
+    dets: List[Detection] = []
+    for k, sl in enumerate(ndimage.find_objects(inst), start=1):
+        if sl is None:
+            continue
+        y0, y1, x0, x1 = sl[0].start, sl[0].stop, sl[1].start, sl[1].stop
+        m = inst[y0:y1, x0:x1] == k
+        area = int(np.count_nonzero(m))
+        if area == 0 or area <= IGNORE_PARTICLE_AREA:   # 粒子 (IGNORE_PARTICLE_AREA 以下) は無視
+            continue
+        ys, xs = np.nonzero(m)
+        cs, _ = cv2.findContours(m.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE,
+                                 offset=(x0, y0))
+        pts = np.vstack([c.reshape(-1, 2) for c in cs]).astype(np.float64)
+        lx, ly = leading_edge_from_points(pts)
+        per = float(sum(cv2.arcLength(c, True) for c in cs))
+        a_roi = float(np.count_nonzero(m & roi_bool[y0:y1, x0:x1]))
+        e = max(0, int(EDGE_TOUCH_PX))
+        touch = (bool(y0 <= e), bool(y1 >= H - e), bool(x0 <= e), bool(x1 >= W - e))
+        dets.append(Detection(
+            shape=(m, x0, y0), contours=cs, area=float(area),
+            cx=float(xs.mean() + x0), cy=float(ys.mean() + y0),
+            leading_x=lx, leading_y=ly, perimeter=per,
+            touches_frame=any(touch), touch=touch,
+            area_in_roi=a_roi, in_roi=a_roi > 0,
+        ))
+    return dets
+
+
+# ==============================================================
+# 4. 形状比較 (画素マスク)
+# ==============================================================
+def overlap_px(a: Shape, b: Shape) -> int:
+    """2つのマスクの重なり画素数"""
+    ma, ax, ay = a
+    mb, bx, by = b
+    x0, y0 = max(ax, bx), max(ay, by)
+    x1 = min(ax + ma.shape[1], bx + mb.shape[1])
+    y1 = min(ay + ma.shape[0], by + mb.shape[0])
+    if x1 <= x0 or y1 <= y0:
+        return 0
+    return int(np.count_nonzero(ma[y0 - ay:y1 - ay, x0 - ax:x1 - ax] & mb[y0 - by:y1 - by, x0 - bx:x1 - bx]))
+
+
+def group_iou(shapes_a: List[Shape], shift: Tuple[float, float], shapes_b: List[Shape]) -> float:
+    """「shapes_a の和集合を shift だけ平行移動したもの」と「shapes_b の和集合」の IoU。
+    1対1 (形状維持の確認)、多対1 (合体の確認)、1対多 (分裂の確認) をすべてこれで計算する。
+    2つの和集合を囲む小さなキャンバスだけで計算するので軽い。"""
+    if not shapes_a or not shapes_b:
+        return 0.0
+    sx, sy = int(round(shift[0])), int(round(shift[1]))
+    a_list = [(m, x + sx, y + sy) for m, x, y in shapes_a]
+    allsh = a_list + list(shapes_b)
+    X0 = min(x for _, x, _ in allsh)
+    Y0 = min(y for _, _, y in allsh)
+    X1 = max(x + m.shape[1] for m, x, _ in allsh)
+    Y1 = max(y + m.shape[0] for m, _, y in allsh)
+    W, H = X1 - X0, Y1 - Y0
+    if W <= 0 or H <= 0 or W > 4000 or H > 4000:
+        return 0.0
+    ua = np.zeros((H, W), bool)
+    ub = np.zeros((H, W), bool)
+    for m, x, y in a_list:
+        ua[y - Y0:y - Y0 + m.shape[0], x - X0:x - X0 + m.shape[1]] |= m
+    for m, x, y in shapes_b:
+        ub[y - Y0:y - Y0 + m.shape[0], x - X0:x - X0 + m.shape[1]] |= m
+    inter = int(np.count_nonzero(ua & ub))
+    union = int(np.count_nonzero(ua | ub))
+    return inter / union if union else 0.0
+
+
+def compute_motion_compensated_iou(prev_shape: Optional[Shape], curr_shape: Optional[Shape],
+                                   shift_x: float, shift_y: float) -> float:
+    """トラックの前回マスクを「この検出が正解と仮定した実測移動量」(検出中心 - 前回中心)だけ平行移動して IoU を計算。
+    予測移動量を使わないのは、予測が外れると同一物体でも形がずれて見え、形状比較が汚れるため。
+    形を保ったまま移動しただけなら IoU は高く、合体/分裂のように形自体が急変すると低くなる。"""
+    if prev_shape is None or curr_shape is None:
+        return 0.5  # 履歴のないトラックにはペナルティもボーナスも与えない(中立値)
+    return group_iou([prev_shape], (shift_x, shift_y), [curr_shape])
+
+
+def eq_diameter(area: float) -> float:
+    """等価直径 (同じ面積の円の直径)"""
+    return 2.0 * math.sqrt(max(area, 0.0) / math.pi)
+
+
+def shift_shape(s: Shape, dx: float, dy: float) -> Shape:
+    m, x0, y0 = s
+    return (m, x0 + int(round(dx)), y0 + int(round(dy)))
+
+
+def mask_iou(a: Shape, area_a: float, b: Shape, area_b: float) -> float:
+    """重心合わせをしない素の IoU。位置と形の両方が合っているときだけ高くなる。"""
+    ov = overlap_px(a, b)
+    return ov / max(1.0, area_a + area_b - ov) if ov else 0.0
+
+
+def _near_bbox(s: Shape, x: float, y: float, r: int) -> bool:
+    m, x0, y0 = s
+    return x0 - r <= x < x0 + m.shape[1] + r and y0 - r <= y < y0 + m.shape[0] + r
+
+
+def point_in_shape(s: Shape, x: float, y: float) -> bool:
+    m, x0, y0 = s
+    xi, yi = int(round(x)) - x0, int(round(y)) - y0
+    return 0 <= yi < m.shape[0] and 0 <= xi < m.shape[1] and bool(m[yi, xi])
+
+
+def dilate_shape(s: Shape, r: int) -> Shape:
+    """マスクを r px 膨らませる (合体/分裂の候補探索用)"""
+    if r <= 0:
+        return s
+    m, x0, y0 = s
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1))
+    return (cv2.dilate(np.pad(m, r).astype(np.uint8), k).astype(bool), x0 - r, y0 - r)
+
+
+def _axis_modes(touch_a, touch_b):
+    """2つの観測 (前回と今回) の位置をどこで比べるかを軸ごとに決める。
+    画面端で切れた気泡の重心は、見えている部分が増減するだけで実際の移動と無関係に動く。
+    そこで、どちらかの観測で上端が切れていれば下端、下端が切れていれば上端を使う (x も同様)。
+    両側とも切れていれば重心を使い、信頼度が低いことを返す。
+    戻り値: (x の基準, y の基準, 信頼度が低いか)   基準は "c"=重心, "lo"=座標の小さい側の端, "hi"=大きい側の端"""
+    def mode(lo_cut, hi_cut):
+        if lo_cut and hi_cut:
+            return "c", True
+        if lo_cut:
+            return "hi", False
+        if hi_cut:
+            return "lo", False
+        return "c", False
+    my, loose_y = mode(touch_a[0] or touch_b[0], touch_a[1] or touch_b[1])
+    mx, loose_x = mode(touch_a[2] or touch_b[2], touch_a[3] or touch_b[3])
+    return mx, my, (loose_x or loose_y)
+
+
+def _ref_xy(obj, mx: str, my: str) -> Tuple[float, float]:
+    """_axis_modes で決めた基準点。obj は Track でも Detection でもよい"""
+    m, x0, y0 = obj.shape
+    x = obj.cx if mx == "c" else float(x0 if mx == "lo" else x0 + m.shape[1] - 1)
+    y = obj.cy if my == "c" else float(y0 if my == "lo" else y0 + m.shape[0] - 1)
+    return x, y
+
+
+def displacement(a, b) -> Tuple[float, float, bool]:
+    """観測 a -> b の移動量 (dx, dy) と、その信頼度が低いか (両側とも画面端で切れている)"""
+    mx, my, loose = _axis_modes(a.touch, b.touch)
+    ax, ay = _ref_xy(a, mx, my)
+    bx, by = _ref_xy(b, mx, my)
+    return bx - ax, by - ay, loose
+
+
+# ==============================================================
+# 5. LAPトラッカー (ハンガリアン法 + 合体/分裂)
+# ==============================================================
+@dataclass
+class Track:
+    track_id: int
+    leading_x: float
+    leading_y: float
+    cx: float
+    cy: float
+    area: float
+    shape: Optional[Shape] = None  # 直近でマッチした検出のマスク
+    touch: Tuple[bool, bool, bool, bool] = (False, False, False, False)
+    vx: float = 0.0                # 速度 (px/frame)。v_known が False の間は使わない
+    vy: float = 0.0
+    v_known: bool = False          # 2回以上観測して速度を実測したか
+    prior_vx: float = 0.0          # 速度未知の間に使う初速度の推定 (PIV / 周りの流れ / 分裂の子なら親の速度)
+    prior_vy: float = 0.0
+    prior_src: str = ""            # 初速度の出どころ: "piv" (PIV 速度場) / "" (それ以外)
+    hits: int = 1
+    time_since_update: int = 0
+    first_frame: int = 0
+    last_frame: int = 0
+    parent_ids: List[int] = field(default_factory=list)
+    # 合体直後の一時保持 (接触しただけで すぐ分かれ直したときに元のIDに戻すため)
+    merge_frame: int = -1
+    dormant: List["Track"] = field(default_factory=list)   # 吸収したトラック (合体直前の状態のまま)
+    pre_merge: Optional["Track"] = None                     # 合体直前の自分自身
+
+    def motion_hypotheses(self, k: int) -> List[Tuple[float, float]]:
+        """k フレーム後までの移動量の仮説。速度既知なら1つ、未知なら「静止」と「周りの流れ」の2つ
+        (PIV で初速度が分かったトラックは「PIV」、PIV_KEEP_STATIC なら + 「静止」)"""
+        if self.v_known:
+            return [(self.vx * k, self.vy * k)]
+        if self.prior_src == "piv":
+            hyps = [(self.prior_vx * k, self.prior_vy * k)]
+            if PIV_KEEP_STATIC:
+                hyps.append((0.0, 0.0))
+            return hyps
+        hyps = [(0.0, 0.0)]
+        if USE_FLOW_PRIOR and (self.prior_vx or self.prior_vy):
+            hyps.append((self.prior_vx * k, self.prior_vy * k))
+        return hyps
+
+    def predicted_shapes(self, frame_idx: int) -> List[Shape]:
+        """前回マスクを予測移動量 (x, y) だけ平行移動した予測マスク"""
+        k = max(1, frame_idx - self.last_frame)
+        return [shift_shape(self.shape, dx, dy) for dx, dy in self.motion_hypotheses(k)]
+
+    def observe(self, d: Detection, frame_idx: int, hold_v: bool = False):
+        """検出 d で状態を更新する。
+        速度は「移動量 / 経過フレーム数」の EMA (tracker2 は見失い後の復帰で経過フレーム数で割っていなかった)"""
+        if not hold_v:
+            k = max(1, frame_idx - self.last_frame)
+            dx, dy, _ = displacement(self, d)
+            if self.v_known:
+                a = VELOCITY_EMA_ALPHA
+                self.vx = a * self.vx + (1 - a) * dx / k
+                self.vy = a * self.vy + (1 - a) * dy / k
+            else:
+                self.vx, self.vy, self.v_known = dx / k, dy / k, True
+        self.leading_x, self.leading_y = d.leading_x, d.leading_y
+        self.cx, self.cy = d.cx, d.cy
+        self.area = d.area
+        self.shape = d.shape
+        self.touch = d.touch
+        self.hits += 1
+        self.time_since_update = 0
+        self.last_frame = frame_idx
+
+    def clear_transient(self):
+        self.merge_frame, self.dormant, self.pre_merge = -1, [], None
+
+
+def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
+    """トラック t と検出 d を同じ気泡として対応させるコスト (各項 0〜1 の重み付き和)。ゲート外なら None。
+      位置 : 予測位置からのずれ / ゲート半径。ゲート半径は「POS_GATE + 等価直径 × POS_GATE_SIZE_FRAC」
+             (速度未知なら + MAX_SPEED) なので、大きい気泡ほど・速度が分からないトラックほど広い
+      面積 : |log 面積比| / log AREA_RATIO_GATE
+      重なり: 予測マスクとの素の IoU (位置と形を同時に見る)。小さい気泡では重みを下げる
+      形状 : 重心を合わせた IoU (形だけを見る)。小さい気泡では重みを下げる"""
+    k = max(1, frame_idx - t.last_frame)
+    extra = 0.0
+    touching = any(t.touch) or any(d.touch)
+    area_gate = AREA_RATIO_GATE * (2.0 if touching else 1.0)
+    area_ratio = max(t.area, d.area) / max(1.0, min(t.area, d.area))
+    smaller_cut = any(t.touch) if t.area <= d.area else any(d.touch)   # 画面に入ってくる途中/出ていく途中
+    if area_ratio > area_gate and not smaller_cut:
+        return None
+    dx, dy, loose = displacement(t, d)
+    resid = min(math.hypot(dx - hx, dy - hy) for hx, hy in t.motion_hypotheses(k))
+    size_slack = POS_GATE_SIZE_FRAC * eq_diameter(max(t.area, d.area))
+    slack = POS_GATE + size_slack
+    if t.v_known:
+        radius = slack * (1.0 + COAST_GATE_GROWTH * (k - 1))
+        gate_dist = resid
+    elif t.prior_src == "piv":   # PIV で初速度が分かっている: 予測 (と静止) の周りだけ。MAX_SPEED の円より広げない
+        radius = min((PIV_GATE + size_slack) * (1.0 + COAST_GATE_GROWTH * (k - 1)), MAX_SPEED * k + slack)
+        gate_dist = resid
+        hard = PIV_GATE_HARD and math.hypot(t.prior_vx, t.prior_vy) >= PIV_STATIC_SPEED
+        if resid > radius and not hard:   # PIV の予測から外れる: 速度未知と同じ広さまで、ペナルティ付き
+            radius = MAX_SPEED * k + slack
+            gate_dist = math.hypot(dx, dy)
+            extra = W_PIV_OUTSIDE
+        elif math.hypot(dx, dy) > (MAX_SPEED * k + slack) * (2.0 if loose else 1.0):
+            return None   # PIV の予測の円でも、物理的に動ける距離 (MAX_SPEED) の外は認めない
+    else:   # 速度未知: 物理的に動ける距離までは候補にする (コストは2仮説の近い方で評価)
+        radius = MAX_SPEED * k + slack
+        gate_dist = math.hypot(dx, dy)
+    if loose:
+        radius *= 2.0
+    iou_pred = max(mask_iou(ps, t.area, d.shape, d.area) for ps in t.predicted_shapes(frame_idx))
+    if gate_dist > radius and iou_pred < OVERLAP_ACCEPT_IOU:
+        return None
+    size_w = min(1.0, min(t.area, d.area) / SHAPE_AREA_REF)
+    if smaller_cut:   # 切れ端と全体の比較になるので、面積と形は判断材料にしない
+        c_area = c_shape = 0.0
+    else:
+        c_area = min(1.0, math.log(area_ratio) / math.log(max(area_gate, 1.01)))
+        c_shape = 1.0 - compute_motion_compensated_iou(t.shape, d.shape, d.cx - t.cx, d.cy - t.cy)
+    return (W_POS * min(1.0, (resid / radius) ** 2)
+            + W_AREA * c_area
+            + size_w * (W_OVERLAP * (1.0 - iou_pred) + W_SHAPE * c_shape)
+            + W_COAST * (k - 1)
+            + (0.0 if t.v_known else W_UNKNOWN_V)
+            + extra)
+
+
+def _max_age(t: Track) -> int:
+    """見失ってから何フレームまで復帰を待つか (MAX_AGE / MAX_AGE_NEW / MAX_AGE_NEW_LARGE)"""
+    if t.v_known:
+        return MAX_AGE
+    if MAX_AGE_NEW_LARGE > MAX_AGE_NEW and t.area >= LARGE_NEW_AREA and not any(t.touch):
+        return MAX_AGE_NEW_LARGE
+    return MAX_AGE_NEW
+
+
+def _relax_tight(t: Track, d: Detection, frame_idx: int) -> bool:
+    """面積ゲートの緩和 (AREA_RELAX_RATIO) の候補か: 速度既知・画面端に接していない・面積比が AREA_RELAX_RATIO 以内で、
+    予測位置からのずれが AREA_RELAX_POS + 小さい側の等価直径 × POS_GATE_SIZE_FRAC 以内"""
+    if not t.v_known or any(t.touch) or any(d.touch):
+        return False
+    if max(t.area, d.area) / max(1.0, min(t.area, d.area)) > AREA_RELAX_RATIO:
+        return False
+    k = max(1, frame_idx - t.last_frame)
+    dx, dy, _ = displacement(t, d)
+    tight = (AREA_RELAX_POS + POS_GATE_SIZE_FRAC * eq_diameter(min(t.area, d.area))) * (1.0 + COAST_GATE_GROWTH * (k - 1))
+    return math.hypot(dx - t.vx * k, dy - t.vy * k) <= tight
+
+
+def _area_tol(touching: bool) -> float:
+    return EVENT_AREA_TOL ** 2 if touching else EVENT_AREA_TOL
+
+
+def _grow_group(members_area: float, have_members: bool, cand_area: float, total_area: float,
+                frac: float, center_in: bool, tol: float, is_merge: bool) -> bool:
+    """合体/分裂のグループに候補を加えるか。
+    members_area : 今のグループの面積の和 (合体: 吸収するトラック群, 分裂: 子の検出群)
+    total_area   : 相手の面積 (合体: 合体後の検出, 分裂: 分裂前の親)
+    面積保存 (合計 ≈ 相手) が良くなるなら加える。相手の EVENT_MINOR_FRAC 未満の小さい気泡は
+    面積では確認できないので、重なり (合体なら中心が相手の中でもよい) だけで判定する。"""
+    if cand_area < EVENT_MINOR_FRAC * total_area:
+        return frac >= EVENT_MINOR_OVERLAP or (is_merge and center_in)
+    if not have_members:
+        return True
+    before = abs(math.log(total_area / max(1.0, members_area)))
+    after_ratio = total_area / (members_area + cand_area)
+    inside = frac >= EVENT_MINOR_OVERLAP or center_in
+    return abs(math.log(after_ratio)) < before or (inside and 1.0 / tol <= after_ratio <= tol)
+
+
+class LeadingEdgeLapTracker:
+    """フレーム間対応付け。
+      同一気泡 : ハンガリアン法 (コスト = 予測ずれ + 面積変化 + 予測マスクとの重なり + 形状、ゲート付き)
+      接触復帰 : 直前に合体したトラックが元の気泡に分かれ直したら元のIDに戻す
+      合体     : 対応なしトラックの予測マスクが検出と重なる -> 面積保存「A + B ≈ X」で確認
+      分裂     : 対応なし検出が親トラックの予測マスクと重なる -> 面積保存「X ≈ A' + B'」で確認
+    """
+
+    def __init__(self):
+        self.tracks: List[Track] = []
+        self._next_id = 1
+        self.restores: List[Tuple[int, int, int, int]] = []   # (合体フレーム, 復帰フレーム, ホストID, 戻したID)
+        self.prior_counts: Dict[str, int] = defaultdict(int)  # 新規トラックの初速度の出どころ (piv / flow / zero)
+        self.relaxed_links = 0                                # 面積ゲートの緩和 (AREA_RELAX_RATIO) でつないだ数
+
+    def _new_id(self) -> int:
+        tid = self._next_id
+        self._next_id += 1
+        return tid
+
+    def update(self, detections: List[Detection], frame_idx: int, piv=None) -> List[dict]:
+        """piv: フレーム frame_idx -> frame_idx+1 の大きさ区分ごとの速度場 {区分: DisplacementField or None}。
+        新しく現れた気泡の初速度にだけ使う (None なら従来どおり)"""
+        det_ids = [j for j, d in enumerate(detections) if d.area >= MIN_TRACK_AREA]   # 元の検出番号
+        dets = [detections[j] for j in det_ids]
+        self.tracks = [t for t in self.tracks if t.time_since_update <= _max_age(t)]
+        active = list(self.tracks)
+        n_t, n_d = len(active), len(dets)
+
+        # ---- 1) 同一気泡: コスト行列 + ハンガリアン法 ----
+        det_to_track: Dict[int, int] = {}
+        if n_t and n_d:
+            cost = np.full((n_t, n_d), 1e6)
+            for i, t in enumerate(active):
+                for j, d in enumerate(dets):
+                    c = pair_cost(t, d, frame_idx)
+                    if c is not None:
+                        cost[i, j] = c
+            for i, j in zip(*linear_sum_assignment(cost)):
+                if cost[i, j] < 1e6:
+                    det_to_track[j] = i
+        matched_t = set(det_to_track.values())
+
+        # ---- 2) 接触からの復帰: 合体直後のトラックが元の気泡に分かれ直したら元のIDに戻す ----
+        # 候補 = 吸収されたトラック (合体直前の状態) + ハンガリアン法で対応しなかったホストの合体直前の状態
+        restored: Dict[int, Tuple[Track, Track]] = {}   # 検出j -> (戻す状態, ホスト)
+        if TRANSIENT_MERGE_FRAMES > 0:
+            cands: List[Tuple[Track, Track]] = []
+            for i, h in enumerate(active):
+                if h.merge_frame < 0 or frame_idx - h.merge_frame > TRANSIENT_MERGE_FRAMES:
+                    continue
+                cands += [(m, h) for m in h.dormant]
+                if i not in matched_t and h.pre_merge is not None:
+                    cands.append((h.pre_merge, h))
+            free = [j for j in range(n_d) if j not in det_to_track]
+            if cands and free:
+                cost = np.full((len(cands), len(free)), 1e6)
+                for a, (snap, h) in enumerate(cands):
+                    # PIV の初速度を持つ (速度未知の) 気泡は、塊になっている間ホストと一緒に動いていたかもしれないので、
+                    # 「ホストの移動量で動いた」も候補に加える (PIV の予測だけだと、接触から戻った気泡を見逃す)。
+                    # PIV 導入前の広いゲートに戻すと、遠くの別の気泡を戻してしまう誤接続が出るので戻さない
+                    alts = [snap]
+                    hj = next((jj for jj, ii in det_to_track.items() if active[ii] is h), None)
+                    if not snap.v_known and snap.prior_src == "piv" and h.pre_merge is not None and hj is not None:
+                        kk = max(1, frame_idx - snap.last_frame)
+                        hdx, hdy, _ = displacement(h.pre_merge, dets[hj])
+                        alts.append(replace(snap, prior_vx=hdx / kk, prior_vy=hdy / kk))
+                    for b, j in enumerate(free):
+                        cs = [c for c in (pair_cost(s_, dets[j], frame_idx) for s_ in alts) if c is not None]
+                        if cs:
+                            cost[a, b] = min(cs)
+                for a, b in zip(*linear_sum_assignment(cost)):
+                    if cost[a, b] < 1e6:
+                        restored[free[b]] = cands[a]
+            # 面積保存で確認: 分かれ直した後の面積の和 ≈ 合体していた塊の面積 (塊がそのまま残っていて、
+            # 近くに別の気泡が現れただけなら和が大きくなりすぎる -> 取り消す)。
+            # ホスト側が見つからない (塊が さらに別の気泡と合体した等) ときは確認できないので、個々のゲートだけで判断する
+            track_idx = {id(t): i for i, t in enumerate(active)}
+            by_host: Dict[int, List[int]] = defaultdict(list)
+            for j, (_, h) in restored.items():
+                by_host[id(h)].append(j)
+            for hid, js in by_host.items():
+                h = active[track_idx[hid]]
+                hj = next((j for j, i in det_to_track.items() if active[i] is h), None)
+                if hj is None and not any(restored[j][0] is h.pre_merge for j in js):
+                    continue
+                parts = js + ([hj] if hj is not None else [])
+                touching = any(h.touch) or any(any(dets[j].touch) for j in parts)
+                tol = _area_tol(touching)
+                ratio = sum(dets[j].area for j in parts) / max(1.0, h.area)
+                if not (1.0 / tol <= ratio <= tol):
+                    for j in js:
+                        del restored[j]
+        restored_hosts = {id(h) for snap, h in restored.values() if snap is h.pre_merge}
+        hosts_with_restore = {id(h) for _, h in restored.values()}
+
+        # ---- 3) 合体: 対応なしトラック i の予測マスクが、どの検出に重なるか ----
+        # 構成メンバーは全員「直前フレームで観測されたトラック」に限る。
+        # 同じフレームの検出同士は重ならない = 確実に別々の気泡なので、
+        # 同じ気泡の古い重複トラック(ID途切れの残り)を「合体」と誤判定しない。
+        dil_cache: Dict[int, Shape] = {}
+
+        def dilated_det(j):
+            if j not in dil_cache:
+                dil_cache[j] = dilate_shape(dets[j].shape, EVENT_MARGIN)
+            return dil_cache[j]
+
+        cand_by_det: Dict[int, List[Tuple[float, bool, int]]] = defaultdict(list)
+        for i, t in enumerate(active):
+            if i in matched_t or t.last_frame != frame_idx - 1 or id(t) in restored_hosts:
+                continue
+            shapes = [t.shape] + t.predicted_shapes(frame_idx)
+            centers = [(t.cx, t.cy)] + [(t.cx + hx, t.cy + hy) for hx, hy in t.motion_hypotheses(1)]
+            best = None
+            for j, d in enumerate(dets):
+                if j in restored or d.area < t.area / _area_tol(True):
+                    continue   # 合体後の塊は構成メンバーより小さくならない
+                frac = max(overlap_px(s, d.shape) for s in shapes) / max(1.0, t.area)
+                center_in = any(_near_bbox(d.shape, x, y, EVENT_MARGIN) and point_in_shape(dilated_det(j), x, y)
+                                for x, y in centers)
+                if frac >= EVENT_OVERLAP_MIN or center_in:
+                    if best is None or (frac, center_in) > best[:2]:
+                        best = (frac, center_in, j)
+            if best:
+                cand_by_det[best[2]].append((best[0], best[1], i))
+
+        merge_map: Dict[int, List[int]] = {}   # 検出j -> 吸収されたトラックの index
+        for j, cands in cand_by_det.items():
+            d = dets[j]
+            primary = det_to_track.get(j)
+            if primary is not None and id(active[primary]) in hosts_with_restore:
+                continue   # 接触から戻ったばかりのホストは同じフレームで合体させない
+            members = [primary] if primary is not None else []
+            touching = any(d.touch) or any(any(active[k].touch) for k in members)
+            for frac, center_in, i in sorted(cands, key=lambda c: -active[c[2]].area):   # 大きい順
+                t = active[i]
+                tol = _area_tol(touching or any(t.touch))
+                if _grow_group(sum(active[k].area for k in members), bool(members), t.area, d.area,
+                               frac, center_in, tol, is_merge=True):
+                    members.append(i)
+                    touching = touching or any(t.touch)
+            if len(members) < 2:
+                continue
+            ratio = d.area / sum(active[k].area for k in members)
+            tol = _area_tol(touching)
+            if not (1.0 / tol <= ratio <= tol):
+                continue
+            if primary is None:   # ハンガリアン法で対応しなかった合体塊 -> 最大のトラックのIDを継承
+                primary = max(members, key=lambda k: active[k].area)
+                det_to_track[j] = primary
+            merge_map[j] = [k for k in members if k != primary]
+
+        absorbed_t = {k for ks in merge_map.values() for k in ks}
+        merge_primary_t = {det_to_track[j] for j in merge_map}
+
+        # ---- 4) 分裂: 対応なし検出 j が、どの親トラックの (予測)マスクと重なるか ----
+        claimed_d = set(det_to_track) | set(restored)
+        parents_ok = [i for i in range(n_t)
+                      if i not in absorbed_t and i not in merge_primary_t and id(active[i]) not in restored_hosts]
+        parent_shapes = {i: [active[i].shape] + active[i].predicted_shapes(frame_idx) for i in parents_ok}
+        parent_dil: Dict[Tuple[int, int], Shape] = {}
+        cand_by_parent: Dict[int, List[Tuple[float, bool, int]]] = defaultdict(list)
+        for j, d in enumerate(dets):
+            if j in claimed_d:
+                continue
+            best = None
+            for i in parents_ok:
+                t = active[i]
+                if d.area > t.area * _area_tol(True):
+                    continue   # 子は親より大きくならない
+                frac = max(overlap_px(s, d.shape) for s in parent_shapes[i]) / max(1.0, d.area)
+                center_in = False
+                for h, s in enumerate(parent_shapes[i]):
+                    if _near_bbox(s, d.cx, d.cy, EVENT_MARGIN):
+                        if (i, h) not in parent_dil:
+                            parent_dil[(i, h)] = dilate_shape(s, EVENT_MARGIN)
+                        if point_in_shape(parent_dil[(i, h)], d.cx, d.cy):
+                            center_in = True
+                            break
+                if frac >= EVENT_OVERLAP_MIN or center_in:
+                    if best is None or (frac, center_in) > best[:2]:
+                        best = (frac, center_in, i)
+            if best:
+                cand_by_parent[best[2]].append((best[0], best[1], j))
+
+        track_to_det = {i: j for j, i in det_to_track.items()}
+        split_map: Dict[int, int] = {}        # 新しい検出j -> 親トラックの index
+        heirs = set()                         # 親が1対1対応しなかった分裂で、親のIDを継承した検出
+        split_parents = set()
+        for i, cands in cand_by_parent.items():
+            t = active[i]
+            primary_j = track_to_det.get(i)
+            children = [primary_j] if primary_j is not None else []
+            touching = any(t.touch) or any(any(dets[c].touch) for c in children)
+            for frac, center_in, j in sorted(cands, key=lambda c: -dets[c[2]].area):   # 大きい順
+                d = dets[j]
+                tol = _area_tol(touching or any(d.touch))
+                if _grow_group(sum(dets[c].area for c in children), bool(children), d.area, t.area,
+                               frac, center_in, tol, is_merge=False):
+                    children.append(j)
+                    touching = touching or any(d.touch)
+            if len(children) < 2:
+                continue
+            ratio = sum(dets[c].area for c in children) / t.area
+            tol = _area_tol(touching)
+            if not (1.0 / tol <= ratio <= tol):
+                continue
+            if primary_j is None:   # 親がハンガリアン法で対応しなかった -> 最大の子が親のIDを継承
+                primary_j = max(children, key=lambda c: dets[c].area)
+                det_to_track[primary_j] = i
+                heirs.add(primary_j)
+            split_parents.add(i)
+            for c in children:
+                if c != primary_j:
+                    split_map[c] = i
+
+        # ---- 4b) 面積ゲートの緩和: 位置がぴったり合う残り同士を、面積比 AREA_RELAX_RATIO までつなぐ ----
+        # 合体/分裂の判定 (3, 4) の後に、どちらにも使われなかったトラックと検出だけで行うので、その判定は変えない。
+        # 互いに唯一の候補で、ほかのトラックの予測マスク/ほかの検出が重なっていない (合体・分裂かもしれない) 組だけ
+        relaxed = set()
+        if AREA_RELAX_RATIO > AREA_RATIO_GATE:
+            busy_t = set(det_to_track.values()) | absorbed_t
+            free_t = [i for i in range(n_t) if i not in busy_t and id(active[i]) not in restored_hosts
+                      and active[i].merge_frame < 0]   # 合体直後 (接触復帰の受付中) の塊は対象外
+            free_d = [j for j in range(n_d) if j not in det_to_track and j not in split_map and j not in restored]
+            pairs = [(i, j) for i in free_t for j in free_d if _relax_tight(active[i], dets[j], frame_idx)]
+            n_pi = defaultdict(int)
+            n_pj = defaultdict(int)
+            for i, j in pairs:
+                n_pi[i] += 1
+                n_pj[j] += 1
+
+            def predicted(o: Track) -> List[Tuple[Shape, float, float]]:
+                k = max(1, frame_idx - o.last_frame)
+                return [(shift_shape(o.shape, hx, hy), o.cx + hx, o.cy + hy) for hx, hy in o.motion_hypotheses(k)]
+
+            def overlaps(s: Shape, sx: float, sy: float, s_area: float, d: Detection) -> bool:
+                """合体/分裂の候補と同じ基準: 重なりが小さい側の面積の EVENT_OVERLAP_MIN 以上か、
+                どちらかの中心が相手 (EVENT_MARGIN だけ膨らませる) の中"""
+                if overlap_px(s, d.shape) >= EVENT_OVERLAP_MIN * min(s_area, d.area):
+                    return True
+                if _near_bbox(s, d.cx, d.cy, EVENT_MARGIN) and point_in_shape(dilate_shape(s, EVENT_MARGIN), d.cx, d.cy):
+                    return True
+                return (_near_bbox(d.shape, sx, sy, EVENT_MARGIN)
+                        and point_in_shape(dilate_shape(d.shape, EVENT_MARGIN), sx, sy))
+
+            for i, j in pairs:
+                if n_pi[i] != 1 or n_pj[j] != 1:
+                    continue
+                t, d = active[i], dets[j]
+                if any(overlaps(s, sx, sy, o.area, d) for ii, o in enumerate(active) if ii != i
+                       for s, sx, sy in predicted(o)):
+                    continue   # 別のトラックもこの検出に重なる (合体かもしれない)
+                if any(overlaps(s, sx, sy, t.area, dd) for jj, dd in enumerate(dets) if jj != j
+                       for s, sx, sy in predicted(t)):
+                    continue   # 別の検出もこのトラックの予測マスクに重なる (分裂かもしれない)
+                det_to_track[j] = i
+                relaxed.add(j)
+            self.relaxed_links += len(relaxed)
+
+        # ---- 5) 結果の記録・トラック更新 ----
+        frame_rows: List[dict] = []
+
+        def row_of(t, j, event, parent_ids, hold_v=False):
+            return {"det_index": det_ids[j], "track_id": t.track_id, "event": event,
+                    "parent_ids": parent_ids, "leading_x": t.leading_x, "leading_y": t.leading_y,
+                    "cx": t.cx, "cy": t.cy, "area": t.area, "vy": t.vy, "hold_v": hold_v}
+
+        for j, i in det_to_track.items():
+            t = active[i]
+            d = dets[j]
+            absorbed = merge_map.get(j, [])
+            # 合体/分裂の直後・接触から戻った直後は、塊の重心の動きが気泡自身の動きではないので速度更新を保留
+            # 面積ゲートの緩和でつないだときも、輪郭の取り方が変わっただけで重心の動きは気泡の動きではないので保留
+            hold_v = (bool(absorbed) or j in heirs or i in split_parents or id(t) in hosts_with_restore
+                      or j in relaxed)
+            if id(t) in hosts_with_restore and t.pre_merge is not None:
+                t.vx, t.vy, t.v_known = t.pre_merge.vx, t.pre_merge.vy, t.pre_merge.v_known
+            if absorbed and TRANSIENT_MERGE_FRAMES > 0:
+                t.pre_merge = replace(t, dormant=[], pre_merge=None, merge_frame=-1,
+                                      parent_ids=list(t.parent_ids))
+                t.dormant = []
+                for k in absorbed:
+                    active[k].clear_transient()
+                    t.dormant.append(active[k])
+                t.merge_frame = frame_idx
+            t.observe(d, frame_idx, hold_v)
+            frame_rows.append(row_of(t, j, "merge" if absorbed else "normal",
+                                     [active[k].track_id for k in absorbed], hold_v))
+
+        restored_host_idx = set()
+        for j, (snap, h) in restored.items():
+            d = dets[j]
+            if id(h) in restored_hosts and snap is h.pre_merge:   # ホスト自身が元の気泡に戻った
+                h.vx, h.vy, h.v_known = snap.vx, snap.vy, snap.v_known
+                h.observe(d, frame_idx, hold_v=True)
+                restored_host_idx.add(next(i for i, t in enumerate(active) if t is h))
+                frame_rows.append(row_of(h, j, "normal", [], True))
+            else:                     # 吸収されていた気泡が分かれ直した -> 元のIDで復帰
+                h.dormant = [m for m in h.dormant if m is not snap]
+                snap.observe(d, frame_idx)
+                self.tracks.append(snap)
+                self.restores.append((h.merge_frame, frame_idx, h.track_id, snap.track_id))
+                frame_rows.append(row_of(snap, j, "split", [h.track_id]))
+        for _, h in restored.values():
+            if not h.dormant:
+                h.clear_transient()
+
+        merged_away_ids = set()
+        for j, absorbed in merge_map.items():
+            primary_id = active[det_to_track[j]].track_id
+            for i in absorbed:
+                t = active[i]
+                merged_away_ids.add(t.track_id)
+                frame_rows.append({
+                    "det_index": None, "track_id": t.track_id, "event": f"merged_into_{primary_id}",
+                    "parent_ids": [], "leading_x": t.leading_x, "leading_y": t.leading_y,
+                    "cx": t.cx, "cy": t.cy, "area": 0.0, "vy": float("nan"),
+                })
+
+        for j, i in split_map.items():
+            parent = active[i]
+            d = dets[j]
+            pvx, pvy = (parent.vx, parent.vy) if parent.v_known else (parent.prior_vx, parent.prior_vy)
+            new_track = Track(
+                track_id=self._new_id(), leading_x=d.leading_x, leading_y=d.leading_y,
+                cx=d.cx, cy=d.cy, area=d.area, shape=d.shape, touch=d.touch,
+                prior_vx=pvx, prior_vy=pvy,
+                hits=1, time_since_update=0, first_frame=frame_idx, last_frame=frame_idx,
+                parent_ids=[parent.track_id],
+            )
+            self.tracks.append(new_track)
+            frame_rows.append(row_of(new_track, j, "split", [parent.track_id]))
+
+        # 周りで追跡中の「動いている」気泡の速度 (今フレームで対応が取れ、3回以上観測されたトラック)。
+        # 静止した気泡が大半の視野では全体の中央値が 0 になり、速い気泡の初速度推定に使えないため
+        movers = [(t.cx, t.cy, t.vx, t.vy, t.area) for t in self.tracks
+                  if t.v_known and t.last_frame == frame_idx and t.hits >= 3
+                  and math.hypot(t.vx, t.vy) >= POS_GATE]
+
+        def flow_prior(x, y, area):
+            if not USE_FLOW_PRIOR or not movers:
+                return 0.0, 0.0
+            if PRIOR_AREA_RATIO > 0:   # 大きさの近い周りの気泡だけ。いなければ 0
+                near = [m for m in movers if math.hypot(m[0] - x, m[1] - y) <= FLOW_PRIOR_RADIUS
+                        and max(m[4], area) / max(1.0, min(m[4], area)) <= PRIOR_AREA_RATIO]
+                if not near:
+                    return 0.0, 0.0
+            else:                      # 旧動作: 大きさを問わず、周りにいなければ画面全体
+                near = [m for m in movers if math.hypot(m[0] - x, m[1] - y) <= FLOW_PRIOR_RADIUS] or movers
+            return float(np.median([m[2] for m in near])), float(np.median([m[3] for m in near]))
+
+        def initial_velocity(d):
+            """新しく現れた気泡の初速度: 同じ大きさ区分の PIV 速度場 -> 大きさの近い周りの気泡の速度 -> 0"""
+            if piv:
+                fld = piv.get(size_class(d.area, PIV_SIZE_CLASSES))
+                if fld is not None:
+                    pdy, pdx, ok = fld.sample(d.cx, d.cy)
+                    if ok:
+                        self.prior_counts["piv"] += 1
+                        return (pdx if PIV_USE_DX else 0.0), pdy, "piv"
+            pvx, pvy = flow_prior(d.cx, d.cy, d.area)
+            self.prior_counts["flow" if (pvx or pvy) else "zero"] += 1
+            return pvx, pvy, ""
+
+        claimed_d = set(det_to_track) | set(split_map) | set(restored)
+        for j, d in enumerate(dets):
+            if j in claimed_d:
+                continue
+            pvx, pvy, src = initial_velocity(d)
+            new_track = Track(
+                track_id=self._new_id(), leading_x=d.leading_x, leading_y=d.leading_y,
+                cx=d.cx, cy=d.cy, area=d.area, shape=d.shape, touch=d.touch,
+                prior_vx=pvx, prior_vy=pvy, prior_src=src,
+                hits=1, time_since_update=0, first_frame=frame_idx, last_frame=frame_idx,
+            )
+            self.tracks.append(new_track)
+            frame_rows.append(row_of(new_track, j, "new", []))
+
+        consumed_t = set(det_to_track.values()) | absorbed_t | restored_host_idx
+        for i in range(n_t):
+            if i not in consumed_t:
+                active[i].time_since_update += 1
+        for t in self.tracks:   # 接触復帰の受付期間が過ぎた合体は確定 (吸収されたトラックを破棄)
+            if t.merge_frame >= 0 and frame_idx - t.merge_frame >= TRANSIENT_MERGE_FRAMES:
+                t.clear_transient()
+
+        self.tracks = [
+            t for t in self.tracks
+            if t.track_id not in merged_away_ids and t.time_since_update <= MAX_AGE
+        ]
+        return frame_rows
+
+
+def suppress_transient_merges(rows_by_frame: Dict[int, List[dict]], restores) -> int:
+    """「合体 -> TRANSIENT_MERGE_FRAMES 以内に元の気泡へ分かれ直した」組を接触として書き換える。
+    合体/分裂のイベントを消し、吸収されていた気泡は その間だけ見えなかった (一時的な見失い) 扱いにする。
+    塊になっていた間のホストの行は速度更新を保留する。戻り値: 書き換えた組の数"""
+    for f1, f2, host_id, member_id in restores:
+        rows1 = rows_by_frame.get(f1, [])
+        for r in rows1:
+            if r["track_id"] == host_id and r["det_index"] is not None and member_id in r["parent_ids"]:
+                r["parent_ids"] = [p for p in r["parent_ids"] if p != member_id]
+                if not r["parent_ids"] and r["event"] == "merge":
+                    r["event"] = "normal"
+        rows_by_frame[f1] = [r for r in rows1
+                             if not (r["track_id"] == member_id and r["event"] == f"merged_into_{host_id}")]
+        for r in rows_by_frame.get(f2, []):
+            if r["track_id"] == member_id and r["event"] == "split":
+                r["event"], r["parent_ids"] = "normal", []
+        for f in range(f1, f2 + 1):
+            for r in rows_by_frame.get(f, []):
+                if r["track_id"] == host_id and r["det_index"] is not None:
+                    r["hold_v"] = True
+    return len(restores)
+
+
+def infer_image_size(detections_per_frame: List[List[Detection]]) -> Optional[Tuple[int, int]]:
+    """画像サイズが渡されないときの推定: 下端/右端に接する検出の端、なければ検出の外接矩形の最大"""
+    H = W = 0
+    Hs, Ws = [], []
+    for dets in detections_per_frame:
+        for d in dets:
+            m, x0, y0 = d.shape
+            y1, x1 = y0 + m.shape[0], x0 + m.shape[1]
+            H, W = max(H, y1), max(W, x1)
+            if d.touch[1]:
+                Hs.append(y1)
+            if d.touch[3]:
+                Ws.append(x1)
+    if not H:
+        return None
+    return (max(Hs) if Hs else H, max(Ws) if Ws else W)
+
+
+def piv_settings():
+    """tracker3 の設定から piv_field の設定を作る"""
+    kw = dict(size_bounds=tuple(PIV_SIZE_CLASSES), windows=dict(PIV_WINDOWS), raster=PIV_RASTER,
+              min_area=MIN_TRACK_AREA)
+    return PIVSettings.faithful(**kw) if PIV_MODE == "faithful" else PIVSettings(**kw)
+
+
+class _LazyFields:
+    """{区分: DisplacementField or None} を、その区分が初めて必要になったときに計算する
+    (新しく現れた気泡がない区分は計算しない)"""
+
+    def __init__(self, seq, f):
+        self.seq, self.f, self._d = seq, f, {}
+
+    def get(self, c):
+        if c not in self._d:
+            self._d[c] = self.seq.field(self.f, c)
+        return self._d[c]
+
+    def __bool__(self):
+        return True
+
+
+class PIVSequence:
+    """フレームの組 (t, t+1) ごとの大きさ区分別の速度場。各フレームの画像は1回だけ作る"""
+
+    def __init__(self, detections_per_frame, image_size):
+        self.dets = detections_per_frame
+        self.hw = image_size
+        self.s = piv_settings()
+        self._raster = {}
+        self.time_s = 0.0
+        self.n_fields = 0
+
+    def _r(self, f):
+        if f not in self._raster:
+            self._raster = {k: v for k, v in self._raster.items() if k >= f - 1}   # 古いフレームは捨てる
+            self._raster[f] = rasterize(self.dets[f], self.hw, self.s)
+        return self._raster[f]
+
+    def field(self, f, c):
+        """フレーム f -> f+1、区分 c の速度場 (どちらかのフレームにその区分の気泡がなければ None)"""
+        t0 = time.perf_counter()
+        a, b = self._r(f)[c], self._r(f + 1)[c]
+        out = DisplacementField(a, b, *self.s.windows[c], s=self.s) if a.any() and b.any() else None
+        self.time_s += time.perf_counter() - t0
+        self.n_fields += 1
+        return out
+
+    def fields(self, f):
+        """フレーム f -> f+1 の速度場 (区分ごとに必要になったとき計算)。最後のフレームなら None"""
+        if f + 1 >= len(self.dets):
+            return None
+        return _LazyFields(self, f)
+
+
+def make_piv_sequence(detections_per_frame, image_size=None) -> Optional[PIVSequence]:
+    """USE_PIV_PRIOR が有効なら PIVSequence、そうでなければ None"""
+    if not USE_PIV_PRIOR:
+        return None
+    hw = image_size or infer_image_size(detections_per_frame)
+    if hw is None:
+        return None
+    return PIVSequence(detections_per_frame, tuple(int(v) for v in hw))
+
+
+def run_laptrack(detections_per_frame: List[List[Detection]], image_size=None,
+                 piv_debug_dir: Optional[str] = None) -> Dict[int, List[dict]]:
+    """image_size = (高さ, 幅)。PIV の画像を作るのに使う (None なら検出から推定)"""
+    tracker = LeadingEdgeLapTracker()
+    seq = make_piv_sequence(detections_per_frame, image_size)
+    rows_by_frame: Dict[int, List[dict]] = {}
+    t_track = 0.0
+    for frame_idx, dets in enumerate(detections_per_frame):
+        piv = seq.fields(frame_idx) if seq is not None else None
+        if piv is not None and piv_debug_dir:
+            save_piv_debug(piv_debug_dir, frame_idx, piv, seq)
+        t0, p0 = time.perf_counter(), (seq.time_s if seq is not None else 0.0)
+        rows_by_frame[frame_idx] = tracker.update(dets, frame_idx, piv)
+        t_track += time.perf_counter() - t0 - ((seq.time_s - p0) if seq is not None else 0.0)   # PIV の分は除く
+    n = suppress_transient_merges(rows_by_frame, tracker.restores)
+    if n:
+        print(f"  合体直後に分かれ直した {n} 組を「接触」として元のIDに戻しました")
+    if tracker.relaxed_links:
+        print(f"  位置がぴったり合うので面積比 {AREA_RATIO_GATE}〜{AREA_RELAX_RATIO} でもつないだ対応: {tracker.relaxed_links}件")
+    nf = max(1, len(detections_per_frame))
+    pc = tracker.prior_counts
+    if seq is not None:
+        print(f"  新規トラックの初速度: PIV {pc['piv']}件 / 周りの気泡 {pc['flow']}件 / 0 {pc['zero']}件")
+        print(f"  計算時間: PIV {1000 * seq.time_s / nf:.0f} ms/フレーム (区分ごとの速度場 {seq.n_fields}個), "
+              f"対応付け {1000 * t_track / nf:.0f} ms/フレーム")
+    run_laptrack.last_stats = {"prior_counts": dict(pc), "piv_ms_per_frame": 1000 * seq.time_s / nf if seq else 0.0,
+                               "piv_fields": seq.n_fields if seq else 0, "track_ms_per_frame": 1000 * t_track / nf,
+                               "relaxed_links": tracker.relaxed_links}
+    return rows_by_frame
+
+
+def save_piv_debug(out_dir: str, frame_idx: int, piv, seq: PIVSequence):
+    """速度場のベクトル図 (区分ごとに横に並べる)。黄 = 実測, 赤 = 周りから補間"""
+    os.makedirs(out_dir, exist_ok=True)
+    panels = []
+    for c in CLASS_NAMES:
+        base = seq._r(frame_idx)[c]
+        fld = piv.get(c)
+        img = draw(base, fld) if fld is not None else cv2.cvtColor(base, cv2.COLOR_GRAY2BGR)
+        cv2.putText(img, c, (8, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        panels.append(np.pad(img, ((0, 0), (0, 6), (0, 0)), constant_values=255))
+    cv2.imwrite(os.path.join(out_dir, f"piv_{frame_idx:05d}.png"), np.hstack(panels))
+
+
+# ==============================================================
+# 6. 速度計算(EMA)
+# ==============================================================
+def compute_velocity_ema(rows_by_frame: Dict[int, List[dict]], total_frames: int) -> Dict[int, List[dict]]:
+    track_history: Dict[int, List[Tuple[int, dict]]] = defaultdict(list)
+    for f in range(total_frames):
+        for row in rows_by_frame.get(f, []):
+            if row["det_index"] is None:
+                continue
+            track_history[row["track_id"]].append((f, row))
+
+    for track_id, hist in track_history.items():
+        hist.sort(key=lambda x: x[0])
+        prev_vy = None       # 旧版は 0 から始めていたため、最初の数フレームの速度が小さく出ていた
+        prev_leading_y = None
+        prev_frame = None
+        for f, row in hist:
+            if prev_leading_y is None:
+                row["vy"] = float("nan")
+            elif row["event"] in ("merge", "split") or row.get("hold_v"):
+                row["vy"] = prev_vy if prev_vy is not None else float("nan")  # 合体/分裂直後は速度更新を保留
+            else:
+                dt = max(f - prev_frame, 1)
+                raw_v = (row["leading_y"] - prev_leading_y) / dt
+                row["vy"] = raw_v if prev_vy is None else VELOCITY_EMA_ALPHA * prev_vy + (1 - VELOCITY_EMA_ALPHA) * raw_v
+            if row["vy"] == row["vy"]:
+                prev_vy = row["vy"]
+            prev_leading_y = row["leading_y"]
+            prev_frame = f
+    return rows_by_frame
+
+
+# ==============================================================
+# 7. QCレポート (今回の実行結果の健全性チェック用)
+# ==============================================================
+def qc_report(rows_by_frame: Dict[int, List[dict]], total_frames: int) -> dict:
+    track_history: Dict[int, List[Tuple[int, dict]]] = defaultdict(list)
+    for f in range(total_frames):
+        for row in rows_by_frame.get(f, []):
+            if row["det_index"] is None:
+                continue
+            track_history[row["track_id"]].append((f, row))
+
+    num_tracks = len(track_history)
+    lengths = [len(h) for h in track_history.values()]
+    avg_track_length = float(np.mean(lengths)) if lengths else 0.0
+    all_rows = [r for f in range(total_frames) for r in rows_by_frame.get(f, [])]
+    return {
+        "num_tracks": num_tracks,
+        "avg_track_length_frames": round(avg_track_length, 2),
+        "merge_events": sum(1 for r in all_rows if r["event"] == "merge"),
+        "split_events": sum(1 for r in all_rows if r["event"] == "split"),
+        "new_events": sum(1 for r in all_rows if r["event"] == "new"),
+    }
+
+
+# ==============================================================
+# 8. 出力(CSV / オーバーレイ画像)
+# ==============================================================
+EVENT_COLORS = {
+    "normal": (0, 255, 0), "new": (0, 255, 255),
+    "merge": (0, 128, 255), "split": (255, 128, 0),
+}
+
+
+def write_tracking_csv(csv_path: str, rows_by_frame: Dict[int, List[dict]], filenames: List[str],
+                        detections_per_frame: List[List[Detection]]):
+    """トラッキング専用CSV: 気泡ごとのID/イベント/位置/速度。
+    列は microgaptracker3.py と同じ順で、末尾に 周長(px)・フレーム接触 を追加。"""
+    out_dir = os.path.dirname(csv_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(csv_path, mode='w', encoding='utf-8-sig', newline='') as f:
+        w = csv.writer(f)
+        w.writerow(["ファイル名", "フレーム", "トラックID", "イベント", "親トラックID",
+                    "面積(px)", "ROI内面積(px)", "先端部X", "先端部Y", "中心X", "中心Y",
+                    "上昇速度(px/frame)", "周長(px)", "フレーム接触"])
+        for frame_idx, filename in enumerate(filenames):
+            rows = rows_by_frame.get(frame_idx, [])
+            dets = detections_per_frame[frame_idx] if frame_idx < len(detections_per_frame) else []
+            if rows:
+                for row in rows:
+                    vy = row["vy"]
+                    vy_str = "" if vy != vy else f"{vy:.3f}"
+                    parent_str = ";".join(str(p) for p in row["parent_ids"])
+                    di = row["det_index"]
+                    roi_area_str = per_str = touch_str = ""
+                    if di is not None and di < len(dets):
+                        roi_area_str = f"{dets[di].area_in_roi:.0f}"
+                        per_str = f"{dets[di].perimeter:.1f}"
+                        touch_str = "1" if dets[di].touches_frame else "0"
+                    w.writerow([filename, frame_idx, row["track_id"], row["event"], parent_str,
+                                row["area"], roi_area_str,
+                                f"{row['leading_x']:.2f}", f"{row['leading_y']:.2f}",
+                                f"{row['cx']:.2f}", f"{row['cy']:.2f}", vy_str, per_str, touch_str])
+            else:
+                w.writerow([filename, frame_idx, "", "気泡なし", "", 0, "", "", "", "", "", "", "", ""])
+
+
+def write_area_count_csv(csv_path: str, filenames: List[str],
+                          total_areas: List[float], roi_counts: List[int]):
+    """面積・個数専用CSV: フレームごとのROI内気泡数と合計面積。"""
+    out_dir = os.path.dirname(csv_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(csv_path, mode='w', encoding='utf-8-sig', newline='') as f:
+        w = csv.writer(f)
+        w.writerow(["ファイル名", "フレーム", "ROI内気泡数", "ROI内合計面積(px)"])
+        for frame_idx, filename in enumerate(filenames):
+            w.writerow([filename, frame_idx, roi_counts[frame_idx], total_areas[frame_idx]])
+
+
+def _draw_detection(img, det, color, label=None, thickness=2):
+    cv2.drawContours(img, det.contours, -1, color, thickness)   # 輪郭は成分ごとに別々に描く(直線で繋がない)
+    cv2.circle(img, (int(det.leading_x), int(det.leading_y)), 4, (0, 0, 255), -1)
+    if label:
+        cv2.putText(img, label, (int(det.leading_x), max(0, int(det.leading_y) - 8)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+
+def draw_overlays(cache_dir: str, output_dir: str, rows_by_frame: Dict[int, List[dict]],
+                   detections_per_frame: List[List[Detection]], filenames: List[str],
+                   total_areas: List[float], roi_counts: List[int], roi_rect=None):
+    os.makedirs(output_dir, exist_ok=True)
+    for frame_idx, filename in enumerate(filenames):
+        img = cv2.imread(os.path.join(cache_dir, filename))
+        if img is None:
+            continue
+
+        if roi_rect is not None:   # ROI矩形 (マゼンタ)
+            rx, ry, rw2, rh2 = roi_rect
+            cv2.rectangle(img, (rx, ry), (rx + rw2, ry + rh2), (255, 0, 255), 2)
+
+        row_by_det_index = {r["det_index"]: r for r in rows_by_frame.get(frame_idx, []) if r["det_index"] is not None}
+        for idx, det in enumerate(detections_per_frame[frame_idx]):
+            row = row_by_det_index.get(idx)
+            event = row["event"] if row else "normal"
+            color = EVENT_COLORS.get(event, (0, 255, 0))
+            if not det.in_roi:   # ROI外の気泡はグレーの細線 (検出はされるが統計には含まれない)
+                cv2.drawContours(img, det.contours, -1, (128, 128, 128), 1)
+                continue
+            label = f"ID{row['track_id']} {int(det.area_in_roi)}px" if row else None
+            _draw_detection(img, det, color, label)
+
+        cv2.putText(img, f"ROI Area: {total_areas[frame_idx]:.0f} px  Count: {roi_counts[frame_idx]}", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
+        cv2.imwrite(os.path.join(output_dir, filename), img)
+
+
+# ==============================================================
+# 9. 自動ブートストラップキャリブレーション
+# ==============================================================
+BOOTSTRAP_PARAM_NAMES = ("MAX_SPEED", "POS_GATE", "AREA_RATIO_GATE", "PIV_GATE")
+
+
+def _bootstrap_confident_pairs(dets_a: List[Detection], dets_b: List[Detection]) -> Dict[int, int]:
+    """隣接フレーム間の「確実な」対応だけを返す (統計用)。{a の番号: b の番号}
+    コスト = 距離/探索半径 + (1 - 形状IoU) + |log 面積比| で、相互に1番手 かつ
+    2番手と明確に差がある (1番手 < 2番手 × BOOTSTRAP_RATIO_TEST) ペアだけを採用する。
+    tracker2 は形状(IoU)最優先の全体最適だったため、形がどれも似ている小さい気泡では
+    でたらめな対応が統計に混ざっていた。"""
+    n_a, n_b = len(dets_a), len(dets_b)
+    if not n_a or not n_b:
+        return {}
+    cost = np.full((n_a, n_b), np.inf)
+    for i, a in enumerate(dets_a):
+        if a.area < MIN_TRACK_AREA:
+            continue
+        for j, b in enumerate(dets_b):
+            if b.area < MIN_TRACK_AREA:
+                continue
+            ar = max(a.area, b.area) / max(1.0, min(a.area, b.area))
+            if ar > BOOTSTRAP_LOOSE_AREA_GATE:
+                continue
+            dx, dy, _ = displacement(a, b)
+            dist = math.hypot(dx, dy)
+            if dist > BOOTSTRAP_LOOSE_GATE:
+                continue
+            iou = compute_motion_compensated_iou(a.shape, b.shape, b.cx - a.cx, b.cy - a.cy)
+            cost[i, j] = dist / BOOTSTRAP_LOOSE_GATE + (1.0 - iou) + math.log(ar)
+    pairs = {}
+    for i in range(n_a):
+        if not np.isfinite(cost[i]).any():
+            continue
+        j = int(np.argmin(cost[i]))
+        if int(np.argmin(cost[:, j])) != i:
+            continue   # 相互に1番手でない
+        second = min(np.partition(cost[i], 1)[1] if n_b > 1 else np.inf,
+                     np.partition(cost[:, j], 1)[1] if n_a > 1 else np.inf)
+        if np.isfinite(second) and cost[i, j] > BOOTSTRAP_RATIO_TEST * second:
+            continue   # 2番手と紛らわしい
+        pairs[i] = j
+    return pairs
+
+
+def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]], image_size=None):
+    """映像全体から均等に抽出した隣接フレームで確実な対応だけを集め、
+      speed_list      : 1フレームの移動量 |d|            -> MAX_SPEED (速度未知のトラックの探索半径)
+      resid_list      : 3フレーム連続の対応で「前フレームと同じ速度」と仮定した予測からのずれ
+                        (等価直径に比例する分 POS_GATE_SIZE_FRAC × 直径 を差し引いたもの) -> POS_GATE
+      area_ratio_list : 面積比                             -> AREA_RATIO_GATE
+      piv_resid_list  : PIV 速度場 (同じ大きさ区分) で予測した位置からのずれ (同じく直径分を差し引く) -> PIV_GATE
+                        (USE_PIV_PRIOR のときだけ。速度場が有効な場所の気泡だけ)
+    を返す。静止した気泡が大半でも、少数の速い気泡の移動量が MAX_SPEED に反映されるよう高いパーセンタイルを使う。"""
+    total_frames = len(detections_per_frame)
+    quality = {"pairs": 0, "chains": 0, "match_fail_rate": 0.0}
+    if total_frames < 2:
+        return [], [], [], quality, []
+    seq = make_piv_sequence(detections_per_frame, image_size)
+    piv_resid_list = []
+
+    n_seg = min(BOOTSTRAP_NUM_SEGMENTS, total_frames - 1)
+    sample_frames = sorted(set(
+        int(round(k * (total_frames - 2) / max(1, n_seg - 1))) for k in range(n_seg)
+    ))
+
+    cache: Dict[int, Dict[int, int]] = {}
+
+    def pairs_of(f):
+        if f not in cache:
+            cache[f] = _bootstrap_confident_pairs(detections_per_frame[f], detections_per_frame[f + 1])
+        return cache[f]
+
+    speed_list, resid_list, area_ratio_list = [], [], []
+    total_candidates = 0
+    for f in sample_frames:
+        A, B = detections_per_frame[f], detections_per_frame[f + 1]
+        p = pairs_of(f)
+        total_candidates += sum(1 for a in A if a.area >= MIN_TRACK_AREA)
+        fields = seq.fields(f) if (seq is not None and p) else None
+        for i, j in p.items():
+            a, b = A[i], B[j]
+            dx, dy, _ = displacement(a, b)
+            speed_list.append(math.hypot(dx, dy))
+            area_ratio_list.append(max(a.area, b.area) / max(1.0, min(a.area, b.area)))
+            fld = fields.get(size_class(a.area, PIV_SIZE_CLASSES)) if fields else None
+            if fld is not None:
+                pdy, pdx, ok = fld.sample(a.cx, a.cy)
+                if ok:
+                    res = math.hypot(dx - (pdx if PIV_USE_DX else 0.0), dy - pdy)
+                    piv_resid_list.append(max(0.0, res - POS_GATE_SIZE_FRAC * eq_diameter(a.area)))
+        if f + 2 < total_frames:
+            p2 = pairs_of(f + 1)
+            C = detections_per_frame[f + 2]
+            for i, j in p.items():
+                if j not in p2:
+                    continue
+                a, b, c = A[i], B[j], C[p2[j]]
+                dx1, dy1, _ = displacement(a, b)
+                dx2, dy2, _ = displacement(b, c)
+                res = math.hypot(dx2 - dx1, dy2 - dy1)
+                resid_list.append(max(0.0, res - POS_GATE_SIZE_FRAC * eq_diameter(b.area)))
+
+    quality = {
+        "pairs": len(speed_list),
+        "chains": len(resid_list),
+        "match_fail_rate": (1.0 - len(speed_list) / total_candidates) if total_candidates else 0.0,
+    }
+    return speed_list, resid_list, area_ratio_list, quality, piv_resid_list
+
+
+def _bootstrap_compute_params(speed_list, resid_list, area_ratio_list, piv_resid_list=None):
+    """収集した分布からゲートパラメータを算出する(パーセンタイル × 安全係数)。
+    PIV_GATE は POS_GATE 〜 MAX_SPEED の範囲 (PIV の予測は速度既知のトラックの予測より粗いので POS_GATE より狭くしない)"""
+    if not speed_list:
+        return None
+    if len(resid_list) >= 10:
+        pos_gate = max(BOOTSTRAP_MIN_JUMP,
+                       float(np.percentile(resid_list, BOOTSTRAP_RESID_PERCENTILE)) * BOOTSTRAP_JUMP_MARGIN)
+    else:   # 3フレーム連続の対応が少なすぎる -> 現在値を維持
+        pos_gate = POS_GATE
+    max_speed = max(2.0 * pos_gate,
+                    float(np.percentile(speed_list, BOOTSTRAP_SPEED_PERCENTILE)) * BOOTSTRAP_JUMP_MARGIN)
+    area_gate = float(np.percentile(area_ratio_list, BOOTSTRAP_AREA_PERCENTILE)) * BOOTSTRAP_AREA_MARGIN
+    if piv_resid_list is not None and len(piv_resid_list) >= 10:
+        piv_gate = float(np.percentile(piv_resid_list, BOOTSTRAP_RESID_PERCENTILE)) * BOOTSTRAP_JUMP_MARGIN
+        piv_gate = min(max(piv_gate, pos_gate), max_speed)
+    else:   # PIV を使わない / 有効な場所の対応が少なすぎる -> 現在値を維持
+        piv_gate = PIV_GATE
+    return {
+        "MAX_SPEED": round(max_speed, 1),
+        "POS_GATE": round(pos_gate, 1),
+        "AREA_RATIO_GATE": round(min(3.0, max(1.3, area_gate)), 2),
+        "PIV_GATE": round(piv_gate, 1),
+    }
+
+
+def _apply_params(params: dict):
+    global MAX_SPEED, POS_GATE, AREA_RATIO_GATE, PIV_GATE
+    MAX_SPEED = params["MAX_SPEED"]
+    POS_GATE = params["POS_GATE"]
+    AREA_RATIO_GATE = params["AREA_RATIO_GATE"]
+    PIV_GATE = params.get("PIV_GATE", PIV_GATE)
+
+
+def _current_params() -> dict:
+    return {"MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "AREA_RATIO_GATE": AREA_RATIO_GATE, "PIV_GATE": PIV_GATE}
+
+
+def _bootstrap_preview_overlays(detections_per_frame, filenames, cache_dir, auto_params, image_size=None):
+    """自動パラメータでサンプル区間を実際にトラッキングし、オーバーレイ画像数枚を返す。"""
+    saved = _current_params()
+    _apply_params(auto_params)
+    seq = make_piv_sequence(detections_per_frame, image_size)
+
+    total_frames = len(detections_per_frame)
+    start = max(0, total_frames // 2 - BOOTSTRAP_PREVIEW_FRAMES // 2)
+    preview_range = list(range(start, min(total_frames, start + BOOTSTRAP_PREVIEW_FRAMES)))
+
+    try:
+        tracker = LeadingEdgeLapTracker()
+        overlays = []
+        warmup_start = max(0, start - 3)   # 少し手前からウォームアップしてIDを安定させる
+        for f in range(warmup_start, min(total_frames, start + BOOTSTRAP_PREVIEW_FRAMES)):
+            rows = tracker.update(detections_per_frame[f], f, seq.fields(f) if seq is not None else None)
+            if f not in preview_range:
+                continue
+            img = cv2.imread(os.path.join(cache_dir, filenames[f]))
+            if img is None:
+                continue
+            row_by_det = {r["det_index"]: r for r in rows if r["det_index"] is not None}
+            for idx, det in enumerate(detections_per_frame[f]):
+                row = row_by_det.get(idx)
+                event = row["event"] if row else "normal"
+                _draw_detection(img, det, EVENT_COLORS.get(event, (0, 255, 0)),
+                                f"ID{row['track_id']}" if row else None)
+            cv2.putText(img, f"frame {f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
+            overlays.append((f, img))
+        return overlays
+    finally:
+        _apply_params(saved)
+
+
+def _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, auto_params, quality, overlays,
+                                    piv_resid_list=None):
+    """ヒストグラム + サンプルオーバーレイを一つのウィンドウにまとめて表示する。
+    matplotlibがない、またはGUIが使えない環境ではコンソール出力にフォールバックする。"""
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
+        print("  [bootstrap] matplotlibを読み込めないためグラフプレビューをスキップします(コンソール値のみ表示)。")
+        return
+
+    specs = [
+        ("Displacement per frame |d| (MAX_SPEED)", speed_list, auto_params["MAX_SPEED"]),
+        ("Prediction residual (POS_GATE)", resid_list, auto_params["POS_GATE"]),
+        ("Area ratio", area_ratio_list, auto_params["AREA_RATIO_GATE"]),
+    ]
+    if piv_resid_list:
+        specs.append(("PIV prediction residual (PIV_GATE)", piv_resid_list, auto_params["PIV_GATE"]))
+    n_rows = len(specs)
+    fig = plt.figure(figsize=(19, 10))
+    fig.suptitle("Bootstrap Calibration - Review (close window to continue)", fontsize=14)
+    gs = fig.add_gridspec(n_rows, 3, width_ratios=[0.7, 1.4, 1.4], hspace=0.6, wspace=0.15)
+    for k, (title, data, cutoff) in enumerate(specs):
+        ax = fig.add_subplot(gs[k, 0])
+        if data:
+            ax.hist(data, bins=30, color="#5B8FF9", edgecolor="white")
+            ax.axvline(cutoff, color="#E24B4A", linestyle="--", linewidth=2, label=f"gate = {cutoff}")
+            ax.legend(fontsize=9)
+            if k != 2:
+                ax.set_yscale("log")   # 静止気泡が大半でも速い気泡の山が見えるように
+        ax.set_title(title, fontsize=10)
+        ax.tick_params(labelsize=8)
+
+    sub = gs[0:n_rows, 1:3].subgridspec(2, 2, hspace=0.15, wspace=0.08)
+    for k, (f_idx, img) in enumerate(overlays[:4]):
+        ax = fig.add_subplot(sub[k // 2, k % 2])
+        ax.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        ax.set_title(f"frame {f_idx}", fontsize=11)
+        ax.axis("off")
+
+    q_txt = (f"pairs={quality['pairs']}   chains={quality['chains']}   "
+             f"match fail={quality['match_fail_rate']*100:.0f}%")
+    fig.text(0.05, 0.02, q_txt, fontsize=10, color="#444")
+
+    print("  [bootstrap] 確認ウィンドウを表示しました。確認後ウィンドウを閉じるとコンソールで承認ステップに進みます。")
+    plt.show()
+
+
+def run_bootstrap_calibration(detections_per_frame, filenames, cache_dir, image_size=None):
+    """統計収集 -> パラメータ算出 -> 確認ウィンドウ -> コンソール承認/修正 -> 確定パラメータをグローバルに反映。"""
+    print("\n[ブートストラップ] 映像全体の均等サンプルから移動量/予測ずれ/面積比の統計を収集します...")
+    speed_list, resid_list, area_ratio_list, quality, piv_resid_list = _bootstrap_collect_stats(
+        detections_per_frame, image_size)
+    auto_params = _bootstrap_compute_params(speed_list, resid_list, area_ratio_list, piv_resid_list)
+
+    if auto_params is None:
+        print("  [ブートストラップ] 有効なマッチングサンプルがないため自動算出をスキップします。現在の手動値を維持します。")
+        return
+
+    print(f"  確実な対応ペア: {quality['pairs']}個, 3フレーム連続: {quality['chains']}個, "
+          f"対応なし率: {quality['match_fail_rate']*100:.0f}%")
+    if piv_resid_list:
+        print(f"  PIV 予測のずれ (直径分を除く): 中央値 {np.median(piv_resid_list):.1f}px, "
+              f"95%値 {np.percentile(piv_resid_list, 95):.1f}px ({len(piv_resid_list)}個)")
+    names = [n for n in BOOTSTRAP_PARAM_NAMES if n != "PIV_GATE" or USE_PIV_PRIOR]
+
+    while True:
+        current = _current_params()
+        print("\n=== 自動ブートストラップ結果 ===")
+        print(f"{'パラメータ':<26}{'現在の手動値':>12}{'自動計算値':>14}")
+        for name in names:
+            print(f"{name:<26}{current[name]:>12}{auto_params[name]:>14}")
+
+        overlays = _bootstrap_preview_overlays(detections_per_frame, filenames, cache_dir, auto_params, image_size)
+        _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, auto_params, quality, overlays,
+                                        piv_resid_list)
+
+        choice = input("\n[Enter] 自動値を使用 / [m] 手動値を維持 / [e] 直接入力 / [r] プレビューを再表示: ").strip().lower()
+        if choice == "":
+            _apply_params(auto_params)
+            print("  -> 自動値を適用しました。")
+            break
+        elif choice == "m":
+            print("  -> 現在の手動値を維持します。")
+            break
+        elif choice == "e":
+            try:
+                vals = {}
+                for name in names:
+                    v = input(f"  {name} (Enter=自動 {auto_params[name]}): ").strip()
+                    vals[name] = float(v) if v else auto_params[name]
+                _apply_params(vals)
+                print("  -> 入力値を適用しました。")
+                break
+            except ValueError:
+                print("  -> 数値形式ではありません。もう一度お試しください。")
+                continue
+        elif choice == "r":
+            continue
+        else:
+            print("  -> 不明な入力です。もう一度選択してください。")
+            continue
+
+    print(f"  [ブートストラップ] 確定ゲート: MAX_SPEED={MAX_SPEED}, "
+          f"POS_GATE={POS_GATE}, AREA={AREA_RATIO_GATE}" + (f", PIV_GATE={PIV_GATE}" if USE_PIV_PRIOR else "") + "\n")
+
+
+# ==============================================================
+# 10. ROI
+# ==============================================================
+def _roi_save_path() -> str:
+    return ROI_SAVE_PATH if ROI_SAVE_PATH else os.path.join(OUTPUT_FOLDER, "roi_saved.json")
+
+
+def load_saved_roi():
+    """保存済みROIがあれば(x, y, w, h)タプルで返す。なければ、または破損していればNone。"""
+    path = _roi_save_path()
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        rect = data.get("roi_rect")
+        if isinstance(rect, list) and len(rect) == 4:
+            return tuple(int(v) for v in rect)
+    except Exception as e:
+        print(f"  [ROI] 保存ファイルを読み込めませんでした({e})。新規に選択します。")
+    return None
+
+
+def save_roi(rect):
+    """選択したROIをファイルに保存し、次回実行時に再利用できるようにする。"""
+    if rect is None:
+        return
+    path = _roi_save_path()
+    out_dir = os.path.dirname(path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"roi_rect": list(rect)}, f, ensure_ascii=False, indent=2)
+    print(f"  [ROI] 選択領域を保存しました: {path}")
+
+
+def resolve_roi(sample_img: np.ndarray):
+    """ROI決定: コード固定値 -> 保存済みROIの再利用確認 -> マウス選択+保存"""
+    if ROI_RECT is not None:
+        print(f"  [ROI] コードに固定されたROI_RECTを使用: {ROI_RECT}")
+        return tuple(ROI_RECT)
+
+    saved = load_saved_roi()
+    if saved is not None:
+        x, y, rw, rh = saved
+        choice = input(f"\n[ROI] 保存済みROIがあります: x={x}, y={y}, w={rw}, h={rh}\n"
+                       f"      [Enter] 再利用 / [n] 新規選択: ").strip().lower()
+        if choice != "n":
+            print("  [ROI] 保存済みROIを再利用します。")
+            return saved
+
+    rect = select_roi_interactive(sample_img)
+    save_roi(rect)
+    return rect
+
+
+def select_roi_interactive(sample_img: np.ndarray):
+    """最初のフレームでマウスドラッグによりROIを選択。ENTER/SPACEで確定、cでキャンセル(画面全体)。"""
+    print("\n[ROI] マウスで関心領域をドラッグしてからENTERまたはSPACEを押してください。(c=キャンセル、キャンセル時は画面全体)")
+    rect = cv2.selectROI("Select ROI (ENTER=OK, c=cancel)", sample_img, showCrosshair=True)
+    cv2.destroyWindow("Select ROI (ENTER=OK, c=cancel)")
+    x, y, rw, rh = [int(v) for v in rect]
+    if rw <= 0 or rh <= 0:
+        print("  [ROI] 選択がキャンセルされたため画面全体をROIとして使用します。")
+        return None
+    print(f"  [ROI] 選択されました: x={x}, y={y}, w={rw}, h={rh}")
+    print(f"  [ROI] 再現するにはコード上部で ROI_RECT = ({x}, {y}, {rw}, {rh}) と固定できます。")
+    return (x, y, rw, rh)
+
+
+def make_roi_mask(image_h: int, image_w: int, roi_rect):
+    """ROI矩形を0/1マスクに変換。roi_rectがNoneなら画面全体。"""
+    mask = np.zeros((image_h, image_w), dtype=np.uint8)
+    if roi_rect is None:
+        mask[:, :] = 1
+        return mask
+    x, y, rw, rh = roi_rect
+    x2, y2 = min(image_w, x + rw), min(image_h, y + rh)
+    x, y = max(0, x), max(0, y)
+    mask[y:y2, x:x2] = 1
+    return mask
+
+
+# ==============================================================
+# 11. 検出ステップ (前処理 -> U-Net)
+# ==============================================================
+def check_unet_input(gray, prob, inst, detector, filename):
+    """最初のフレームで「U-Netに入る画像が学習画像と同じ種類か」を確認し、デバッグ画像を保存する。"""
+    h, w = gray.shape
+    black = float((gray < 15).mean())
+    cover = float((inst > 0).mean())
+    print(f"  [入力チェック] {filename}: サイズ {h}x{w}, 黒画素 {black:.0%}, 気泡判定の画素 {cover:.0%}")
+    if black < MIN_BLACK_FRACTION:
+        print("  !!! 警告: 前処理後の背景が黒くなっていません (学習画像は約94%が黒)。")
+        print("      U-Netは「黒い背景 + 白い輪郭」の2値化画像で学習しているため、このままでは正しく検出できません。")
+        print("      -> Noise Cut を上げる / 背景画像(BACKGROUND_PATH)が同じ撮影条件か確認 /")
+        print("         学習画像を作ったときの値を PREPROC_FIXED に設定")
+    if cover > 0.5:
+        print("  !!! 警告: 画面の半分以上が気泡と判定されています。背景そのものを気泡と誤認している可能性が高いです。")
+    if getattr(detector, "train_hw", None) is None:
+        print("  ※ best.pt に学習画像サイズの記録がありません。学習画像とサイズが違う場合は TRAIN_IMAGE_HW を指定してください。")
+    if SAVE_DEBUG_FIRST_FRAME:
+        d = os.path.join(OUTPUT_FOLDER, "debug")
+        os.makedirs(d, exist_ok=True)
+        cv2.imwrite(os.path.join(d, "unet_input.png"), gray)                          # U-Netが実際に見た画像
+        cv2.imwrite(os.path.join(d, "prob_in.png"), (prob[1] * 255).astype(np.uint8))  # 内部確率 (白=1)
+        cv2.imwrite(os.path.join(d, "prob_edge.png"), (prob[2] * 255).astype(np.uint8))  # 境界確率 (白=1)
+        print(f"  [入力チェック] U-Net入力と確率マップを保存: {d}")
+
+
+def run_detection_phase(cache_dir: str):
+    print("U-Netモデルをロード中...")
+    detector = UNetDetector(UNET_CKPT, TRAIN_IMAGE_HW)
+
+    bg_img = cv2.imread(BACKGROUND_PATH)
+    if bg_img is None and ENABLE_PREPROCESSING:
+        raise FileNotFoundError(f"背景画像が見つかりません: {BACKGROUND_PATH}")
+    if not ENABLE_PREPROCESSING:
+        print("  [前処理OFF] 元画像をそのままU-Netに入力します (2値化画像で学習したモデルには非推奨)。")
+
+    image_files = []
+    for ext in ('*.png', '*.jpg', '*.jpeg', '*.bmp', '*.tif', '*.tiff'):
+        image_files.extend(glob.glob(os.path.join(IMAGE_FOLDER, ext)))
+    image_files = sorted(set(image_files))
+    image_files = [p for p in image_files if os.path.normcase(os.path.abspath(p))
+                   != os.path.normcase(os.path.abspath(BACKGROUND_PATH))]
+    if not image_files:
+        raise FileNotFoundError(f"'{IMAGE_FOLDER}' フォルダに画像がありません。")
+
+    print(f"合計{len(image_files)}枚の画像が見つかりました。検出ステップを開始します。\n")
+    os.makedirs(cache_dir, exist_ok=True)
+    inst_dir = os.path.join(OUTPUT_FOLDER, "instances")
+    if SAVE_INSTANCE_MASKS:
+        os.makedirs(inst_dir, exist_ok=True)
+    prob_dir = os.path.join(OUTPUT_FOLDER, "prob")
+    if SAVE_PROB_MAPS:
+        os.makedirs(prob_dir, exist_ok=True)
+    diff_dir = os.path.join(OUTPUT_FOLDER, "mode_diff")
+    if COMPARE_INSTANCE_MODES:
+        os.makedirs(diff_dir, exist_ok=True)
+    unet_instances(np.zeros((3, 8, 8), np.float32))   # UNET_INSTANCE_MODE の綴りを最初に確認
+    other_mode = "wall" if UNET_INSTANCE_MODE != "wall" else "hybrid"   # 比べる相手 (COMPARE_INSTANCE_MODES)
+    inst_stats: Dict[str, int] = {}
+    n_prob_saved = 0
+    diff_tot = {"only_" + UNET_INSTANCE_MODE: 0, "only_" + other_mode: 0, "frames_with_diff": 0}
+
+    is_first = True
+    thresh_val, bright_val, median_val = PREPROC_FIXED if PREPROC_FIXED else PREPROC_DEFAULT
+    use_ui = ENABLE_PREPROCESSING and PREPROC_FIXED is None
+    detections_per_frame: List[List[Detection]] = []
+    filenames: List[str] = []
+    total_areas: List[float] = []   # ROI使用時: ROI内面積の合計。未使用時: 全体面積の合計
+    roi_counts: List[int] = []      # フレームごとのROIにかかった気泡数
+    image_size = None
+    roi_rect = ROI_RECT
+    roi_bool = None
+
+    for img_path in image_files:
+        filename = os.path.basename(img_path)
+        img, processed_img, thresh_val, bright_val, median_val = preprocess_image(
+            img_path, bg_img, filename=filename, show_ui=(is_first and use_ui),
+            current_thresh_val=thresh_val, current_bright_val=bright_val, current_median_val=median_val,
+        )
+        if img is None:
+            print(f"  -> {filename}: 画像の読み込みに失敗、スキップ")
+            continue
+        if is_first:
+            print(f"  -> 設定値: Noise={thresh_val}, Brightness={bright_val}, Median={median_val}")
+            print(f"  -> 気泡の分け方: UNET_INSTANCE_MODE = \"{UNET_INSTANCE_MODE}\""
+                  + (f" (芯の内部確率 > {UNET_SEED_THR})" if UNET_INSTANCE_MODE != "wall" else ""))
+            if ENABLE_ROI and roi_rect is None:
+                roi_rect = resolve_roi(processed_img)
+            is_first = False
+
+        cv2.imwrite(os.path.join(cache_dir, filename), processed_img)
+        h, w = processed_img.shape[:2]
+        image_size = (h, w)
+        if roi_bool is None or roi_bool.shape != (h, w):
+            roi_bool = make_roi_mask(h, w, roi_rect if ENABLE_ROI else None).astype(bool)
+
+        gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
+        prob = detector.prob(gray)
+        n_res0, n_ring0, n_nest0 = inst_stats.get("rescued", 0), inst_stats.get("ring", 0), inst_stats.get("nested", 0)
+        inst = unet_instances(prob, stats=inst_stats)
+        n_res, n_ring = inst_stats.get("rescued", 0) - n_res0, inst_stats.get("ring", 0) - n_ring0
+        if not filenames:   # 最初のフレームだけ入力の健全性チェック
+            check_unet_input(gray, prob, inst, detector, filename)
+        if SAVE_INSTANCE_MASKS:
+            np.savez_compressed(os.path.join(inst_dir, os.path.splitext(filename)[0] + ".npz"), inst=inst)
+        stem = os.path.splitext(filename)[0]
+        if SAVE_PROB_MAPS:
+            p_in = np.round(prob[1] * 255).astype(np.uint8)
+            p_edge = np.round(prob[2] * 255).astype(np.uint8)
+            np.savez_compressed(os.path.join(prob_dir, stem + ".npz"), p_in=p_in, p_edge=p_edge, u_input=gray)
+            sep = np.full((gray.shape[0], 4), 128, np.uint8)
+            cv2.imwrite(os.path.join(prob_dir, stem + ".png"), np.hstack([gray, sep, p_in, sep, p_edge]))
+            n_prob_saved += 1
+        diff_msg = ""
+        if COMPARE_INSTANCE_MODES:
+            other = unet_instances(prob, other_mode)
+            only_here, only_other = unmatched_instances(inst, other), unmatched_instances(other, inst)
+            diff_tot["only_" + UNET_INSTANCE_MODE] += len(only_here)
+            diff_tot["only_" + other_mode] += len(only_other)
+            diff_msg = f"  | {UNET_INSTANCE_MODE}だけ {len(only_here)}個, {other_mode}だけ {len(only_other)}個"
+            if only_here or only_other:
+                diff_tot["frames_with_diff"] += 1
+                if diff_tot["frames_with_diff"] <= COMPARE_SAVE_MAX:
+                    save_mode_diff(os.path.join(diff_dir, stem + ".png"), gray, inst, other,
+                                   only_here, only_other, UNET_INSTANCE_MODE, other_mode)
+
+        dets = instances_to_detections(inst, roi_bool)
+        total_area = float(sum(d.area_in_roi for d in dets))
+        roi_count = sum(1 for d in dets if d.in_roi)
+
+        detections_per_frame.append(dets)
+        filenames.append(filename)
+        total_areas.append(total_area)
+        roi_counts.append(roi_count)
+        n_nest = inst_stats.get("nested", 0) - n_nest0
+        res_msg = ((f"  | 救済 {n_res}個" if n_res else "") + (f"  | リング気泡 {n_ring}個" if n_ring else "")
+                   + (f"  | 気泡の中の気泡を除外 {n_nest}個" if n_nest else ""))
+        print(f"  [{filename}] 検出{len(dets)}個 (ROI内{roi_count}個), ROI内合計面積 {total_area:.0f}px{res_msg}{diff_msg}")
+
+    DETECTION_STATS.clear()
+    DETECTION_STATS["mode"] = UNET_INSTANCE_MODE
+    if UNET_INSTANCE_MODE == "hybrid":
+        DETECTION_STATS["rescued"] = inst_stats.get("rescued", 0)
+        print(f"\n  hybrid: 壁の切れ目から背景に漏れていた気泡を {inst_stats.get('rescued', 0)} 個 取り戻しました")
+    if UNET_RING_RESCUE and UNET_INSTANCE_MODE != "seed":
+        DETECTION_STATS["ring"] = inst_stats.get("ring", 0)
+        DETECTION_STATS["pair_split"] = inst_stats.get("pair_split", 0)
+        print(f"  穴の小さいリング気泡の取りこぼしを {inst_stats.get('ring', 0)} 個 拾い、くっついたリングを "
+              f"{inst_stats.get('pair_split', 0)} 組 分けました (UNET_RING_RESCUE)")
+    if UNET_DROP_NESTED:
+        DETECTION_STATS["nested"] = inst_stats.get("nested", 0)
+        print(f"  別の気泡の中にある気泡を {inst_stats.get('nested', 0)} 個 除きました (UNET_DROP_NESTED)")
+    if SAVE_PROB_MAPS:
+        print(f"\n  確率マップを {n_prob_saved} フレーム分保存: {os.path.abspath(prob_dir)}"
+              "  (npz = 解析用 / png = 確認用: 入力 | 内部確率 | 境界確率)")
+        DETECTION_STATS["prob_maps_saved"] = n_prob_saved
+    if COMPARE_INSTANCE_MODES:
+        print(f"  気泡の分け方の比較 ({len(filenames)} フレーム): {UNET_INSTANCE_MODE}だけにある気泡 "
+              f"{diff_tot['only_' + UNET_INSTANCE_MODE]}個, {other_mode}だけにある気泡 {diff_tot['only_' + other_mode]}個, "
+              f"違いのあったフレーム {diff_tot['frames_with_diff']}"
+              + (f"  -> {os.path.abspath(diff_dir)}" if diff_tot["frames_with_diff"] else ""))
+        DETECTION_STATS["mode_diff"] = dict(diff_tot)
+
+    preprocess_params = {"noise_cut": thresh_val, "brightness": bright_val, "median": median_val}
+    return detections_per_frame, filenames, total_areas, roi_counts, image_size, roi_rect, preprocess_params
+
+
+def used_params(roi_rect, preprocess_params) -> dict:
+    """qc_report.json の used_params (3_tracking_qc.py が ROI・ゲート・MAX_AGE を読む)"""
+    return {
+        "UNET_CKPT": UNET_CKPT,
+        "IGNORE_PARTICLE_AREA": IGNORE_PARTICLE_AREA,
+        "UNET": {"min_area": UNET_MIN_AREA, "band": UNET_BAND, "edge_thr": UNET_EDGE_THR,
+                 "close": UNET_CLOSE, "tiny_max": UNET_TINY_MAX,
+                 "mode": UNET_INSTANCE_MODE, "seed_thr": UNET_SEED_THR, "rescue_core_min": UNET_RESCUE_CORE_MIN,
+                 "rescue_core_frac": UNET_RESCUE_CORE_FRAC, "ring_rescue": UNET_RING_RESCUE,
+                 "ring_max": UNET_RING_MAX, "ring_reach": UNET_RING_REACH, "drop_nested": UNET_DROP_NESTED,
+                 "nested_surround": UNET_NESTED_SURROUND, "detection": dict(DETECTION_STATS)},
+        "preprocess": preprocess_params if ENABLE_PREPROCESSING else None,
+        "MAX_SPEED": MAX_SPEED, "POS_GATE": POS_GATE, "POS_GATE_SIZE_FRAC": POS_GATE_SIZE_FRAC,
+        "AREA_RATIO_GATE": AREA_RATIO_GATE, "OVERLAP_ACCEPT_IOU": OVERLAP_ACCEPT_IOU,
+        "AREA_RELAX_RATIO": AREA_RELAX_RATIO, "AREA_RELAX_POS": AREA_RELAX_POS,
+        "MAX_AGE": MAX_AGE, "COAST_GATE_GROWTH": COAST_GATE_GROWTH, "MIN_TRACK_AREA": MIN_TRACK_AREA,
+        "MAX_AGE_NEW": MAX_AGE_NEW, "MAX_AGE_NEW_LARGE": MAX_AGE_NEW_LARGE, "LARGE_NEW_AREA": LARGE_NEW_AREA,
+        "EDGE_TOUCH_PX": EDGE_TOUCH_PX,
+        "weights": {"pos": W_POS, "area": W_AREA, "overlap": W_OVERLAP, "shape": W_SHAPE,
+                    "coast": W_COAST, "unknown_v": W_UNKNOWN_V},
+        "SHAPE_AREA_REF": SHAPE_AREA_REF,
+        "USE_FLOW_PRIOR": USE_FLOW_PRIOR, "PRIOR_AREA_RATIO": PRIOR_AREA_RATIO,
+        "USE_PIV_PRIOR": USE_PIV_PRIOR, "PIV_GATE": PIV_GATE,
+        "PIV_GATE_HARD": PIV_GATE_HARD, "PIV_STATIC_SPEED": PIV_STATIC_SPEED, "W_PIV_OUTSIDE": W_PIV_OUTSIDE,
+        "PIV_KEEP_STATIC": PIV_KEEP_STATIC, "PIV_USE_DX": PIV_USE_DX, "PIV_MODE": PIV_MODE,
+        "PIV_RASTER": PIV_RASTER, "PIV_SIZE_CLASSES": list(PIV_SIZE_CLASSES),
+        "PIV_WINDOWS": {k: list(v) for k, v in PIV_WINDOWS.items()},
+        "piv_stats": getattr(run_laptrack, "last_stats", None),
+        "EVENT_OVERLAP_MIN": EVENT_OVERLAP_MIN, "EVENT_MARGIN": EVENT_MARGIN,
+        "EVENT_AREA_TOL": EVENT_AREA_TOL, "EVENT_MINOR_FRAC": EVENT_MINOR_FRAC,
+        "EVENT_MINOR_OVERLAP": EVENT_MINOR_OVERLAP, "TRANSIENT_MERGE_FRAMES": TRANSIENT_MERGE_FRAMES,
+        "bootstrap_enabled": ENABLE_BOOTSTRAP,
+        "roi_enabled": ENABLE_ROI,
+        "roi_rect": list(roi_rect) if (ENABLE_ROI and roi_rect is not None) else None,
+    }
+
+
+# ==============================================================
+# 12. メインパイプライン
+# ==============================================================
+def main_single():
+    print(f"実行中のファイル: {os.path.abspath(__file__)}")
+    print(f"  気泡の分け方 UNET_INSTANCE_MODE = \"{UNET_INSTANCE_MODE}\", 確率マップ保存 SAVE_PROB_MAPS = {SAVE_PROB_MAPS}, "
+          f"分け方の比較 COMPARE_INSTANCE_MODES = {COMPARE_INSTANCE_MODES}, 出力先 {OUTPUT_FOLDER}")
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    cache_dir = os.path.join(OUTPUT_FOLDER, "_cache_processed")
+
+    (detections_per_frame, filenames, total_areas, roi_counts,
+     image_size, roi_rect, preprocess_params) = run_detection_phase(cache_dir)
+    total_frames = len(filenames)
+
+    if ENABLE_BOOTSTRAP:
+        run_bootstrap_calibration(detections_per_frame, filenames, cache_dir, image_size)
+
+    print("\n[LAPトラッカー] 実行中...")
+    rows = run_laptrack(detections_per_frame, image_size,
+                        piv_debug_dir=os.path.join(OUTPUT_FOLDER, "piv") if SAVE_PIV_DEBUG else None)
+    rows = compute_velocity_ema(rows, total_frames)
+
+    tracking_csv_path = os.path.join(OUTPUT_FOLDER, "result_tracking.csv")
+    area_csv_path = os.path.join(OUTPUT_FOLDER, "result_area_count.csv")
+    write_tracking_csv(tracking_csv_path, rows, filenames, detections_per_frame)
+    write_area_count_csv(area_csv_path, filenames, total_areas, roi_counts)
+    draw_overlays(cache_dir, OUTPUT_FOLDER, rows, detections_per_frame, filenames,
+                  total_areas, roi_counts, roi_rect=(roi_rect if ENABLE_ROI else None))
+
+    report = qc_report(rows, total_frames)
+    report["used_params"] = used_params(roi_rect, preprocess_params)
+    report_path = os.path.join(OUTPUT_FOLDER, "qc_report.json")
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+
+    print(f"\nCSV保存完了:")
+    print(f"  - トラッキング(移動距離): {tracking_csv_path}")
+    print(f"  - 面積・個数:            {area_csv_path}")
+    print(f"オーバーレイ画像の保存完了: {OUTPUT_FOLDER}")
+    print(f"QCレポート: {json.dumps(report, ensure_ascii=False, indent=2)}")
+    print("\n全ての処理が完了しました!")
+
+
+# ======================================================================
+# [D] TAU の多パス検出 — 元 tau_tracker.py
+# ======================================================================
+# 元 tau_tracker.py の説明:
+# Microgap Bubble Tracking - Tracking-aware U-Net 版 (tau_tracker)
+# =====================================================================
+# U-Net に「このフレームに気泡がどこにあるはずか」(前のパスのトラックから予測した気泡マスク) を一緒に入力し、
+# 見落とし・ちらつき・くっついた気泡の境目の揺れを、前後のフレームの情報で直す。
+# モデルは 1_tau_unet_train.py で作る (入力 5チャンネル: 画像 ×3 + 事前マスクの 内部・輪郭。tau_unet.py)。
+# 前処理・気泡の分け方・トラッキング・CSV/オーバーレイ/QC は tracker3.py をそのまま使う (tracker3.py を import する)。
+#
+# 処理の流れ (オフライン。動画を何回か通す):
+#   パス0 : 事前マスクなし (= 普通の U-Net) で全フレームを検出 -> ブートストラップ -> トラッキング
+#   パス1 : フレーム t の事前マスク = パス0 のトラックから予測した t の気泡マスク
+#             t-1 と t+1 の両方にいるトラック -> t-1 のマスクを「t-1 -> t+1 の移動量の半分」だけ動かす (内挿)
+#             t-1 だけ                       -> t-1 のマスクを「t-2 -> t-1 の移動量」だけ前へ (分からなければ動かさない)
+#             t+1 だけ                       -> t+1 のマスクを「t+1 -> t+2 の移動量」だけ後ろへ
+#           t 自身の検出は使わない (誤検出が自分自身を支えないように)。
+#           観測が PRIOR_MIN_HITS 回未満 (t を除く) のトラックも使わない (1フレームだけの誤検出を広げないように)
+#           -> 事前マスク付きで全フレームを検出し直す -> 同じゲートでトラッキング
+#   パス2.. : PRIOR_PASSES まで繰り返す (検出が前のパスと同じになったら終了)。
+#             何フレームも続けて見落とした気泡は、両端のフレームから 1パスごとに1フレームずつ取り戻す
+#   最後のパスの結果を tracker3.py と同じ形式で出力する (result_tracking.csv / result_area_count.csv / オーバーレイ / qc_report.json)
+#   パスごとの CSV (OUTPUT_FOLDER/passes/pass<k>/) と QC の比較表 (pass_summary.json) も出す
+#
+# best.pt (3チャンネルのモデル) を UNET_CKPT に入れると事前マスクは使われず、全パスが tracker3.py と同じ検出になる
+# (パス1 で「前のパスと同じ」になって終了する)。動作確認用。
+# tau_unet.py, tracker3.py, piv_field.py を同じフォルダに置いて実行すること。
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+# ==============================================================
+# 1. 前のパスのトラック -> 事前マスク
+# ==============================================================
+class TrackObservations:
+    """パスの結果 (検出 + トラッキングの行) を「フレーム -> {トラックID: (検出, 行)}」に並べ替えたもの"""
+
+    def __init__(self, dets_per_frame: List[List[Detection]], rows_by_frame: Dict[int, List[dict]]):
+        self.obs: Dict[int, Dict[int, tuple]] = defaultdict(dict)
+        self.count: Counter = Counter()
+        for f, rows in rows_by_frame.items():
+            for r in rows:
+                di = r["det_index"]
+                if di is None:   # 合体で吸収された記録 (merged_into_...)
+                    continue
+                tid = r["track_id"]
+                if tid not in self.obs[f]:
+                    self.count[tid] += 1
+                self.obs[f][tid] = (dets_per_frame[f][di], r)
+
+    @staticmethod
+    def _steady(row) -> bool:
+        """この観測の直前からの移動量を気泡の速度として使ってよいか (合体/分裂・輪郭の付け替えの直後は使わない)"""
+        return row["event"] == "normal" and not row.get("hold_v")
+
+    def prior_shapes(self, t: int, mode: str = "both", min_hits: int = 2) -> List[Shape]:
+        """フレーム t の事前マスク用の気泡マスク (t 自身の検出は使わない)"""
+        prev, nxt = self.obs.get(t - 1, {}), (self.obs.get(t + 1, {}) if mode == "both" else {})
+        here = self.obs.get(t, {})
+        shapes = []
+        for tid in sorted(set(prev) | set(nxt)):
+            if self.count[tid] - (1 if tid in here else 0) < min_hits:
+                continue
+            a, b = prev.get(tid), nxt.get(tid)
+            if a and b:
+                dx, dy, _ = displacement(a[0], b[0])
+                shapes.append(shift_shape(a[0].shape, dx / 2, dy / 2))
+            elif a:
+                p2 = self.obs.get(t - 2, {}).get(tid)
+                dx, dy = (displacement(p2[0], a[0])[:2] if p2 and self._steady(a[1]) else (0.0, 0.0))
+                shapes.append(shift_shape(a[0].shape, dx, dy))
+            else:
+                n2 = self.obs.get(t + 2, {}).get(tid)
+                dx, dy = (displacement(b[0], n2[0])[:2] if n2 and self._steady(n2[1]) else (0.0, 0.0))
+                shapes.append(shift_shape(b[0].shape, -dx, -dy))
+        return shapes
+
+
+# ==============================================================
+# 2. パスの実行
+# ==============================================================
+def inst_from_dets(dets: List[Detection], H: int, W: int) -> np.ndarray:
+    """検出の一覧 -> 気泡ラベルマップ (比較用)"""
+    inst = np.zeros((H, W), np.int32)
+    for k, d in enumerate(dets, start=1):
+        m, x0, y0 = d.shape
+        inst[y0:y0 + m.shape[0], x0:x0 + m.shape[1]][m] = k
+    return inst
+
+
+def same_detections(a: List[Detection], b: List[Detection]) -> bool:
+    if len(a) != len(b):
+        return False
+    return all(da.shape[1:] == db.shape[1:] and da.shape[0].shape == db.shape[0].shape
+               and np.array_equal(da.shape[0], db.shape[0]) for da, db in zip(a, b))
+
+
+def save_prior_debug(path: str, gray: np.ndarray, prior: np.ndarray, prev_inst: np.ndarray, inst: np.ndarray,
+                     only_prev: List[int], only_now: List[int], k: int):
+    """左: 入力 + 事前マスク (青 = 内部, 黄 = 輪郭) / 右: 検出 (灰 = 全気泡, 赤 = 前のパスだけ, 緑 = このパスだけ)"""
+    left = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    if prior is not None:
+        tint = left.copy()
+        tint[prior[0] > 0.5] = (255, 120, 0)
+        left = cv2.addWeighted(left, 0.6, tint, 0.4, 0)
+        left[prior[1] > 0.5] = (0, 255, 255)
+    right = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    cs, _ = cv2.findContours((inst > 0).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(right, cs, -1, (128, 128, 128), 1)
+    for lab, ids, col in ((prev_inst, only_prev, (0, 0, 255)), (inst, only_now, (0, 255, 0))):
+        if ids:
+            cs, _ = cv2.findContours(np.isin(lab, ids).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            cv2.drawContours(right, cs, -1, col, 2)
+    cv2.putText(left, f"pass{k} prior", (6, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+    cv2.putText(right, f"red: pass{k - 1} only {len(only_prev)}  green: pass{k} only {len(only_now)}", (6, 20),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+    cv2.imwrite(path, np.hstack([left, np.full((gray.shape[0], 4, 3), 128, np.uint8), right]))
+
+
+def detect_pass(k: int, n_frames: int, gray_of: Callable[[int], np.ndarray], detector, roi_bool,
+                prev: Optional[TrackObservations] = None, prev_dets=None, names=None, debug_dir=None,
+                on_frame=None, log=print):
+    """パス k の検出。prev (前のパスの結果) があれば事前マスクを作って入れる。
+    戻り値: (フレームごとの検出, 集計)"""
+    dets_all: List[List[Detection]] = []
+    st = {"pass": k, "prior_shapes": 0, "changed_frames": 0, "only_prev": 0, "only_now": 0, "debug_saved": 0}
+    inst_stats: Dict[str, int] = {}
+    for f in range(n_frames):
+        gray = gray_of(f)
+        H, W = gray.shape
+        prior = None
+        if prev is not None:
+            shapes = prev.prior_shapes(f, PRIOR_FROM, PRIOR_MIN_HITS)
+            st["prior_shapes"] += len(shapes)
+            prior = render_prior(shapes, H, W, getattr(detector, "edge_px", PRIOR_EDGE_PX))
+        prob = detector.prob(gray, prior)
+        n_res0, n_ring0 = inst_stats.get("rescued", 0), inst_stats.get("ring", 0)
+        inst = unet_instances(prob, stats=inst_stats)
+        dets = instances_to_detections(inst, roi_bool)
+        dets_all.append(dets)
+        msg = ""
+        if prev_dets is not None:
+            pinst = inst_from_dets(prev_dets[f], H, W)
+            cinst = inst_from_dets(dets, H, W)
+            only_prev, only_now = unmatched_instances(pinst, cinst), unmatched_instances(cinst, pinst)
+            st["only_prev"] += len(only_prev)
+            st["only_now"] += len(only_now)
+            if only_prev or only_now:
+                st["changed_frames"] += 1
+                msg = f"  | パス{k - 1}だけ {len(only_prev)}個, パス{k}だけ {len(only_now)}個"
+                if debug_dir and st["debug_saved"] < PRIOR_DEBUG_MAX:
+                    stem = os.path.splitext(names[f])[0] if names else f"{f:06d}"
+                    save_prior_debug(os.path.join(debug_dir, f"{stem}_pass{k}.png"), gray, prior, pinst, cinst,
+                                     only_prev, only_now, k)
+                    st["debug_saved"] += 1
+        n_res, n_ring = inst_stats.get("rescued", 0) - n_res0, inst_stats.get("ring", 0) - n_ring0
+        if on_frame is not None:
+            on_frame(f, gray, prob, inst, dets)
+        name = names[f] if names else str(f)
+        log(f"  [パス{k} {name}] 検出{len(dets)}個" + (f", 事前マスクの気泡 {len(shapes)}個" if prev is not None else "")
+            + (f"  | 救済 {n_res}個" if n_res else "") + (f"  | リング気泡 {n_ring}個" if n_ring else "") + msg)
+    st["rescued"] = inst_stats.get("rescued", 0)
+    st["ring"] = inst_stats.get("ring", 0)
+    st["pair_split"] = inst_stats.get("pair_split", 0)
+    st["nested"] = inst_stats.get("nested", 0)
+    return dets_all, st
+
+
+def run_passes(n_frames: int, gray_of: Callable[[int], np.ndarray], detector, roi_bool, image_size,
+               passes: int = PRIOR_PASSES, names=None, debug_dir=None, after_pass0=None, on_frame0=None,
+               log=print):
+    """全パスを実行する。detector は prob(gray, prior) を持つもの (TauDetector など)。
+    after_pass0(dets): パス0 の検出のあと、トラッキングの前に呼ぶ (ブートストラップ用)。
+    戻り値: [(検出, トラッキングの行, 集計) ...] パス0 から順に"""
+    results = []
+    log("\n[パス0] 事前マスクなしで検出")
+    dets, st = detect_pass(0, n_frames, gray_of, detector, roi_bool, names=names, on_frame=on_frame0, log=log)
+    if after_pass0 is not None:
+        after_pass0(dets)
+    log("\n[パス0] トラッキング")
+    rows = run_laptrack(dets, image_size)
+    results.append((dets, rows, st))
+    if passes > 0 and not getattr(detector, "uses_prior", True):
+        log("  ※ このモデルは事前マスクを入力しない (3チャンネル) ので、パス1 以降もパス0 と同じ検出になります")
+    for k in range(1, passes + 1):
+        log(f"\n[パス{k}] パス{k - 1} のトラックから事前マスクを作って検出し直す")
+        prev = TrackObservations(dets, rows)
+        dets_k, st = detect_pass(k, n_frames, gray_of, detector, roi_bool, prev, dets, names, debug_dir, log=log)
+        log(f"  パス{k - 1} と違う気泡: パス{k - 1}だけ {st['only_prev']}個, パス{k}だけ {st['only_now']}個 "
+            f"({st['changed_frames']} フレーム)")
+        same = all(same_detections(a, b) for a, b in zip(dets, dets_k))
+        if same:
+            log(f"  パス{k} の検出がパス{k - 1} と全く同じなので、ここで終了します")
+            break
+        log(f"\n[パス{k}] トラッキング")
+        dets, rows = dets_k, run_laptrack(dets_k, image_size)
+        results.append((dets, rows, st))
+    return results
+
+
+# ==============================================================
+# 3. パスごとの比較 (3_tracking_qc.py の項目)
+# ==============================================================
+def load_qc_module():
+    import importlib.util
+    path = os.path.join(HERE, "3_tracking_qc.py")
+    if not os.path.exists(path):
+        return None
+    spec = importlib.util.spec_from_file_location("tracking_qc", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def pass_qc(Q, csv_path: str, roi, n_frames: int) -> dict:
+    """パスの CSV に 3_tracking_qc.py の解析をかけ、比較表の項目だけ取り出す"""
+    rows, frame_files, has_touch = Q.load_tracking_csv(csv_path)
+    flags, info = Q.analyze(rows, frame_files, has_touch, None, max_age=MAX_AGE)
+    s = Q.summarize(flags, info, roi)
+    nf = max(1, n_frames)
+    c = s["counts"]
+    dev = s["deviation_from_prediction"]
+    return {
+        "observations_per_frame": {k: round(v / nf, 2) for k, v in s["observations_by_size"].items()},
+        "n_tracks": s["n_tracks"],
+        "interior_new_per_frame": {k: round(v / nf, 3) for k, v in c["INTERIOR_NEW"].items()},
+        "interior_lost_per_frame": {k: round(v / nf, 3) for k, v in c["INTERIOR_LOST"].items()},
+        "swap_likely": dict(c["SWAP_LIKELY"]),
+        "merge_split": dict(c["MERGE_SPLIT"]),
+        "area_jump": dict(c["AREA_JUMP"]),
+        "frac_over_threshold": {k: v["frac_over_threshold"] for k, v in dev.items()},
+        "suspicious_ratio_by_area": s["suspicious_ratio_by_area"],
+    }
+
+
+def print_pass_table(summ: List[dict], log=print):
+    keys = [("observations_per_frame", "検出/フレーム", "{:.1f}"), ("interior_new_per_frame", "内部新規/フレーム", "{:.2f}"),
+            ("interior_lost_per_frame", "内部消失/フレーム", "{:.2f}"), ("swap_likely", "ID乗り移り", "{}"),
+            ("merge_split", "合体直後の分裂", "{}"), ("frac_over_threshold", "基準超え", "{:.1%}")]
+    log("\n=== パスごとの比較 (3_tracking_qc.py の項目) ===")
+    log(f"{'項目':<16}{'大きさ':<8}" + "".join(f"{'パス' + str(s['pass']):>10}" for s in summ))
+    for key, label, fmt in keys:
+        for cls in ("tiny", "small", "large"):
+            vals = [s["qc"].get(key, {}).get(cls) for s in summ]
+            log(f"{label:<16}{cls:<8}" + "".join(f"{(fmt.format(v) if v is not None else '-'):>10}" for v in vals))
+    log(f"{'トラック数':<24}" + "".join(f"{s['qc']['n_tracks']:>10}" for s in summ))
+    log(f"{'疑わしい割合(面積)':<20}" + "".join(f"{s['qc']['suspicious_ratio_by_area']:>10.2%}" for s in summ))
+
+
+# ==============================================================
+# 4. メイン
+# ==============================================================
+def set_detection_stats(st: dict):
+    """qc_report.json の used_params.UNET.detection に入れる集計"""
+    DETECTION_STATS.clear()
+    DETECTION_STATS["mode"] = UNET_INSTANCE_MODE
+    if UNET_INSTANCE_MODE == "hybrid":
+        DETECTION_STATS["rescued"] = st.get("rescued", 0)
+    if UNET_RING_RESCUE and UNET_INSTANCE_MODE != "seed":
+        DETECTION_STATS["ring"] = st.get("ring", 0)
+        DETECTION_STATS["pair_split"] = st.get("pair_split", 0)
+    if UNET_DROP_NESTED:
+        DETECTION_STATS["nested"] = st.get("nested", 0)
+    DETECTION_STATS["pass"] = st["pass"]
+
+
+def main_tau():
+    global IMAGE_FOLDER, BACKGROUND_PATH
+    print(f"実行中のファイル: {os.path.abspath(__file__)}")
+    image_folder = IMAGE_FOLDER or IMAGE_FOLDER
+    bg_path = BACKGROUND_PATH or BACKGROUND_PATH
+    IMAGE_FOLDER, BACKGROUND_PATH = image_folder, bg_path
+    print(f"  モデル {UNET_CKPT}, 気泡の分け方 \"{UNET_INSTANCE_MODE}\", 事前マスク付きの検出 {PRIOR_PASSES}回 "
+          f"(予測元 {PRIOR_FROM}, 観測回数 >= {PRIOR_MIN_HITS}), 出力先 {OUTPUT_FOLDER}")
+    if PRIOR_FROM not in ("both", "forward"):
+        raise ValueError(f'PRIOR_FROM は "both" / "forward": {PRIOR_FROM!r}')
+    unet_instances(np.zeros((3, 8, 8), np.float32))   # 分け方の綴りを最初に確認
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    cache_dir = os.path.join(OUTPUT_FOLDER, "_cache_processed")
+    os.makedirs(cache_dir, exist_ok=True)
+
+    print("U-Netモデルをロード中...")
+    detector = TauDetector(UNET_CKPT, TRAIN_IMAGE_HW)
+
+    bg_img = cv2.imread(bg_path)
+    if bg_img is None and ENABLE_PREPROCESSING:
+        raise FileNotFoundError(f"背景画像が見つかりません: {bg_path}")
+    image_files = []
+    for ext in ('*.png', '*.jpg', '*.jpeg', '*.bmp', '*.tif', '*.tiff'):
+        image_files.extend(glob.glob(os.path.join(image_folder, ext)))
+    image_files = sorted(p for p in set(image_files)
+                         if os.path.normcase(os.path.abspath(p)) != os.path.normcase(os.path.abspath(bg_path)))
+    if not image_files:
+        raise FileNotFoundError(f"'{image_folder}' フォルダに画像がありません。")
+
+    # 前処理の値を最初の1枚で決める (tracker3.py と同じ UI)。読めない画像は除く
+    tv, bv, mv = PREPROC_FIXED if PREPROC_FIXED else PREPROC_DEFAULT
+    use_ui = ENABLE_PREPROCESSING and PREPROC_FIXED is None
+    files, first = [], None
+    for p in image_files:
+        if cv2.imread(p) is None:
+            print(f"  -> {os.path.basename(p)}: 画像の読み込みに失敗、スキップ")
+            continue
+        if first is None:
+            _, first, tv, bv, mv = preprocess_image(p, bg_img, filename=os.path.basename(p), show_ui=use_ui,
+                                                       current_thresh_val=tv, current_bright_val=bv,
+                                                       current_median_val=mv)
+        files.append(p)
+    print(f"合計{len(files)}枚の画像。前処理: Noise={tv}, Brightness={bv}, Median={mv}")
+    roi_rect = ROI_RECT
+    if ENABLE_ROI and roi_rect is None:
+        roi_rect = resolve_roi(first)
+    h, w = first.shape[:2]
+    image_size = (h, w)
+    roi_bool = make_roi_mask(h, w, roi_rect if ENABLE_ROI else None).astype(bool)
+    names = [os.path.basename(p) for p in files]
+
+    def gray_of(f):
+        _, proc, _, _, _ = preprocess_image(files[f], bg_img, show_ui=False, current_thresh_val=tv,
+                                               current_bright_val=bv, current_median_val=mv)
+        if proc.shape[:2] != image_size:
+            raise ValueError(f"{names[f]}: 画像サイズ {proc.shape[:2]} が最初の画像 {image_size} と違います")
+        return cv2.cvtColor(proc, cv2.COLOR_BGR2GRAY)
+
+    def on_frame0(f, gray, prob, inst, dets):   # パス0: オーバーレイ用の前処理画像を保存、最初のフレームは入力チェック
+        cv2.imwrite(os.path.join(cache_dir, names[f]), cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR))
+        if f == 0:
+            check_unet_input(gray, prob, inst, detector, names[f])
+
+    def after_pass0(dets):
+        if ENABLE_BOOTSTRAP:
+            run_bootstrap_calibration(dets, names, cache_dir, image_size)
+
+    debug_dir = os.path.join(OUTPUT_FOLDER, "prior_debug") if SAVE_PRIOR_DEBUG else None
+    for d in ("prior_debug", "passes"):   # 前回の実行の残り (パスの数が違うと混ざる) を消す
+        shutil.rmtree(os.path.join(OUTPUT_FOLDER, d), ignore_errors=True)
+    if debug_dir:
+        os.makedirs(debug_dir)
+    results = run_passes(len(files), gray_of, detector, roi_bool, image_size, PRIOR_PASSES, names, debug_dir,
+                         after_pass0, on_frame0)
+
+    # パスごとの CSV と比較
+    pp = {"preprocess": {"noise_cut": tv, "brightness": bv, "median": mv}}
+    tau_params = {"UNET_CKPT": UNET_CKPT, "uses_prior": detector.uses_prior, "PRIOR_PASSES": PRIOR_PASSES,
+                  "PRIOR_FROM": PRIOR_FROM, "PRIOR_MIN_HITS": PRIOR_MIN_HITS, "prior_edge_px": detector.edge_px,
+                  "passes_run": len(results)}
+    Q = load_qc_module() if SAVE_PASS_RESULTS else None
+    summ = []
+    n = len(files)
+    roi_q = tuple(roi_rect) if (ENABLE_ROI and roi_rect is not None) else None
+    for dets, rows, st in results:
+        rows = compute_velocity_ema(rows, n)
+        entry = {"pass": st["pass"], "detection": st}
+        if SAVE_PASS_RESULTS:
+            d = os.path.join(OUTPUT_FOLDER, "passes", f"pass{st['pass']}")
+            os.makedirs(d, exist_ok=True)
+            write_tracking_csv(os.path.join(d, "result_tracking.csv"), rows, names, dets)
+            rep = qc_report(rows, n)
+            set_detection_stats(st)
+            rep["used_params"] = dict(used_params(roi_rect, pp["preprocess"]), TAU={**tau_params, "pass": st["pass"]})
+            with open(os.path.join(d, "qc_report.json"), "w", encoding="utf-8") as fp:
+                json.dump(rep, fp, ensure_ascii=False, indent=2)
+            if Q is not None:
+                entry["qc"] = pass_qc(Q, os.path.join(d, "result_tracking.csv"), roi_q, n)
+        summ.append(entry)
+    if summ and all("qc" in s for s in summ):
+        print_pass_table(summ)
+    with open(os.path.join(OUTPUT_FOLDER, "pass_summary.json"), "w", encoding="utf-8") as fp:
+        json.dump(summ, fp, ensure_ascii=False, indent=2)
+
+    # 最後のパスを tracker3.py と同じ形式で出力
+    dets, rows, st = results[-1]
+    total_areas = [float(sum(d.area_in_roi for d in ds)) for ds in dets]
+    roi_counts = [sum(1 for d in ds if d.in_roi) for ds in dets]
+    tracking_csv_path = os.path.join(OUTPUT_FOLDER, "result_tracking.csv")
+    area_csv_path = os.path.join(OUTPUT_FOLDER, "result_area_count.csv")
+    write_tracking_csv(tracking_csv_path, rows, names, dets)
+    write_area_count_csv(area_csv_path, names, total_areas, roi_counts)
+    draw_overlays(cache_dir, OUTPUT_FOLDER, rows, dets, names, total_areas, roi_counts,
+                     roi_rect=(roi_rect if ENABLE_ROI else None))
+    set_detection_stats(st)
+    report = qc_report(rows, n)
+    report["used_params"] = dict(used_params(roi_rect, pp["preprocess"]), TAU=tau_params)
+    with open(os.path.join(OUTPUT_FOLDER, "qc_report.json"), "w", encoding="utf-8") as fp:
+        json.dump(report, fp, ensure_ascii=False, indent=2)
+
+    print(f"\n最後のパス (パス{st['pass']}) の結果を保存しました:")
+    print(f"  - トラッキング: {tracking_csv_path}")
+    print(f"  - 面積・個数:   {area_csv_path}")
+    print(f"  - オーバーレイ / qc_report.json: {OUTPUT_FOLDER}")
+    if SAVE_PASS_RESULTS:
+        print(f"  - パスごとの結果: {os.path.join(OUTPUT_FOLDER, 'passes')}  (3_tracking_qc.py でそれぞれ確認できる)")
+    if debug_dir and any(s["detection"].get("debug_saved") for s in summ):
+        print(f"  - 検出が変わったフレームの確認画像: {debug_dir}  (左: 事前マスク / 右: 赤 = 前のパスだけ, 緑 = このパスだけ)")
+    print("\n全ての処理が完了しました!")
+
+
+# ======================================================================
+# [E] 起動
+# ======================================================================
+def ckpt_uses_prior(path):
+    """UNET_CKPT が TAU (事前マスク付き 5チャンネル) か"""
+    import torch
+    ck = torch.load(path, map_location="cpu")
+    sd = ck["state_dict"] if isinstance(ck, dict) and "state_dict" in ck else ck
+    return state_in_channels(sd) > IMAGE_CHANNELS
+
+
+def main():
+    """普通の U-Net なら main_single (元 watershed.py)、TAU なら main_tau (元 tau_tracker.py)"""
+    if PRIOR_PASSES > 0 and ckpt_uses_prior(UNET_CKPT):
+        print("TAU のモデル (5チャンネル) なので、事前マスク付きの多パス検出をします")
+        return main_tau()
+    return main_single()
+
+
+if __name__ == "__main__":
+    main()

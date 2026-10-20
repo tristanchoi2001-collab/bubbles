@@ -366,6 +366,32 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   2. `1_tau_unet_train.py`를 `SRC=dot_labels\coco`, `IGNORE_SRC=dot_labels\ignore`, `USE_PRIOR=False`로 학습한다.
   3. test 표에서 tiny 재현율을 시작 모델과 비교한다.
 
+## 이진화 버전 2파일 (binarized/, 2026-10)
+- 사용자 요청: 이진화 입력용 코드는 나중에 이진화하지 않는 입력과 따로 쓰게 되므로 "학습 1개 + 검출·추적 1개"로 정리한다.
+- `binarized/1_bin_train.py` (원본: tau_unet + dot_labels + 1_tau_unet_train)
+  - `STEP = 'dots'`: 작은 점 라벨 보충. 결과는 `DOT_OUT`에 저장한다.
+  - `STEP = 'train'`: 학습. `USE_DOT_LABELS=True`면 DOT_OUT/coco와 DOT_OUT/ignore를 자동으로 쓴다.
+  - 원본과 기본값이 다른 것: STEP='dots', USE_PRIOR=False, DST=dataset_bin, OUT=runs/bin. dot의 OUT과 REVIEW는 DOT_OUT과 DOT_REVIEW로 바꿨다.
+- `binarized/2_bin_track.py` (원본: watershed + piv_field + tau_unet + tau_tracker)
+  - 기본값은 watershed와 같다(hybrid 등). 출력 폴더만 output_bin이다.
+  - `main()`은 UNET_CKPT가 5ch이고 PRIOR_PASSES > 0이면 `main_tau`(원본 tau_tracker), 아니면 `main_single`(원본 watershed)을 실행한다.
+- `tools/build_binarized.py`가 원본 모듈에서 기계적으로 만든다.
+  - 하는 일: 설정을 맨 앞에 모으고, import를 합치고, `T3.` / `tau_unet.` / `piv_field.` 참조를 같은 파일 안의 이름으로 바꾼다.
+  - 이름이 겹치는 것은 이름을 바꾼다: main → main_single/main_tau/main_dots/main_train. 쓰이지 않는 tau_tracker의 size_class는 지운다(남기면 PIV의 size_class를 덮어써 오류가 났다).
+  - 치환 횟수를 고정해 두었다. 원본이 바뀌면 생성이 멈춘다.
+  - 이름을 바꾼 결과 함수 안에서 지역 변수와 겹치는지 AST로 검사한다.
+  - **원본 모듈을 고치면 `python tools/build_binarized.py`로 다시 만든다.** `--check`로 최신인지 확인한다.
+  - 원본이 비이진화용으로 갈라지기 시작하면, 그 뒤로는 binarized/ 쪽을 이진화 버전의 기준으로 삼는다.
+- 검증
+  - `tests/test_binarized.py`
+    - a: 파일이 최신인지 확인한다.
+    - b: 2_bin_track을 tracker3/piv_field/tau_unet/tau_tracker로 바꿔 끼워 test_events, test_instances, test_tau를 그대로 통과한다.
+    - c: 점 후보와 내보내기가 원본과 같다. 학습(TAU, 3ch+ignore)의 가중치, log.json, test_report.json이 원본과 완전히 같다.
+    - d: STEP 연결.
+    - e: 3ch/5ch에 따라 main_single/main_tau를 고른다.
+  - pyflakes에서 정의되지 않은 이름이 0이다.
+- 3_tracking_qc.py는 입력과 상관없이 CSV만 다루므로 그대로 둔다(두 파일과 같은 폴더에 있으면 TAU 패스별 비교표도 나온다).
+
 ## 저장소 구성
 - `tracker2.py` — 트래커 v2(지시서의 `tracker.py`). 선단부 vy만으로 예측, 간격 게이트, Union IoU 기반 합체·분열.
 - `tracker3.py` — v2 이후의 개선판. 지시서 1~4장 이후에 만들었으므로 지시서가 전제하는 v2와 구조가 다르다.
@@ -377,7 +403,8 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `3_tracking_qc.py` — 추적 QC. SWAP_LIKELY 상대 후보는 면적비 ≤ 3, 반경 min(2×등가직경, 200 px), 상세는 ID 중복 제거 후 최대 5개 + 「他N件」.
 - `tau_unet.py`, `1_tau_unet_train.py`, `tau_tracker.py`, `tests/test_tau.py` — 위 "Tracking-aware U-Net" 참고.
 - `dot_labels.py`, `tests/test_dots.py` — 위 "작은 점 라벨 보충" 참고.
+- `binarized/1_bin_train.py`, `binarized/2_bin_track.py`, `tools/build_binarized.py`, `tests/test_binarized.py` — 위 "이진화 버전 2파일" 참고.
 - `reference/piv_prior.py` — PIV 참고 구현(수정하지 않음).
 - `docs/PIV_TASK.md` — PIV prior 도입 작업 지시서 원문(5장 할 일, 6장 검증, 7장 주의, 8장 작업 방식).
 - 테스트 실행: `python -B tests/test_events.py`, `python -B tests/test_qc.py`, `python -B tests/test_instances.py`,
-  `python -B tests/test_tau.py`, `python -B tests/test_dots.py` (pytest로도 실행 가능).
+  `python -B tests/test_tau.py`, `python -B tests/test_dots.py`, `python -B tests/test_binarized.py` (pytest로도 실행 가능).
