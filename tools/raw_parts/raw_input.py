@@ -93,7 +93,7 @@ def ckpt_layout(ck, sd):
 
 def remap_first_conv(sd, src_names, dst_names):
     """最初の畳み込みの重みを、入力チャンネルの名前で並べ替える。無いチャンネルは 0 (= 学習前は出力に影響しない)。
-    'diff' (D×3) を二値化の重み (B×3) から始めるときだけ、B の重みをそのまま D に使う (今までの動作)"""
+    'diff' (D×3) と B×3 の入れ替えだけは、もう一方の重みをそのまま使う (B0 <-> D0 ...)"""
     import torch
     k0 = next(k for k, v in sd.items() if k.startswith('encoder.') and v.ndim == 4)
     w = sd[k0]
@@ -101,20 +101,20 @@ def remap_first_conv(sd, src_names, dst_names):
     for j, n in enumerate(dst_names):
         if n in src_names:
             out[:, j] = w[:, src_names.index(n)]
-        elif n in ('D0', 'D1', 'D2') and 'B' + n[1] in src_names:
-            out[:, j] = w[:, src_names.index('B' + n[1])]
+        elif n[:1] in 'BD' and n[1:] in ('0', '1', '2') and {'B': 'D', 'D': 'B'}[n[0]] + n[1] in src_names:
+            out[:, j] = w[:, src_names.index({'B': 'D', 'D': 'B'}[n[0]] + n[1])]
     sd = dict(sd)
     sd[k0] = out
     return sd
 
 
-def _pos2d(h, w, dim, device):
-    """2次元の位置 (sin / cos)。画像の大きさが学習と違っても同じ式で作れる"""
+def _pos2d(h, w, dim, device, oy=0, ox=0):
+    """2次元の位置 (sin / cos)。画像の大きさが学習と違っても同じ式で作れる。oy, ox = 位置のずらし (学習の切り出し用)"""
     import torch
     d = dim // 4
     omega = 1.0 / (10000 ** (torch.arange(d, device=device, dtype=torch.float32) / max(1, d)))
-    ys = torch.arange(h, device=device, dtype=torch.float32)[:, None] * omega[None]
-    xs = torch.arange(w, device=device, dtype=torch.float32)[:, None] * omega[None]
+    ys = (torch.arange(h, device=device, dtype=torch.float32) + oy)[:, None] * omega[None]
+    xs = (torch.arange(w, device=device, dtype=torch.float32) + ox)[:, None] * omega[None]
     pe = torch.cat([torch.sin(ys)[:, None].expand(h, w, d), torch.cos(ys)[:, None].expand(h, w, d),
                     torch.sin(xs)[None].expand(h, w, d), torch.cos(xs)[None].expand(h, w, d)], -1)
     pe = pe.reshape(h * w, 4 * d)
@@ -123,8 +123,13 @@ def _pos2d(h, w, dim, device):
     return pe[None]
 
 
+CTX_POS_JITTER = 8     # 学習中は位置を 0〜この値 (1/32 の格子の数) だけずらす: 切り出し (例 34×13) で学習しても、
+                       # 画像全体 (例 38×15) で推論するときの位置まで見たことがあるように
+
+
 def _context_block(dim, layers, heads):
     """小さいトランスフォーマー (画面全体の関係を見る)。出口の重みは 0 -> 学習前は何もしない (足す前と同じ結果)"""
+    import torch
     import torch.nn as nn
 
     class ContextBlock(nn.Module):
@@ -143,7 +148,8 @@ def _context_block(dim, layers, heads):
 
         def forward(self, f):
             b, c, h, w = f.shape
-            t = f.flatten(2).transpose(1, 2) + _pos2d(h, w, c, f.device).to(f.dtype)
+            oy, ox = (torch.randint(0, CTX_POS_JITTER + 1, (2,)).tolist() if self.training else (0, 0))
+            t = f.flatten(2).transpose(1, 2) + _pos2d(h, w, c, f.device, oy, ox).to(f.dtype)
             t = self.out(self.norm(self.enc(t)))
             return f + t.transpose(1, 2).reshape(b, c, h, w)
 
@@ -159,3 +165,27 @@ def build_unet(encoder, classes, in_ch, ctx_layers=0, ctx_heads=8, encoder_weigh
         model.ctx = _context_block(model.encoder.out_channels[-1], int(ctx_layers), int(ctx_heads))
         model.encoder.register_forward_hook(lambda m, i, out: list(out[:-1]) + [model.ctx(out[-1])])
     return model
+
+
+def predict_planes(model, planes, mode, mean, std, dev, prior=None, uses_prior=False, train_hw=None):
+    """画像 {'B', ...} (+ 事前マスク) -> 確率 (3, H, W)。2_raw_track.py と 1_raw_train.py の test で同じ計算:
+    学習画像の大きさ (train_hw) と違えば その大きさにしてから推論して元に戻す、32 の倍数に反射で足す (事前マスクは 0 で足す)"""
+    import torch
+    H, W = next(iter(planes.values())).shape
+    if train_hw is not None and (H, W) != tuple(train_hw):
+        th, tw = (int(v) for v in train_hw)
+        interp = cv2.INTER_AREA if th * tw < H * W else cv2.INTER_LINEAR
+        planes = {k: cv2.resize(v, (tw, th), interpolation=interp) for k, v in planes.items()}
+        if uses_prior and prior is not None:
+            prior = np.stack([cv2.resize(c.astype(np.float32), (tw, th), interpolation=interp) for c in prior])
+        p = predict_planes(model, planes, mode, mean, std, dev, prior, uses_prior)
+        return np.stack([cv2.resize(c, (W, H), interpolation=cv2.INTER_LINEAR) for c in p])
+    ph, pw = (-H) % 32, (-W) % 32
+    planes = {k: cv2.copyMakeBorder(v, 0, ph, 0, pw, cv2.BORDER_REFLECT_101) for k, v in planes.items()}
+    pr = None
+    if uses_prior and prior is not None:
+        pr = np.pad(prior.astype(np.float32), ((0, 0), (0, ph), (0, pw)))   # 事前マスクのパディングは 0 (学習と同じ)
+    x = torch.from_numpy(make_input_raw(planes, mode, mean, std, pr, uses_prior))[None].to(dev)
+    with torch.no_grad():
+        out = model(x).softmax(1)[0].cpu().numpy()
+    return out[:, :H, :W]

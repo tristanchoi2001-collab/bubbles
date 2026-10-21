@@ -200,6 +200,27 @@ def test_c_detector():
             d = float(np.abs(d5.prob_raw(f, bg, pr) - t5.prob(B, pr)).max())
             assert d < 1e-5, d
         assert float(np.abs(d5.prob_raw(f, bg, prior) - d5.prob_raw(f, bg)).max()) > 1e-4, "事前マスクが効いていない"
+        # 二値化の道具は raw の ckpt ('bin+sign' も 5ch) を TAU と取り違えず止める
+        cks5 = os.path.join(td, "sign5.pt")
+        save_ckpt(cks5, widen(m3, "bin+sign"), None, {"mode": "bin+sign", "preproc": [15, 4, 0], "prior": False})
+        for fn in (lambda: BIN.ckpt_uses_prior(cks5), lambda: BIN.TauDetector(cks5)):
+            try:
+                fn()
+                raise AssertionError("raw の ckpt を二値化の道具が読んでしまう")
+            except ValueError as e:
+                assert "raw/2_raw_track.py" in str(e)
+        assert BIN.ckpt_uses_prior(ck5) and not BIN.ckpt_uses_prior(os.path.join(td, "b3_None.pt"))
+        # 'diff' と B の入れ替えはもう一方の重みを使う
+        sdd = TRACK.remap_first_conv(m3.state_dict(), TRACK.channel_names("diff"), TRACK.channel_names("bin"))
+        assert torch.equal(sdd["encoder.conv1.weight"], m3.state_dict()["encoder.conv1.weight"])
+        # トランスフォーマーの位置: ずらした位置 = 大きい格子の一部 (学習中のずらしが推論の位置を含む)
+        big = TRACK._pos2d(17, 21, 512, "cpu")[0].reshape(17, 21, 512)
+        sh = TRACK._pos2d(13, 15, 512, "cpu", 4, 6)[0].reshape(13, 15, 512)
+        assert torch.allclose(big[4:, 6:], sh, atol=1e-5)
+        x = torch.randn(1, 3, 64, 96)
+        with torch.no_grad():
+            a1, a2 = mc.eval()(x), mc(x)
+        assert torch.equal(a1, a2), "推論でトランスフォーマーの位置がずれている"
         for bad, inp in ((m3, {"mode": "bin+diff"}), (widen(m3, "bin+diff"), None), (m5, {"mode": "bin+diff"})):
             ckb = os.path.join(td, "bad.pt")
             save_ckpt(ckb, bad, None, inp)
@@ -285,6 +306,31 @@ def test_d_train_smoke():
                 raise AssertionError(f"取り違えで止まらない ({word})")
             except SystemExit as e:
                 assert word in str(e), str(e)
+        # Roboflow の Augmentation (同じ元画像のコピー) / Resize は止める。失敗した変換の meta.json は残さない
+        aug = os.path.join(td, "aug_coco")
+        import shutil as _sh
+        _sh.copytree(src, aug)
+        a0 = json.load(open(os.path.join(aug, "train", "_annotations.coco.json")))
+        fn0 = a0["images"][0]["file_name"]
+        fn_dup = fn0.replace(".rf.", ".rf.zz")
+        _sh.copy(os.path.join(aug, "train", fn0), os.path.join(aug, "train", fn_dup))
+        a0["images"].append(dict(a0["images"][0], id=99, file_name=fn_dup))
+        json.dump(a0, open(os.path.join(aug, "train", "_annotations.coco.json"), "w"))
+        small_bg = os.path.join(td, "bg_small.png")
+        cv2.imwrite(small_bg, cv2.resize(cv2.imread(os.path.join(td, "bg_test.png")), (64, 48)))
+        for s_, bgp, word in ((aug, None, "同じ元画像"), (src, small_bg, "大きさ")):
+            _configure(TR, td, s_, "bin", base, None, out="runs_aug")
+            if bgp:
+                TR.BACKGROUNDS = {"test": bgp}
+            meta_p = TR.resolve(TR.DST) / "meta.json"
+            meta_p.parent.mkdir(parents=True, exist_ok=True)
+            meta_p.write_text("{}")
+            try:
+                TR.main()
+                raise AssertionError(f"止まらない ({word})")
+            except SystemExit as e:
+                assert word in str(e), str(e)
+            assert not meta_p.exists(), "失敗した変換の meta.json が残っている"
         cks = {}
         groups = {"bin+sign": {"B", "DK", "DB"}, "bin+diff": {"B", "D"}, "diff": {"D"}, "bin": {"B"}}
         for mode, o in (("bin+sign", old), ("bin+diff", None), ("diff", None), ("bin", None)):
@@ -299,6 +345,7 @@ def test_d_train_smoke():
             assert (ck["val_old"] is not None) == bool(o)
             rep = json.load(open(out / "test_report.json", encoding="utf-8"))
             assert len(rep["columns"]) == 2 and rep["input_mode"] == mode
+            assert all(c["train_hw"] == [96, 128] for c in rep["columns"].values())   # 2_raw_track と同じ大きさで推論
             for col in rep["columns"].values():
                 assert col["n_gt"] == 3
             assert ("old_test" in rep) == bool(o)          # 今までの二値化画像の test は別の表
@@ -375,6 +422,14 @@ def test_d_train_smoke():
         assert dt.uses_prior and dt.mode == "bin+sign"
         with open(out / "best.pt", "rb") as fp:          # f) で使う (この一時フォルダは消える)
             test_d_train_smoke.ck_prior = fp.read()
+        # トランスフォーマーのヘッド数は ckpt のものを使い、その数を記録する (CTX_HEADS と違っても)
+        _configure(TR, td, src, "bin+sign", str(out / "best.pt"), None, out="runs_heads")
+        TR.CTX_LAYERS, TR.CTX_HEADS, TR.USE_PRIOR = 1, 4, True
+        try:
+            TR.main()
+        finally:
+            TR.CTX_LAYERS, TR.CTX_HEADS, TR.USE_PRIOR = 0, 8, False
+        assert torch.load(str(TR.resolve(TR.OUT) / "best.pt"), map_location="cpu")["ctx"] == {"layers": 1, "heads": 8}
         # トランスフォーマーの層数が違う ckpt からは始められない
         _configure(TR, td, src, "bin+sign", str(out / "best.pt"), None, out="runs_ctx2")
         TR.CTX_LAYERS, TR.USE_PRIOR = 2, True

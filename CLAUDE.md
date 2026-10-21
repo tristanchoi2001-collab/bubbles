@@ -493,6 +493,16 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     - d 4모드 + 트랜스포머 + TAU 학습 스모크.
     - f 이진화 TAU ckpt로 2_raw_track main = 2_bin_track main_tau(CSV 바이트 동일), raw 사전 ckpt 다중 패스, PRIOR_PASSES=0.
   - 실데이터 학습·검증은 사용자 PC에서 한다. 학습 전에 확인할 것: 거대 기포가 있는 프레임을 test에 넣는다.
+- **리뷰 반영 (workflow, 확인된 문제 수정)**
+  - Roboflow Augmentation/Resize 내보내기 방지: 같은 원래 이름이 2장 이상이면 멈춘다. 원본과 배경의 크기가 다르면 멈춘다. 이진화 화상의 30% 넘게 빛나면 경고한다.
+    480 = 160×3이라 사용자가 예전에 Augmentation을 썼을 가능성이 있다.
+  - 변환을 시작할 때 meta.json을 지운다(중단되면 다음에 다시 만든다).
+  - 이진화 쪽(load_tau_model, ckpt_uses_prior; 1_bin_train·2_bin_track 둘 다)은 raw ckpt(input.mode가 'bin'이 아니거나 ctx 있음)를 오류로 멈춘다. 'bin+sign'도 5ch라 TAU로 오인되던 문제다.
+  - remap: B0-2 ↔ D0-2를 양방향으로 대응한다. 시작 모델의 화상 입력을 버리면 "학습 전 같은 결과" 대신 경고를 낸다.
+  - ctx heads는 실제로 쓴 수(시작 ckpt 값)를 기록한다.
+  - 트랜스포머 위치는 학습 중 0~8 격자만큼 무작위로 민다(`CTX_POS_JITTER`). 추론의 더 큰 격자 위치도 학습 중에 보게 하려는 것이다.
+  - test는 2_raw_track과 같은 계산이다(`predict_planes` 공유, 모델의 train_hw로 리사이즈). 화소 IoU는 패딩 없이 원래 크기에서 잰다.
+  - 확인용 화상: debug/unet_input_{B,D,DK,DB}.png, prob npz의 u_B 등에 U-Net이 실제로 본 화상을 저장한다.
 
 ## 저장소 구성 (2026-10-21 정리, 사용자 요청: "앞으로 쓸 것만 모으고 옛날 파일은 old/에 보존")
 - 사용자용 안내는 `README.md`(한국어). 폴더 하나만 PC에 복사하면 동작하게 했다.

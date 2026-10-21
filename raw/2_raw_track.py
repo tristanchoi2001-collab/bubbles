@@ -800,7 +800,7 @@ def ckpt_layout(ck, sd):
 
 def remap_first_conv(sd, src_names, dst_names):
     """最初の畳み込みの重みを、入力チャンネルの名前で並べ替える。無いチャンネルは 0 (= 学習前は出力に影響しない)。
-    'diff' (D×3) を二値化の重み (B×3) から始めるときだけ、B の重みをそのまま D に使う (今までの動作)"""
+    'diff' (D×3) と B×3 の入れ替えだけは、もう一方の重みをそのまま使う (B0 <-> D0 ...)"""
     import torch
     k0 = next(k for k, v in sd.items() if k.startswith('encoder.') and v.ndim == 4)
     w = sd[k0]
@@ -808,20 +808,20 @@ def remap_first_conv(sd, src_names, dst_names):
     for j, n in enumerate(dst_names):
         if n in src_names:
             out[:, j] = w[:, src_names.index(n)]
-        elif n in ('D0', 'D1', 'D2') and 'B' + n[1] in src_names:
-            out[:, j] = w[:, src_names.index('B' + n[1])]
+        elif n[:1] in 'BD' and n[1:] in ('0', '1', '2') and {'B': 'D', 'D': 'B'}[n[0]] + n[1] in src_names:
+            out[:, j] = w[:, src_names.index({'B': 'D', 'D': 'B'}[n[0]] + n[1])]
     sd = dict(sd)
     sd[k0] = out
     return sd
 
 
-def _pos2d(h, w, dim, device):
-    """2次元の位置 (sin / cos)。画像の大きさが学習と違っても同じ式で作れる"""
+def _pos2d(h, w, dim, device, oy=0, ox=0):
+    """2次元の位置 (sin / cos)。画像の大きさが学習と違っても同じ式で作れる。oy, ox = 位置のずらし (学習の切り出し用)"""
     import torch
     d = dim // 4
     omega = 1.0 / (10000 ** (torch.arange(d, device=device, dtype=torch.float32) / max(1, d)))
-    ys = torch.arange(h, device=device, dtype=torch.float32)[:, None] * omega[None]
-    xs = torch.arange(w, device=device, dtype=torch.float32)[:, None] * omega[None]
+    ys = (torch.arange(h, device=device, dtype=torch.float32) + oy)[:, None] * omega[None]
+    xs = (torch.arange(w, device=device, dtype=torch.float32) + ox)[:, None] * omega[None]
     pe = torch.cat([torch.sin(ys)[:, None].expand(h, w, d), torch.cos(ys)[:, None].expand(h, w, d),
                     torch.sin(xs)[None].expand(h, w, d), torch.cos(xs)[None].expand(h, w, d)], -1)
     pe = pe.reshape(h * w, 4 * d)
@@ -830,8 +830,13 @@ def _pos2d(h, w, dim, device):
     return pe[None]
 
 
+CTX_POS_JITTER = 8     # 学習中は位置を 0〜この値 (1/32 の格子の数) だけずらす: 切り出し (例 34×13) で学習しても、
+                       # 画像全体 (例 38×15) で推論するときの位置まで見たことがあるように
+
+
 def _context_block(dim, layers, heads):
     """小さいトランスフォーマー (画面全体の関係を見る)。出口の重みは 0 -> 学習前は何もしない (足す前と同じ結果)"""
+    import torch
     import torch.nn as nn
 
     class ContextBlock(nn.Module):
@@ -850,7 +855,8 @@ def _context_block(dim, layers, heads):
 
         def forward(self, f):
             b, c, h, w = f.shape
-            t = f.flatten(2).transpose(1, 2) + _pos2d(h, w, c, f.device).to(f.dtype)
+            oy, ox = (torch.randint(0, CTX_POS_JITTER + 1, (2,)).tolist() if self.training else (0, 0))
+            t = f.flatten(2).transpose(1, 2) + _pos2d(h, w, c, f.device, oy, ox).to(f.dtype)
             t = self.out(self.norm(self.enc(t)))
             return f + t.transpose(1, 2).reshape(b, c, h, w)
 
@@ -866,6 +872,30 @@ def build_unet(encoder, classes, in_ch, ctx_layers=0, ctx_heads=8, encoder_weigh
         model.ctx = _context_block(model.encoder.out_channels[-1], int(ctx_layers), int(ctx_heads))
         model.encoder.register_forward_hook(lambda m, i, out: list(out[:-1]) + [model.ctx(out[-1])])
     return model
+
+
+def predict_planes(model, planes, mode, mean, std, dev, prior=None, uses_prior=False, train_hw=None):
+    """画像 {'B', ...} (+ 事前マスク) -> 確率 (3, H, W)。2_raw_track.py と 1_raw_train.py の test で同じ計算:
+    学習画像の大きさ (train_hw) と違えば その大きさにしてから推論して元に戻す、32 の倍数に反射で足す (事前マスクは 0 で足す)"""
+    import torch
+    H, W = next(iter(planes.values())).shape
+    if train_hw is not None and (H, W) != tuple(train_hw):
+        th, tw = (int(v) for v in train_hw)
+        interp = cv2.INTER_AREA if th * tw < H * W else cv2.INTER_LINEAR
+        planes = {k: cv2.resize(v, (tw, th), interpolation=interp) for k, v in planes.items()}
+        if uses_prior and prior is not None:
+            prior = np.stack([cv2.resize(c.astype(np.float32), (tw, th), interpolation=interp) for c in prior])
+        p = predict_planes(model, planes, mode, mean, std, dev, prior, uses_prior)
+        return np.stack([cv2.resize(c, (W, H), interpolation=cv2.INTER_LINEAR) for c in p])
+    ph, pw = (-H) % 32, (-W) % 32
+    planes = {k: cv2.copyMakeBorder(v, 0, ph, 0, pw, cv2.BORDER_REFLECT_101) for k, v in planes.items()}
+    pr = None
+    if uses_prior and prior is not None:
+        pr = np.pad(prior.astype(np.float32), ((0, 0), (0, ph), (0, pw)))   # 事前マスクのパディングは 0 (学習と同じ)
+    x = torch.from_numpy(make_input_raw(planes, mode, mean, std, pr, uses_prior))[None].to(dev)
+    with torch.no_grad():
+        out = model(x).softmax(1)[0].cpu().numpy()
+    return out[:, :H, :W]
 
 
 class RawDetector:
@@ -895,6 +925,7 @@ class RawDetector:
         hw = ck.get("train_hw") or train_hw
         self.train_hw = (int(hw[0]), int(hw[1])) if hw else None
         self.raw_of = None          # TAU の多パス: フレーム番号 -> (元画像, 背景画像)
+        self.last_planes = {}
         self._resize_notice = False
         print(f"  U-Net: {ckpt_path}  (epoch {ck.get('epoch')}, device {self.dev}, 入力 {self.mode!r}, "
               f"前処理 {self.preproc}{'' if inp else ' (ckpt に記録なし)'}"
@@ -904,37 +935,17 @@ class RawDetector:
         if self.dev == "cpu":
             print("  ※ GPUが見つかりません。CPUでも動きますが遅くなります。")
 
-    def _forward(self, planes, prior):
-        torch = self.torch
-        H, W = planes["B"].shape
-        ph, pw = (-H) % 32, (-W) % 32
-        planes = {k: cv2.copyMakeBorder(v, 0, ph, 0, pw, cv2.BORDER_REFLECT_101) for k, v in planes.items()}
-        p = None
-        if self.uses_prior and prior is not None:
-            p = np.pad(prior.astype(np.float32), ((0, 0), (0, ph), (0, pw)))   # 事前マスクのパディングは 0 (学習と同じ)
-        x = make_input_raw(planes, self.mode, self.mean, self.std, p, self.uses_prior)
-        x = torch.from_numpy(x)[None].to(self.dev)
-        with torch.no_grad():
-            out = self.model(x).softmax(1)[0].cpu().numpy()
-        return out[:, :H, :W]
-
     def prob_raw(self, raw_bgr, bg_bgr, prior=None):
         """元画像 (BGR) + 背景画像 (BGR) (+ 事前マスク (2, H, W)) -> 確率 (3, H, W)"""
         planes = make_planes(raw_bgr, bg_bgr, self.preproc)
+        self.last_planes = {k: planes[k] for k in PLANES[self.mode]}     # U-Net が実際に見た画像 (確認用)
         H, W = planes["B"].shape
-        if self.train_hw is None or (H, W) == self.train_hw:
-            return self._forward(planes, prior)
-        th, tw = self.train_hw
-        if not self._resize_notice:
-            print(f"  ※ 画像サイズ {H}x{W} が学習画像 {th}x{tw} と異なるため、学習サイズに合わせて推論します")
+        if self.train_hw is not None and (H, W) != self.train_hw and not self._resize_notice:
+            print(f"  ※ 画像サイズ {H}x{W} が学習画像 {self.train_hw[0]}x{self.train_hw[1]} と異なるため、"
+                  "学習サイズに合わせて推論します")
             self._resize_notice = True
-        interp = cv2.INTER_AREA if th * tw < H * W else cv2.INTER_LINEAR
-        planes = {k: cv2.resize(v, (tw, th), interpolation=interp) for k, v in planes.items()}
-        pr = None
-        if self.uses_prior and prior is not None:
-            pr = np.stack([cv2.resize(c.astype(np.float32), (tw, th), interpolation=interp) for c in prior])
-        p = self._forward(planes, pr)
-        return np.stack([cv2.resize(c, (W, H), interpolation=cv2.INTER_LINEAR) for c in p])
+        return predict_planes(self.model, self.last_planes, self.mode, self.mean, self.std, self.dev, prior, self.uses_prior,
+                              self.train_hw)
 
     def prob_frame(self, f, gray, prior=None):
         """TAU の多パス用: フレーム番号 f の確率 (gray は表示用の二値化画像。U-Net の入力は元画像から作る)"""
@@ -2943,7 +2954,7 @@ def check_unet_input(gray, prob, inst, detector, filename):
         print("  !!! 警告: 前処理後の背景が黒くなっていません (学習画像は約94%が黒)。")
         print("      U-Netは「黒い背景 + 白い輪郭」の2値化画像で学習しているため、このままでは正しく検出できません。")
         print("      -> Noise Cut を上げる / 背景画像(BACKGROUND_PATH)が同じ撮影条件か確認 /")
-        print("         学習画像を作ったときの値を PREPROC_FIXED に設定")
+        print("         ckpt に前処理の記録が無いときは、学習画像を作ったときの値を PREPROC_FIXED に設定")
     if cover > 0.5:
         print("  !!! 警告: 画面の半分以上が気泡と判定されています。背景そのものを気泡と誤認している可能性が高いです。")
     if getattr(detector, "train_hw", None) is None:
@@ -2952,6 +2963,8 @@ def check_unet_input(gray, prob, inst, detector, filename):
         d = os.path.join(OUTPUT_FOLDER, "debug")
         os.makedirs(d, exist_ok=True)
         cv2.imwrite(os.path.join(d, "unet_input.png"), gray)                          # U-Netが実際に見た画像
+        for k, v in getattr(detector, "last_planes", {}).items():   # U-Net に入れた画像 (B, D, DK, DB)
+            cv2.imwrite(os.path.join(d, f"unet_input_{k}.png"), v)
         cv2.imwrite(os.path.join(d, "prob_in.png"), (prob[1] * 255).astype(np.uint8))  # 内部確率 (白=1)
         cv2.imwrite(os.path.join(d, "prob_edge.png"), (prob[2] * 255).astype(np.uint8))  # 境界確率 (白=1)
         print(f"  [入力チェック] U-Net入力と確率マップを保存: {d}")
@@ -3040,7 +3053,8 @@ def run_detection_phase(cache_dir: str):
         if SAVE_PROB_MAPS:
             p_in = np.round(prob[1] * 255).astype(np.uint8)
             p_edge = np.round(prob[2] * 255).astype(np.uint8)
-            np.savez_compressed(os.path.join(prob_dir, stem + ".npz"), p_in=p_in, p_edge=p_edge, u_input=gray)
+            np.savez_compressed(os.path.join(prob_dir, stem + ".npz"), p_in=p_in, p_edge=p_edge, u_input=gray,
+                                **{f"u_{k}": v for k, v in detector.last_planes.items()})
             sep = np.full((gray.shape[0], 4), 128, np.uint8)
             cv2.imwrite(os.path.join(prob_dir, stem + ".png"), np.hstack([gray, sep, p_in, sep, p_edge]))
             n_prob_saved += 1

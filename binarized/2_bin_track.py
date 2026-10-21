@@ -698,6 +698,10 @@ def load_tau_model(ckpt_path: str, dev: str = "cpu", force_prior: bool = False):
     import torch
     ck = torch.load(ckpt_path, map_location="cpu")
     sd = {k: (v.float() if v.is_floating_point() else v) for k, v in ck["state_dict"].items()}  # fp16 版も読める
+    inp = ck.get("input") or {}
+    if inp.get("mode", "bin") != "bin" or ck.get("ctx"):   # raw/1_raw_train.py の ckpt (差分の入力・トランスフォーマー)
+        raise ValueError(f"{ckpt_path}: raw/1_raw_train.py の ckpt です (入力 {inp.get('mode')!r}"
+                         f"{', トランスフォーマー付き' if ck.get('ctx') else ''})。raw/2_raw_track.py で使ってください")
     src_ch = state_in_channels(sd)
     in_ch = src_ch if (src_ch > IMAGE_CHANNELS or not force_prior) else IMAGE_CHANNELS + PRIOR_CHANNELS
     if in_ch not in (IMAGE_CHANNELS, IMAGE_CHANNELS + PRIOR_CHANNELS):
@@ -3737,9 +3741,14 @@ def main_tau():
 # [E] 起動
 # ======================================================================
 def ckpt_uses_prior(path):
-    """UNET_CKPT が TAU (事前マスク付き 5チャンネル) か"""
+    """UNET_CKPT が TAU (事前マスク付き 5チャンネル) か。raw/1_raw_train.py の ckpt (差分の入力など) は止める"""
     import torch
     ck = torch.load(path, map_location="cpu")
+    inp = (ck.get("input") or {}) if isinstance(ck, dict) else {}
+    if inp.get("mode", "bin") != "bin" or (isinstance(ck, dict) and ck.get("ctx")):
+        raise ValueError(f"{path}: raw/1_raw_train.py の ckpt です (入力 {inp.get('mode')!r})。raw/2_raw_track.py で使ってください")
+    if inp:
+        return bool(inp.get("prior"))
     sd = ck["state_dict"] if isinstance(ck, dict) and "state_dict" in ck else ck
     return state_in_channels(sd) > IMAGE_CHANNELS
 

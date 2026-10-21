@@ -213,6 +213,15 @@ def build_track():
     t = sub(t, r'tau_params = \{"UNET_CKPT": UNET_CKPT, ',
             'tau_params = {"UNET_CKPT": UNET_CKPT, "input": {"mode": detector.mode, "preproc": list(detector.preproc)}, ',
             1, 'TAU の入力の記録')
+    # 確認用の画像: U-Net が実際に見た画像 (B, D, DK, DB) も保存する
+    t = sub(t, r'^(        cv2\.imwrite\(os\.path\.join\(d, "unet_input\.png"\), gray\).*\n)',
+            lambda m: m.group(1) + '        for k, v in getattr(detector, "last_planes", {}).items():   # U-Net に入れた画像 (B, D, DK, DB)\n'
+                                   '            cv2.imwrite(os.path.join(d, f"unet_input_{k}.png"), v)\n', 1, '入力チェックの画像')
+    t = sub(t, r'print\("         学習画像を作ったときの値を PREPROC_FIXED に設定"\)',
+            'print("         ckpt に前処理の記録が無いときは、学習画像を作ったときの値を PREPROC_FIXED に設定")', 1, '入力チェックの助言')
+    t = sub(t, r'p_in=p_in, p_edge=p_edge, u_input=gray\)',
+            'p_in=p_in, p_edge=p_edge, u_input=gray,\n                                **{f"u_{k}": v for k, v in detector.last_planes.items()})', 1,
+            '確率マップの保存')
     for name in ('TauDetector(', 'UNetDetector(', 'class UNetDetector', 'class TauDetector', 'ckpt_uses_prior('):
         if name in t:
             raise SystemExit(f'2_raw_track.py に {name} が残っている')

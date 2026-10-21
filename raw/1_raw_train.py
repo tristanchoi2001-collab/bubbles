@@ -36,7 +36,8 @@ INPUT_MODE で入れ方を選ぶ (同じデータで学習して test で比べ�
 # ======================================================================
 #  設定 — ここだけ直して  python 1_raw_train.py  で実行。Windows のパスは r'...' で囲む
 # ======================================================================
-SRC = r'C:\Users\Tristan\Desktop\raw\coco'     # Roboflow の書き出し (元画像にラベル。train/ valid/ test/ を含む)
+SRC = r'C:\Users\Tristan\Desktop\raw\coco'     # Roboflow の書き出し (元画像にラベル。train/ valid/ test/ を含む)。
+                                                # 書き出すときは Augmentation も Resize も無しで (背景画像と画素がずれると入力が壊れる)
 BACKGROUNDS = {                                 # 画像の元の名前の先頭 -> その動画の背景画像 (先頭が長く一致するものが優先)
     'test': r'C:\Users\Tristan\Desktop\raw\bg_test.jpg',
 }
@@ -236,7 +237,7 @@ def ckpt_layout(ck, sd):
 
 def remap_first_conv(sd, src_names, dst_names):
     """最初の畳み込みの重みを、入力チャンネルの名前で並べ替える。無いチャンネルは 0 (= 学習前は出力に影響しない)。
-    'diff' (D×3) を二値化の重み (B×3) から始めるときだけ、B の重みをそのまま D に使う (今までの動作)"""
+    'diff' (D×3) と B×3 の入れ替えだけは、もう一方の重みをそのまま使う (B0 <-> D0 ...)"""
     import torch
     k0 = next(k for k, v in sd.items() if k.startswith('encoder.') and v.ndim == 4)
     w = sd[k0]
@@ -244,20 +245,20 @@ def remap_first_conv(sd, src_names, dst_names):
     for j, n in enumerate(dst_names):
         if n in src_names:
             out[:, j] = w[:, src_names.index(n)]
-        elif n in ('D0', 'D1', 'D2') and 'B' + n[1] in src_names:
-            out[:, j] = w[:, src_names.index('B' + n[1])]
+        elif n[:1] in 'BD' and n[1:] in ('0', '1', '2') and {'B': 'D', 'D': 'B'}[n[0]] + n[1] in src_names:
+            out[:, j] = w[:, src_names.index({'B': 'D', 'D': 'B'}[n[0]] + n[1])]
     sd = dict(sd)
     sd[k0] = out
     return sd
 
 
-def _pos2d(h, w, dim, device):
-    """2次元の位置 (sin / cos)。画像の大きさが学習と違っても同じ式で作れる"""
+def _pos2d(h, w, dim, device, oy=0, ox=0):
+    """2次元の位置 (sin / cos)。画像の大きさが学習と違っても同じ式で作れる。oy, ox = 位置のずらし (学習の切り出し用)"""
     import torch
     d = dim // 4
     omega = 1.0 / (10000 ** (torch.arange(d, device=device, dtype=torch.float32) / max(1, d)))
-    ys = torch.arange(h, device=device, dtype=torch.float32)[:, None] * omega[None]
-    xs = torch.arange(w, device=device, dtype=torch.float32)[:, None] * omega[None]
+    ys = (torch.arange(h, device=device, dtype=torch.float32) + oy)[:, None] * omega[None]
+    xs = (torch.arange(w, device=device, dtype=torch.float32) + ox)[:, None] * omega[None]
     pe = torch.cat([torch.sin(ys)[:, None].expand(h, w, d), torch.cos(ys)[:, None].expand(h, w, d),
                     torch.sin(xs)[None].expand(h, w, d), torch.cos(xs)[None].expand(h, w, d)], -1)
     pe = pe.reshape(h * w, 4 * d)
@@ -266,8 +267,13 @@ def _pos2d(h, w, dim, device):
     return pe[None]
 
 
+CTX_POS_JITTER = 8     # 学習中は位置を 0〜この値 (1/32 の格子の数) だけずらす: 切り出し (例 34×13) で学習しても、
+                       # 画像全体 (例 38×15) で推論するときの位置まで見たことがあるように
+
+
 def _context_block(dim, layers, heads):
     """小さいトランスフォーマー (画面全体の関係を見る)。出口の重みは 0 -> 学習前は何もしない (足す前と同じ結果)"""
+    import torch
     import torch.nn as nn
 
     class ContextBlock(nn.Module):
@@ -286,7 +292,8 @@ def _context_block(dim, layers, heads):
 
         def forward(self, f):
             b, c, h, w = f.shape
-            t = f.flatten(2).transpose(1, 2) + _pos2d(h, w, c, f.device).to(f.dtype)
+            oy, ox = (torch.randint(0, CTX_POS_JITTER + 1, (2,)).tolist() if self.training else (0, 0))
+            t = f.flatten(2).transpose(1, 2) + _pos2d(h, w, c, f.device, oy, ox).to(f.dtype)
             t = self.out(self.norm(self.enc(t)))
             return f + t.transpose(1, 2).reshape(b, c, h, w)
 
@@ -302,6 +309,30 @@ def build_unet(encoder, classes, in_ch, ctx_layers=0, ctx_heads=8, encoder_weigh
         model.ctx = _context_block(model.encoder.out_channels[-1], int(ctx_layers), int(ctx_heads))
         model.encoder.register_forward_hook(lambda m, i, out: list(out[:-1]) + [model.ctx(out[-1])])
     return model
+
+
+def predict_planes(model, planes, mode, mean, std, dev, prior=None, uses_prior=False, train_hw=None):
+    """画像 {'B', ...} (+ 事前マスク) -> 確率 (3, H, W)。2_raw_track.py と 1_raw_train.py の test で同じ計算:
+    学習画像の大きさ (train_hw) と違えば その大きさにしてから推論して元に戻す、32 の倍数に反射で足す (事前マスクは 0 で足す)"""
+    import torch
+    H, W = next(iter(planes.values())).shape
+    if train_hw is not None and (H, W) != tuple(train_hw):
+        th, tw = (int(v) for v in train_hw)
+        interp = cv2.INTER_AREA if th * tw < H * W else cv2.INTER_LINEAR
+        planes = {k: cv2.resize(v, (tw, th), interpolation=interp) for k, v in planes.items()}
+        if uses_prior and prior is not None:
+            prior = np.stack([cv2.resize(c.astype(np.float32), (tw, th), interpolation=interp) for c in prior])
+        p = predict_planes(model, planes, mode, mean, std, dev, prior, uses_prior)
+        return np.stack([cv2.resize(c, (W, H), interpolation=cv2.INTER_LINEAR) for c in p])
+    ph, pw = (-H) % 32, (-W) % 32
+    planes = {k: cv2.copyMakeBorder(v, 0, ph, 0, pw, cv2.BORDER_REFLECT_101) for k, v in planes.items()}
+    pr = None
+    if uses_prior and prior is not None:
+        pr = np.pad(prior.astype(np.float32), ((0, 0), (0, ph), (0, pw)))   # 事前マスクのパディングは 0 (学習と同じ)
+    x = torch.from_numpy(make_input_raw(planes, mode, mean, std, pr, uses_prior))[None].to(dev)
+    with torch.no_grad():
+        out = model(x).softmax(1)[0].cpu().numpy()
+    return out[:, :H, :W]
 
 # ======================================================================
 # 共通の部品 — binarized/1_bin_train.py と同じ (tools/build_raw.py が写したもの)
@@ -830,6 +861,7 @@ def build_dataset(src, dst, old_src=None):
     src, dst = Path(src), Path(dst)
     if not src.exists():
         raise FileNotFoundError(f'SRC フォルダがありません: {src}')
+    (dst / 'meta.json').unlink(missing_ok=True)      # 途中で止まったときに古い meta.json で使い回さないように
     for sub in SUBDIRS + ('preview',):
         if (dst / sub).exists():
             shutil.rmtree(dst / sub)
@@ -849,6 +881,12 @@ def build_dataset(src, dst, old_src=None):
     if missing:
         raise SystemExit(f'背景画像が決まらない画像が {len(missing)}枚あります (BACKGROUNDS か DEFAULT_BACKGROUND を設定):\n  '
                          + '\n  '.join(missing[:20]) + ('\n  ...' if len(missing) > 20 else ''))
+    names = Counter(name for _, _, _, _, name in plan)
+    dup = sorted(n for n, c in names.items() if c > 1)
+    if dup:       # Roboflow の Augmentation (同じ元画像の反転・明るさ違いのコピー) は背景画像と合わない
+        raise SystemExit(f'同じ元画像から作られた画像が {len(dup)}組あります (例: {dup[:3]})。Roboflow の Augmentation を'
+                         '付けて書き出していませんか? 背景画像と画素が合わなくなるので、Augmentation 無しで書き出し直してください '
+                         '(このファイルの AUG_FLIP / AUG_ROTATE / COPY_PASTE を使う)')
     bg_cache, shapes = {}, Counter()
     stats = Counter()
     for sdir, im, anns, bgp, name in plan:
@@ -865,8 +903,16 @@ def build_dataset(src, dst, old_src=None):
             if bg is None:
                 raise FileNotFoundError(f'背景画像が読めません: {bgp}')
             bg_cache[bgp] = bg
+        if raw.shape != bg_cache[bgp].shape:
+            raise SystemExit(f'{sdir.name}/{name}: 画像の大きさ {raw.shape[:2]} が背景画像 {bg_cache[bgp].shape[:2]} と違います。'
+                             'Roboflow で Resize を付けて書き出していませんか? (Resize 無しで書き出し直す / 背景画像を確認)')
         pl = make_planes(raw, bg_cache[bgp], PREPROC)
         H, W = pl['B'].shape
+        if (pl['B'] > 0).mean() > 0.3:
+            stats['bright_frames'] += 1
+            if stats['bright_frames'] <= 5:
+                print(f'    ※ {sdir.name}/{name}: 二値化画像の {100 * (pl["B"] > 0).mean():.0f}% が光っています。'
+                      '背景画像が合っていない (別の日・明るさが違う) かもしれません。DST/preview で確認')
         lbl, ins = make_target(anns, H, W, EDGE_PX)
         stem = Path(im['file_name']).stem
         _save(dst, split, stem, pl, lbl, ins)
@@ -1110,11 +1156,16 @@ def make_model(dev):
             notes.append(f'{"/".join(info["dropped"])} の重みは使わない')
         if info['new_ctx']:
             notes.append(f'トランスフォーマー {CTX_LAYERS}層を足した (出口の重み 0)')
+        lost = [n for n in info['dropped'] if not n.startswith('P_')]   # 事前マスクは捨てても「事前マスクなし」と同じ
         print(f'  開始モデル: {path} (epoch {ck0.get("epoch")}, エンコーダ {ck0["encoder"]})'
-              + (f'  — {"、".join(notes)} (学習前は開始モデルと同じ結果)' if notes else ''))
-        return model.train(), ck0['encoder']
+              + (f'  — {"、".join(notes)}' if notes else '')
+              + ('  (学習前は開始モデルと同じ結果)' if notes and not lost else ''))
+        if lost:
+            print(f'  ※ 開始モデルの入力 {"/".join(lost)} を使わないので、学習前でも開始モデルとは少し違う結果になります '
+                  '(epoch 0 の基準もこの形のモデル)')
+        return model.train(), ck0['encoder'], info['ctx_heads']
     model = build_unet('resnet34', 3, input_channels(INPUT_MODE, USE_PRIOR), CTX_LAYERS, CTX_HEADS, 'imagenet')
-    return model.to(dev).train(), 'resnet34'
+    return model.to(dev).train(), 'resnet34', CTX_HEADS
 
 
 def input_weights(model):
@@ -1172,14 +1223,14 @@ def train(root, out, dev, train_hw):
     if COPY_PASTE:
         print(f'  Copy-Paste の材料: 小さい気泡 {len(tr.bank)}個')
 
-    model, encoder = make_model(dev)
+    model, encoder, heads = make_model(dev)
     ce, dice = make_losses(dev)
     opt = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=EPOCHS)
     meta = {'encoder': encoder, 'classes': 3, 'mean': MEAN, 'std': STD,
             'in_channels': input_channels(INPUT_MODE, USE_PRIOR),
             'input': {'mode': INPUT_MODE, 'preproc': list(PREPROC), 'prior': bool(USE_PRIOR), 'prior_edge_px': PRIOR_EDGE_PX},
-            'ctx': {'layers': CTX_LAYERS, 'heads': CTX_HEADS} if CTX_LAYERS else None,
+            'ctx': {'layers': CTX_LAYERS, 'heads': heads} if CTX_LAYERS else None,
             'prior_aug': prior_aug().as_dict() if USE_PRIOR else None, 'prior_edge_px': PRIOR_EDGE_PX,
             'train_hw': train_hw, 'edge_px': EDGE_PX, 'edge_w': EDGE_W, 'crop': list(CROP), 'seed': SEED,
             'n_train': n_new, 'n_train_old': n_old, 'old_share': OLD_SHARE if n_old else None, 'n_val': n_va,
@@ -1261,19 +1312,22 @@ def train(root, out, dev, train_hw):
 # [3] test — 開始モデル (今の best.pt) と新しいモデルの比較
 # ======================================================================
 @torch.no_grad()
-def eval_on_test(model, layout, root, dev, gt_inst, preview_dir=None, tag='', split='test'):
-    """layout = (INPUT_MODE, 事前マスクを入れるか, 事前マスクの作り方 'empty' / 'synth')"""
+def eval_on_test(model, layout, root, dev, gt_inst, preview_dir=None, tag='', split='test', train_hw=None):
+    """layout = (INPUT_MODE, 事前マスクを入れるか, 事前マスクの作り方 'empty' / 'synth')。
+    2_raw_track.py と同じ計算 (predict_planes: 画像が学習画像の大きさ train_hw と違えばその大きさにして推論)"""
     mode, prior, prior_mode = layout
+    model.eval()
     te = RawDS(root, [split], False, mode=mode, prior=prior, prior_mode=prior_mode)
-    ev = evaluate(model, DataLoader(te, 1, shuffle=False, num_workers=WORKERS), dev)
     per = {n: [0, 0, 0, 0] for n, _, _ in SIZE_CLASSES}
+    conf = np.zeros((3, 3), np.int64)
     n_gt = n_pred = 0
     for i in range(len(te)):
         stem = te.items[i][1]
         planes, m, ins = te.load(i)
-        H, W = m.shape
-        x = te[i][0][None].to(dev)                      # 32 の倍数に足した入力 (val と同じ)
-        prob = model(x).softmax(1)[0].cpu().numpy()[:, :H, :W]
+        prob = predict_planes(model, dict(zip(te.names, planes)), mode, MEAN, STD, dev, te.prior_for(i, ins), prior,
+                              train_hw)
+        ok = m != IGNORE_LABEL
+        conf += np.bincount(m[ok].astype(np.int64) * 3 + prob.argmax(0)[ok], minlength=9).reshape(3, 3)
         inst = extract_instances(prob, MIN_AREA, BAND, EDGE_THR, CLOSE, TINY_MAX)
         n_pred += int(len(np.unique(inst)) - (1 if (inst == 0).any() else 0))
         gts = gt_inst.get(stem)
@@ -1287,7 +1341,10 @@ def eval_on_test(model, layout, root, dev, gt_inst, preview_dir=None, tag='', sp
             D = cv2.imread(str(Path(root) / 'diff' / te.items[i][0] / (stem + '.png')), cv2.IMREAD_GRAYSCALE)
             cv2.imwrite(str(preview_dir / f'{stem}_{tag}.png'),
                         instance_overlay(D, inst, f'{tag} pred N={int(inst.max())}  GT N={"-" if gts is None else len(gts)}'))
-    return {'pixel_iou': {'bg': ev['iou'][0], 'in': ev['iou'][1], 'edge': ev['iou'][2]}, 'n_gt': n_gt, 'n_pred': n_pred,
+    tp = np.diag(conf).astype(np.float64)
+    iou = (tp / np.maximum(conf.sum(0) + conf.sum(1) - tp, 1)).tolist()
+    return {'pixel_iou': {'bg': iou[0], 'in': iou[1], 'edge': iou[2]}, 'n_gt': n_gt, 'n_pred': n_pred,
+            'train_hw': list(train_hw) if train_hw else None,
             'per_size': {k: {'gt': v[0], 'found': v[1], 'pred': v[2], 'correct': v[3],
                              'recall': v[1] / v[0] if v[0] else None,
                              'precision': v[3] / v[2] if v[2] else None} for k, v in per.items()}}
@@ -1321,24 +1378,26 @@ def test_check(best_path, root, out, dev):
         return
     models = []
     if FINETUNE_FROM:      # 開始モデルはそれ自身の入力で (今の best.pt なら 'bin'。事前マスクを使うモデルなら事前マスクなしで)
-        m0, _, info0 = load_model(resolve(FINETUNE_FROM), dev=dev)
+        m0, ck0, info0 = load_model(resolve(FINETUNE_FROM), dev=dev)
         name0 = f'開始モデル ({info0["mode"]})'
-        models.append((name0, m0.eval(), (info0['mode'], info0['prior'], 'empty'), 'now'))
-    m1, _, _ = load_model(best_path, dev=dev)
+        models.append((name0, m0.eval(), (info0['mode'], info0['prior'], 'empty'), 'now', ck0.get('train_hw')))
+    m1, ck1, _ = load_model(best_path, dev=dev)
+    hw1 = ck1.get('train_hw')
     name1 = f'新 ({INPUT_MODE}' + (f', 変換{CTX_LAYERS}層' if CTX_LAYERS else '') + ')'
     if USE_PRIOR:
-        models.append((name1[:-1] + ', 事前なし)', m1.eval(), (INPUT_MODE, True, 'empty'), 'new'))
-        models.append((name1[:-1] + ', 事前あり)', m1, (INPUT_MODE, True, 'synth'), 'new_prior'))
+        models.append((name1[:-1] + ', 事前なし)', m1.eval(), (INPUT_MODE, True, 'empty'), 'new', hw1))
+        models.append((name1[:-1] + ', 事前あり)', m1, (INPUT_MODE, True, 'synth'), 'new_prior', hw1))
     else:
-        models.append((name1, m1.eval(), (INPUT_MODE, False, 'empty'), 'new'))
+        models.append((name1, m1.eval(), (INPUT_MODE, False, 'empty'), 'new', hw1))
     report = {'columns': None, 'iou_match': IOU_MATCH, 'input_mode': INPUT_MODE, 'ctx_layers': CTX_LAYERS,
               'use_prior': bool(USE_PRIOR)}
     for split, title, gt in sets:
-        cols = [(name, eval_on_test(m, layout, root, dev, gt, out / f'{split}_preview', tag, split))
-                for name, m, layout, tag in models]
+        cols = [(name, eval_on_test(m, layout, root, dev, gt, out / f'{split}_preview', tag, split, hw))
+                for name, m, layout, tag, hw in models]
         print_table(title, cols)
         report['columns' if split == 'test' else split] = dict(cols)
     (out / 'test_report.json').write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')
+    print('  (2_raw_track.py と同じ計算: 画像の大きさが各モデルの学習画像と違えば、その大きさにして推論)')
     print(f'\n  オーバーレイ -> {out}/' + ', '.join(f'{s}_preview' for s, _, _ in sets)
           + '  (背景は D。now = 開始モデル, new = 新しいモデル' + (', new_prior = 事前マスクあり' if USE_PRIOR else '') + ')')
 
