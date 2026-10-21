@@ -439,7 +439,10 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `raw/1_raw_train.py`
   - SRC = Roboflow 내보내기(원본 화상). 배경은 `BACKGROUNDS`(원래 파일명 앞부분 → 배경 경로, 가장 길게 일치하는 것). 원래 이름은 `extra.name` 또는 `<name>_jpg.rf.<hash>`에서 복원. 배경을 못 정한 화상이 있으면 목록을 내고 멈춘다.
   - DST/{bin,diff,masks}/<split>/. valid가 없으면 train의 10%를 val로. `meta.json`에 train_hw(새 train 화상의 최빈 크기)와 preproc.
-  - `OLD_BIN_SRC`: 예전 이진화 내보내기의 train만 split 'old'로 섞는다(D = B). `OLD_SHARE`=0.5로 WeightedRandomSampler.
+  - `OLD_BIN_SRC`: 예전 이진화 내보내기(480장, train/valid/test)를 쓴다. D = B(원본이 없으므로).
+    - train → split 'old', 학습에 섞는다. `OLD_SHARE`=0.5로 WeightedRandomSampler.
+    - valid → 'old_val', best 선택 점수 = (1 − `OLD_VAL_WEIGHT`) × 새 val + `OLD_VAL_WEIGHT`(0.5) × 예전 val. 예전 영상에서 나빠진 epoch를 고르지 않게 한다(2026-10-21 사용자 질문으로 추가).
+    - test → 'old_test', [3]에서 별도 표(시작 모델 vs 새 모델, test_report.json의 `old_test`). 예전 best.pt도 이 test는 학습·선택에 안 썼으므로 공정한 비교.
   - FINETUNE_FROM=best.pt, epoch 0(시작 모델)을 기준으로 best를 고른다. 'bin+diff'는 epoch마다 D 가중치 크기 표시.
   - test: 시작 모델(그 ckpt의 입력) vs 새 모델의 화소 IoU + 크기별 재현율/적합율, test_preview(배경 D).
   - dot 라벨/ignore, TAU는 넣지 않았다.
@@ -448,7 +451,7 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - 생성: `python tools/build_raw.py`(`--check`). 재료는 `tools/raw_parts/`(train.py 본체, raw_input.py, raw_detector.py) + binarized/1_bin_train.py의 공통 부품(AST로 복사) + binarized/2_bin_track.py. **binarized/를 다시 만들면 이것도 다시 만든다.**
 - 테스트 `tests/test_raw.py` a~e
   - a 최신, b bin_diff의 B = preprocess_image, c RawDetector = UNetDetector(완전 일치, 리사이즈 포함)·4ch 0 초기화 = 3ch·채널 불일치 오류
-  - d 학습 스모크(3모드, Roboflow 이름, OLD_BIN_SRC, 배경 누락 오류, 학습한 4ch에서 이어 학습), e 기록 없는 3ch ckpt면 2_bin_track과 CSV 바이트 동일 + 학습한 bin+diff ckpt로 끝까지 실행.
+  - d 학습 스모크(3모드, Roboflow 이름, OLD_BIN_SRC의 train/valid/test 사용과 합산 점수, 배경 누락 오류, 학습한 4ch에서 이어 학습), e 기록 없는 3ch ckpt면 2_bin_track과 CSV 바이트 동일 + 학습한 bin+diff ckpt로 끝까지 실행.
 - 실데이터 학습·검증은 하지 않았다(사용자 PC에서).
 
 ## 저장소 구성

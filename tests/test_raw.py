@@ -6,6 +6,7 @@
   c) RawDetector: 記録の無い 3ch ckpt = 2_bin_track の UNetDetector と完全に同じ確率 (学習サイズへの拡大縮小も)。
      best.pt から D の重みを 0 で足した 4ch ('bin+diff') は 3ch と同じ確率。チャンネル数が合わない ckpt は止まる
   d) 学習: Roboflow の名前 (_jpg.rf.<hash>) から背景を選び、3つの INPUT_MODE と OLD_BIN_SRC で最後まで動く。
+     OLD_BIN_SRC の valid は best の点数に、test は別の表に使う。
      背景の決まらない画像があれば一覧を出して止まる。できた ckpt を RawDetector が記録どおりの入力で読む
   e) 2_raw_track の main_single: 記録の無い 3ch ckpt なら 2_bin_track の main_single と同じ CSV。
      学習した 'bin+diff' の ckpt でも最後まで動き、qc_report に入力の記録が残る
@@ -229,16 +230,26 @@ def test_d_train_smoke():
             ck = torch.load(str(out / "best.pt"), map_location="cpu")
             assert ck["input"] == {"mode": mode, "preproc": [15, 4, 0]} and ck["in_channels"] == TR.input_channels(mode)
             assert ck["train_hw"] == [96, 128] and ck["n_train"] == 3 and ck["n_train_old"] == (2 if o else 0)
+            assert ck["n_val_old"] == (1 if o else 0) and ck["old_val_weight"] == (0.5 if o else 0.0)
+            assert (ck["val_old"] is not None) == bool(o)
             rep = json.load(open(out / "test_report.json", encoding="utf-8"))
             assert len(rep["columns"]) == 2 and rep["input_mode"] == mode
             for col in rep["columns"].values():
                 assert col["n_gt"] == 3
+            assert ("old_test" in rep) == bool(o)          # 今までの二値化画像の test は別の表
+            if o:
+                assert list(rep["old_test"]) == list(rep["columns"]) and all(c["n_gt"] == 3 for c in rep["old_test"].values())
+                assert len(os.listdir(out / "old_test_preview")) == 2
             log = json.load(open(out / "log.json"))
             assert len(log) == 1 and (("diff_w" in log[0]) == (mode == "bin+diff"))
+            sc = lambda iou: 0.4 * iou[1] + 0.6 * iou[2]
+            want = 0.5 * sc(log[0]["iou"]) + 0.5 * sc(log[0]["iou_old"]) if o else sc(log[0]["iou"])
+            assert abs(log[0]["score"] - want) < 1e-9 and (log[0]["iou_old"] is None) == (not o)
             ds = TR.resolve(TR.DST)
             for sub in ("bin", "diff", "masks"):
                 assert len(os.listdir(ds / sub / "train")) == 3 and len(os.listdir(ds / sub / "val")) == 1
-                assert len(TR.list_images(ds / sub / "old")) == (2 if o else 0)
+                for split, n in (("old", 2), ("old_val", 1), ("old_test", 1)):   # OLD_BIN_SRC の train / valid / test
+                    assert len(TR.list_images(ds / sub / split)) == (n if o else 0), (sub, split)
             cks[mode] = str(out / "best.pt")
             det = TRACK.RawDetector(cks[mode])
             assert det.mode == mode and det.preproc == (15, 4, 0) and det.train_hw == (96, 128)

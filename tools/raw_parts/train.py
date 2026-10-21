@@ -13,13 +13,15 @@ INPUT_MODE で入れ方を選ぶ (同じデータで3つとも学習して test 
   'diff'     : D だけ (3チャンネル)。best.pt から始めるが、入力の見た目が変わるので最初は今より悪い
   'bin'      : B だけ (今と同じ入力)。同じ新しいデータで学習した「比較の基準」
 ラベルは Roboflow で元画像に描いたもの (座標は B・D と同じ)。背景画像は画像の名前の先頭で選ぶ (BACKGROUNDS)。
-今までの二値化画像の学習データ (OLD_BIN_SRC) も混ぜられる (D は作れないので B と同じものを入れる =
-「気泡の中の情報が無い画像」として学ぶ。白く飛んだ動画と同じ状況)。
+今までの二値化画像の学習データ (OLD_BIN_SRC) も使える (D は作れないので B と同じものを入れる =
+「気泡の中の情報が無い画像」として学ぶ。白く飛んだ動画と同じ状況):
+  train -> 学習に混ぜる / valid -> best.pt の選び方にも使う / test -> 今までの画像で悪くなっていないかを別の表で確認
 
 流れ
   [1] Roboflow の書き出し (SRC) -> B, D, 3クラスのマスク (0=背景, 1=気泡内部, 2=気泡境界) (DST)
   [2] 学習 -> OUT/best.pt (2_raw_track.py の UNET_CKPT に入れる。入力の作り方も ckpt に記録)
   [3] test で確認 -> 「開始モデル (今の best.pt)」と「新しいモデル」の 画素 IoU と 大きさ別の再現率・適合率
+                    (新しい test と、OLD_BIN_SRC の test の 2つの表)
 相対パスは「このファイルがあるフォルダ」基準。OUT が既にあれば runs/raw2, raw3 ... を新しく作る。
 このファイルは tools/build_raw.py が作ったもの (共通の部品は binarized/1_bin_train.py と同じ)。
 """
@@ -34,9 +36,14 @@ BACKGROUNDS = {                                 # 画像の元の名前の先頭
 DEFAULT_BACKGROUND = None     # BACKGROUNDS のどれにも当てはまらない画像の背景。None なら当てはまらない画像の一覧を出して止まる
 INPUT_MODE = 'bin+diff'       # 'bin+diff' (おすすめ) / 'diff' / 'bin'
 PREPROC = (15, 4, 0)          # 前処理 (Noise Cut, Brightness, Median)。今の二値化と同じ値 (B はこの値で作る)
-OLD_BIN_SRC = None            # 今までの二値化画像の Roboflow 書き出し (例 480枚)。その train/ だけを混ぜる。None なら使わない。
-                              # 新しいデータが少ないうちは混ぜるのがおすすめ (小さい気泡などの今の力を保つ)
-OLD_SHARE = 0.5               # 1 epoch で OLD_BIN_SRC の画像が占める割合 (新しい画像は 1 epoch に平均1回ずつ出る)
+OLD_BIN_SRC = None            # 今までの二値化画像の Roboflow 書き出し (例 480枚。train/ valid/ test/ を含む)。None なら使わない。
+                              #   train/ -> 学習に混ぜる
+                              #   valid/ -> best.pt の選び方にも使う (OLD_VAL_WEIGHT。今までの画像で悪くなった epoch を選ばない)
+                              #   test/  -> [3] で別の表 (今までの画像で今の best.pt より悪くなっていないか)
+                              # 新しいデータが少ないうちは使うのがおすすめ (小さい気泡などの今の力を保つ)
+OLD_SHARE = 0.5               # 1 epoch で OLD_BIN_SRC の train の画像が占める割合 (新しい画像は 1 epoch に平均1回ずつ出る)
+OLD_VAL_WEIGHT = 0.5          # best.pt を選ぶ点数 = (1 - この値) × 新しい val の点数 + この値 × OLD_BIN_SRC の val の点数。
+                              # 0 なら新しい val だけで選ぶ (今までの val は表示だけ)
 DST = r'dataset_raw'          # 変換したデータセットのフォルダ (毎回作り直す)
 OUT = r'runs/raw'             # 結果のフォルダ。既にあれば runs/raw2, raw3 ... を自動で作る
 REBUILD_DATASET = True        # True: 毎回 SRC から作り直す / False: DST に変換済みがあればそのまま使う
@@ -97,6 +104,8 @@ IMG_EXT = {'.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff'}
 SPLIT_MAP = {'train': 'train', 'valid': 'val', 'val': 'val', 'test': 'test'}
 IGNORE_LABEL = 255
 ANN_NAME = '_annotations.coco.json'
+OLD_SPLIT = {'train': 'old', 'val': 'old_val', 'test': 'old_test'}   # OLD_BIN_SRC の split -> DST の中の名前
+OLD_PREFIX = 'old_'                                                 # OLD_BIN_SRC の画像の名前の頭 (SRC と重ならないように)
 
 # @@RAW_INPUT@@
 
@@ -136,7 +145,8 @@ def _preview(B, D, lbl):
 
 
 def build_dataset(src, dst, old_src=None):
-    """SRC (元画像) -> DST/{bin,diff,masks}/<split>/。OLD_BIN_SRC があればその train を DST/*/old/ に (D = B)。
+    """SRC (元画像) -> DST/{bin,diff,masks}/<split>/。OLD_BIN_SRC があればその train / valid / test を
+    DST/*/old/, old_val/, old_test/ に (D = B)。
     戻り値: 新しい train 画像の大きさで一番多いもの (推論で画像の大きさをそろえる基準)"""
     src, dst = Path(src), Path(dst)
     if not src.exists():
@@ -202,22 +212,22 @@ def build_dataset(src, dst, old_src=None):
     if not stats['test']:
         print('  ※ test がありません。今の best.pt との比較 [3] ができないので、Roboflow で test を分けてください')
     if old_src:
-        n_old = 0
+        n_old = Counter()
         for sdir in _split_dirs(old_src):
-            if SPLIT_MAP[sdir.name] != 'train':
-                continue
+            split = OLD_SPLIT[SPLIT_MAP[sdir.name]]
             images, by_img = load_coco(sdir / ANN_NAME)
             for im in images:
                 g = cv2.imread(str(sdir / im['file_name']), cv2.IMREAD_GRAYSCALE)
                 if g is None:
                     continue
                 lbl, _ = make_target(by_img.get(im['id'], []), *g.shape, EDGE_PX)
-                stem = 'old_' + Path(im['file_name']).stem
+                stem = OLD_PREFIX + Path(im['file_name']).stem
                 for sub, a in (('bin', g), ('diff', g), ('masks', lbl)):   # D は作れないので B と同じ
-                    (dst / sub / 'old').mkdir(parents=True, exist_ok=True)
-                    cv2.imwrite(str(dst / sub / 'old' / (stem + '.png')), a)
-                n_old += 1
-        print(f'  [old] 今までの二値化画像 {n_old}枚 (D = B として混ぜる)')
+                    (dst / sub / split).mkdir(parents=True, exist_ok=True)
+                    cv2.imwrite(str(dst / sub / split / (stem + '.png')), a)
+                n_old[split] += 1
+        print(f'  [old] 今までの二値化画像 (D = B): train {n_old["old"]}枚 (学習に混ぜる), '
+              f'valid {n_old["old_val"]}枚 (best の選び方), test {n_old["old_test"]}枚 (悪くなっていないかの確認)')
     hw = [int(v) for v in shapes.most_common(1)[0][0]] if shapes else None
     (dst / 'meta.json').write_text(json.dumps({'train_hw': hw, 'preproc': list(PREPROC)}), encoding='utf-8')
     print(f'  -> {dst}   (確認: {dst / "preview"}  左から B, D, ラベル)')
@@ -377,6 +387,8 @@ def train(root, out, dev, train_hw):
     has_old = bool(list_images(root / 'bin' / 'old'))
     tr = RawDS(root, ['train'] + (['old'] if has_old else []), True)
     va = RawDS(root, ['val'], False)
+    va_old = RawDS(root, ['old_val'], False)
+    w_old = OLD_VAL_WEIGHT if len(va_old) else 0.0
     n_new = sum(1 for s, _ in tr.items if s == 'train')
     n_old = len(tr) - n_new
     if n_new < 1 or len(va) < 1:
@@ -393,7 +405,8 @@ def train(root, out, dev, train_hw):
             raise RuntimeError(f'train の画像が {n_new}枚しかありません (BS={BS} 以上必要)')
         dl_tr = DataLoader(tr, BS, shuffle=True, num_workers=WORKERS, drop_last=True, generator=g)
     print(f'  入力 {INPUT_MODE!r}  train 新 {n_new}枚 + 今までの二値化 {n_old}枚 (1 epoch {len(dl_tr) * BS}サンプル)  '
-          f'val {len(va)}枚  device {dev}')
+          f'val 新 {len(va)}枚' + (f' + 今までの {len(va_old)}枚 (点数の重み {w_old})' if len(va_old) else '')
+          + f'  device {dev}')
     if dev == 'cpu':
         print('  ※ GPU が見つかりません。CPU での学習はとても遅いです')
     if COPY_PASTE:
@@ -407,15 +420,27 @@ def train(root, out, dev, train_hw):
             'input': {'mode': INPUT_MODE, 'preproc': list(PREPROC)}, 'train_hw': train_hw,
             'edge_px': EDGE_PX, 'edge_w': EDGE_W, 'crop': list(CROP), 'seed': SEED,
             'n_train': n_new, 'n_train_old': n_old, 'old_share': OLD_SHARE if n_old else None, 'n_val': len(va),
+            'n_val_old': len(va_old), 'old_val_weight': w_old,
             'src': str(SRC), 'old_src': str(OLD_BIN_SRC) if OLD_BIN_SRC else None,
             'date': datetime.now().strftime('%Y-%m-%d %H:%M'), 'finetuned_from': str(FINETUNE_FROM) if FINETUNE_FROM else None}
     dl_va = DataLoader(va, 1, shuffle=False, num_workers=WORKERS)
+    dl_va_old = DataLoader(va_old, 1, shuffle=False, num_workers=WORKERS) if len(va_old) else None
+
+    def validate():
+        """(best を選ぶ点数, 新しい val, 今までの val (無ければ None))"""
+        ev = evaluate(model, dl_va, dev)
+        ev_old = evaluate(model, dl_va_old, dev) if dl_va_old is not None else None
+        sc = score_of(ev) if ev_old is None else (1 - w_old) * score_of(ev) + w_old * score_of(ev_old)
+        return sc, ev, ev_old
+
+    def old_msg(ev_old):
+        return '' if ev_old is None else f'  | 今までの val 内部 {ev_old["iou"][1]:.3f} 境界 {ev_old["iou"][2]:.3f}'
+
     best, best_ep = -1.0, 0
     if FINETUNE_FROM:      # 開始モデル自体を基準にする -> 悪くなったら best.pt は開始モデルのまま
-        ev0 = evaluate(model, dl_va, dev)
-        best = score_of(ev0)
-        torch.save(dict(meta, state_dict=model.state_dict(), epoch=0, val=ev0), out / 'best.pt')
-        print(f'  開始モデル val 内部 {ev0["iou"][1]:.3f} 境界 {ev0["iou"][2]:.3f} (score {best:.4f})')
+        best, ev0, ev0_old = validate()
+        torch.save(dict(meta, state_dict=model.state_dict(), epoch=0, val=ev0, val_old=ev0_old), out / 'best.pt')
+        print(f'  開始モデル val 内部 {ev0["iou"][1]:.3f} 境界 {ev0["iou"][2]:.3f}{old_msg(ev0_old)} (score {best:.4f})')
     log = []
     for ep in range(1, EPOCHS + 1):
         model.train()
@@ -429,15 +454,15 @@ def train(root, out, dev, train_hw):
             opt.step()
             tl += loss.item()
         sched.step()
-        ev = evaluate(model, dl_va, dev)
-        sc = score_of(ev)
-        entry = {'ep': ep, 'loss': tl / max(1, len(dl_tr)), 'score': sc, 'iou': ev['iou']}
+        sc, ev, ev_old = validate()
+        entry = {'ep': ep, 'loss': tl / max(1, len(dl_tr)), 'score': sc, 'iou': ev['iou'],
+                 'iou_old': ev_old['iou'] if ev_old else None}
         if INPUT_MODE == 'bin+diff':      # D の重みの大きさ (0 のままなら D を使っていない)
             w1 = next(p for p in model.encoder.parameters() if p.ndim == 4).detach().abs()
             entry['diff_w'] = float(w1[:, 3].mean())
             entry['bin_w'] = float(w1[:, :3].mean())
         log.append(entry)
-        ck = dict(meta, state_dict=model.state_dict(), epoch=ep, val=ev)
+        ck = dict(meta, state_dict=model.state_dict(), epoch=ep, val=ev, val_old=ev_old)
         torch.save(ck, out / 'last.pt')
         mark = ''
         if sc > best:
@@ -446,7 +471,7 @@ def train(root, out, dev, train_hw):
             mark = '  <- best'
         dw = f'  D の重み {entry["diff_w"]:.4f} (B {entry["bin_w"]:.4f})' if 'diff_w' in entry else ''
         print(f'  ep {ep:3d}/{EPOCHS}  loss {entry["loss"]:.4f}  val 内部 {ev["iou"][1]:.3f} 境界 {ev["iou"][2]:.3f}'
-              f'{dw}   {time.time() - t0:.0f}s{mark}')
+              f'{old_msg(ev_old)}{dw}   {time.time() - t0:.0f}s{mark}')
         (out / 'log.json').write_text(json.dumps(log, indent=1), encoding='utf-8')
     print(f'  学習完了。best = epoch {best_ep} (score {best:.4f})'
           + ('  ※ 開始モデルより良くならなかったので best.pt は開始モデルのまま' if FINETUNE_FROM and best_ep == 0 else ''))
@@ -454,11 +479,11 @@ def train(root, out, dev, train_hw):
 
 
 # ======================================================================
-# [3] test — 今の best.pt (二値化) と新しいモデルの比較
+# [3] test — 開始モデル (今の best.pt) と新しいモデルの比較
 # ======================================================================
 @torch.no_grad()
-def eval_on_test(model, mode, root, dev, gt_inst, preview_dir=None, tag=''):
-    te = RawDS(root, ['test'], False, mode=mode)
+def eval_on_test(model, mode, root, dev, gt_inst, preview_dir=None, tag='', split='test'):
+    te = RawDS(root, [split], False, mode=mode)
     ev = evaluate(model, DataLoader(te, 1, shuffle=False, num_workers=WORKERS), dev)
     per = {n: [0, 0, 0, 0] for n, _, _ in SIZE_CLASSES}
     n_gt = n_pred = 0
@@ -487,21 +512,9 @@ def eval_on_test(model, mode, root, dev, gt_inst, preview_dir=None, tag=''):
                              'precision': v[3] / v[2] if v[2] else None} for k, v in per.items()}}
 
 
-def test_check(best_path, root, out, dev):
-    root = Path(root)
-    if not list_images(root / 'bin' / 'test'):
-        print('  test の画像が無いので飛ばします')
-        return
-    gt_inst = load_gt_instances(resolve(SRC))
-    cols = []
-    if FINETUNE_FROM:      # 開始モデルはそれ自身の入力で (今の best.pt なら 'bin')
-        mode0 = (torch.load(str(resolve(FINETUNE_FROM)), map_location='cpu').get('input') or {}).get('mode', 'bin')
-        m0, _ = load_model(resolve(FINETUNE_FROM), mode0, dev)
-        cols.append((f'開始モデル ({mode0})', eval_on_test(m0.eval(), mode0, root, dev, gt_inst, out / 'test_preview', 'now')))
-    m1, _ = load_model(best_path, INPUT_MODE, dev)
-    cols.append((f'新 ({INPUT_MODE})', eval_on_test(m1.eval(), INPUT_MODE, root, dev, gt_inst, out / 'test_preview', 'new')))
+def print_table(title, cols):
     fmt = lambda v: '   -  ' if v is None else f'{100 * v:5.1f}%'
-    print(f'  test の気泡 {cols[-1][1]["n_gt"]}個 (正解と IoU >= {IOU_MATCH} なら同じ気泡)')
+    print(f'\n  {title}: 気泡 {cols[-1][1]["n_gt"]}個 (正解と IoU >= {IOU_MATCH} なら同じ気泡)')
     print('  ' + f'{"大きさ":<8}' + ''.join(f'{n:>24}' for n, _ in cols))
     print('  ' + f'{"":<8}' + ''.join(f'{"再現率":>12}{"適合率":>12}' for _ in cols))
     for k, _, _ in SIZE_CLASSES:
@@ -510,9 +523,34 @@ def test_check(best_path, root, out, dev):
     for n, r in cols:
         pi = r['pixel_iou']
         print(f'  [{n}] 予測 {r["n_pred"]}個 / 正解 {r["n_gt"]}個, 画素 IoU 内部 {pi["in"]:.3f} 境界 {pi["edge"]:.3f}')
-    (out / 'test_report.json').write_text(json.dumps({'columns': dict(cols), 'iou_match': IOU_MATCH, 'input_mode': INPUT_MODE},
-                                                     indent=1, ensure_ascii=False), encoding='utf-8')
-    print(f'  オーバーレイ -> {out / "test_preview"}  (背景は D。now = 開始モデル, new = 新しいモデル)')
+
+
+def test_check(best_path, root, out, dev):
+    """新しい test (SRC) と、OLD_BIN_SRC の test (今までの二値化画像) で 開始モデル と 新しいモデル を比べる"""
+    root = Path(root)
+    sets = []
+    if list_images(root / 'bin' / 'test'):
+        sets.append(('test', '新しい test (元画像)', load_gt_instances(resolve(SRC))))
+    if OLD_BIN_SRC and list_images(root / 'bin' / 'old_test'):
+        gt_old = {OLD_PREFIX + k: v for k, v in load_gt_instances(resolve(OLD_BIN_SRC)).items()}
+        sets.append(('old_test', '今までの二値化画像の test (D = B。今の best.pt より悪くなっていないか)', gt_old))
+    if not sets:
+        print('  test の画像が無いので飛ばします')
+        return
+    models = []
+    if FINETUNE_FROM:      # 開始モデルはそれ自身の入力で (今の best.pt なら 'bin')
+        mode0 = (torch.load(str(resolve(FINETUNE_FROM)), map_location='cpu').get('input') or {}).get('mode', 'bin')
+        models.append((f'開始モデル ({mode0})', load_model(resolve(FINETUNE_FROM), mode0, dev)[0].eval(), mode0, 'now'))
+    models.append((f'新 ({INPUT_MODE})', load_model(best_path, INPUT_MODE, dev)[0].eval(), INPUT_MODE, 'new'))
+    report = {'columns': None, 'iou_match': IOU_MATCH, 'input_mode': INPUT_MODE}
+    for split, title, gt in sets:
+        cols = [(name, eval_on_test(m, mode, root, dev, gt, out / f'{split}_preview', tag, split))
+                for name, m, mode, tag in models]
+        print_table(title, cols)
+        report['columns' if split == 'test' else split] = dict(cols)
+    (out / 'test_report.json').write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')
+    print(f'\n  オーバーレイ -> {out}/' + ', '.join(f'{s}_preview' for s, _, _ in sets)
+          + '  (背景は D。now = 開始モデル, new = 新しいモデル)')
 
 
 # ======================================================================
@@ -523,6 +561,8 @@ def main():
     input_channels(INPUT_MODE)
     if not 0 <= OLD_SHARE < 1:
         raise ValueError(f'OLD_SHARE は 0 以上 1 未満: {OLD_SHARE}')
+    if not 0 <= OLD_VAL_WEIGHT <= 1:
+        raise ValueError(f'OLD_VAL_WEIGHT は 0 以上 1 以下: {OLD_VAL_WEIGHT}')
     dev = 'cuda' if torch.cuda.is_available() else 'cpu'
     dst = resolve(DST)
     print('\n[1] データセットの変換 (B = 二値化, D = 差分)')
