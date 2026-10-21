@@ -1,8 +1,8 @@
 # 마이크로갭 기포 추적 (bubbles)
 
-## 배경 — docs/PIV_TASK.md 1~4장 요약
+## 배경 — old/docs/PIV_TASK.md 1~4장 요약
 
-원문은 `docs/PIV_TASK.md`(claude.ai 채팅에서 진행한 진단·설계를 넘겨받은 작업 지시서). 아래는 1~4장 요약이다.
+원문은 `old/docs/PIV_TASK.md`(claude.ai 채팅에서 진행한 진단·설계를 넘겨받은 작업 지시서). 아래는 1~4장 요약이다.
 
 ### 1. 프로젝트 개요
 - 마이크로갭(약 1 mm) 안의 기액 이상류에서 기포를 고속 촬영 영상으로 검출·추적한다.
@@ -122,7 +122,7 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - wall의 작은 기포 경로는 고리가 열린(C자) 작은 기포를 덜 채운다(92건).
     seed가 흰 윤곽에 더 가까웠다(84/85). 작은 기포 면적 규약은 별도 개선 후보.
   - 회귀 테스트: `tests/test_instances.py`의 c, d(U-Net에 가까운 3px 벽 + 약한 틈).
-- `watershed.py` = tracker3.py의 기본값만 다른 사본. 사용자 요청으로 따로 저장했다. **tracker3.py를 고치면 같이 고칠 것.**
+- `watershed.py` = tracker3.py의 기본값만 다른 사본. 사용자 요청으로 따로 저장했다. (2026-10-21 정리 후 둘 다 old/에 보관. 지금은 binarized/2_bin_track.py를 직접 고친다.)
   - 다른 기본값: hybrid, SAVE_PROB_MAPS=True, COMPARE_INSTANCE_MODES=True, OUTPUT_FOLDER=...\output_watershed.
   - 실행 시 `실행 중인 파일: ...`과 설정값을 로그에 출력한다.
   - 사용자가 PC에서 직접 만든 이전 watershed.py는 코드가 빠져 있어 동작하지 않았다.
@@ -388,8 +388,7 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - 이름이 겹치는 것은 이름을 바꾼다: main → main_single/main_tau/main_dots/main_train. 쓰이지 않는 tau_tracker의 size_class는 지운다(남기면 PIV의 size_class를 덮어써 오류가 났다).
   - 치환 횟수를 고정해 두었다. 원본이 바뀌면 생성이 멈춘다.
   - 이름을 바꾼 결과 함수 안에서 지역 변수와 겹치는지 AST로 검사한다.
-  - **원본 모듈을 고치면 `python tools/build_binarized.py`로 다시 만든다.** `--check`로 최신인지 확인한다.
-  - 원본이 비이진화용으로 갈라지기 시작하면, 그 뒤로는 binarized/ 쪽을 이진화 버전의 기준으로 삼는다.
+  - (2026-10-21 정리) 원본 모듈과 이 생성기는 old/에 보관했다. **이제 binarized/ 파일이 기준이고 직접 고친다.** old/tools/build_binarized.py는 다시 돌리지 않는다.
 - 검증
   - `tests/test_binarized.py`
     - a: 파일이 최신인지 확인한다.
@@ -450,26 +449,24 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - dot 라벨/ignore, TAU는 넣지 않았다.
 - `raw/2_raw_track.py`: binarized/2_bin_track.py에서 TAU(설정, [B] 부품, [D] 다중 패스, 디스패처)를 빼고 UNetDetector를 RawDetector로 바꾼 것.
   - 전처리 값은 ckpt 기록을 쓰고 슬라이더는 안 띄운다. 배경 화상은 필수. 오버레이/확률맵 png 배경은 B. qc_report의 used_params.UNET.detection.input에 입력 기록.
-- 생성: `python tools/build_raw.py`(`--check`). 재료는 `tools/raw_parts/`(train.py 본체, raw_input.py, raw_detector.py) + binarized/1_bin_train.py의 공통 부품(AST로 복사) + binarized/2_bin_track.py. **binarized/를 다시 만들면 이것도 다시 만든다.**
+- 생성: `python tools/build_raw.py`(`--check`). 재료는 `tools/raw_parts/`(train.py 본체, raw_input.py, raw_detector.py) + binarized/1_bin_train.py의 공통 부품(AST로 복사) + binarized/2_bin_track.py + binarized/3_tracking_qc.py(그대로 복사). **binarized/나 tools/raw_parts/를 고치면 다시 만든다.**
 - 테스트 `tests/test_raw.py` a~e
   - a 최신, b bin_diff의 B = preprocess_image, c RawDetector = UNetDetector(완전 일치, 리사이즈 포함)·4ch 0 초기화 = 3ch·채널 불일치 오류
   - d 학습 스모크(3모드, Roboflow 이름, OLD_BIN_SRC의 train/valid/test 사용과 합산 점수(가중치 0.3으로 뒤바뀜 검출)·OLD_VAL_TOL·REBUILD_DATASET=False 재사용/재생성, 배경 누락 오류, 학습한 4ch에서 이어 학습), e 기록 없는 3ch ckpt면 2_bin_track과 CSV 바이트 동일 + 학습한 bin+diff ckpt로 끝까지 실행.
 - 실데이터 학습·검증은 하지 않았다(사용자 PC에서).
 
-## 저장소 구성
-- `tracker2.py` — 트래커 v2(지시서의 `tracker.py`). 선단부 vy만으로 예측, 간격 게이트, Union IoU 기반 합체·분열.
-- `tracker3.py` — v2 이후의 개선판. 지시서 1~4장 이후에 만들었으므로 지시서가 전제하는 v2와 구조가 다르다.
-  - x·y 2차원 속도 예측.
-  - 크기에 비례하는 게이트 + 속도 미지 트랙용 `MAX_SPEED`(간격 게이트는 없앰).
-  - 면적 보존 기반 합체·분열, 접촉 후 ID 복원(`TRANSIENT_MERGE_FRAMES`), `MIN_TRACK_AREA`.
-- `sim_compare.py` — 정답 ID가 있는 합성 장면으로 tracker2 / tracker3을 비교하는 스크립트.
-- `piv_field.py`, `fake_detector.py`, `sim_piv.py`, `qc_compare.py`, `tests/` — 위 "PIV 초기 속도 추정 구현 현황" 참고.
-- `3_tracking_qc.py` — 추적 QC. SWAP_LIKELY 상대 후보는 면적비 ≤ 3, 반경 min(2×등가직경, 200 px), 상세는 ID 중복 제거 후 최대 5개 + 「他N件」.
-- `tau_unet.py`, `1_tau_unet_train.py`, `tau_tracker.py`, `tests/test_tau.py` — 위 "Tracking-aware U-Net" 참고.
-- `dot_labels.py`, `tests/test_dots.py` — 위 "작은 점 라벨 보충" 참고.
-- `binarized/1_bin_train.py`, `binarized/2_bin_track.py`, `tools/build_binarized.py`, `tests/test_binarized.py` — 위 "이진화 버전 2파일" 참고.
-- `raw/1_raw_train.py`, `raw/2_raw_track.py`, `tools/build_raw.py`, `tools/raw_parts/`, `tests/test_raw.py` — 위 "비이진화 버전 2파일" 참고.
-- `reference/piv_prior.py` — PIV 참고 구현(수정하지 않음).
-- `docs/PIV_TASK.md` — PIV prior 도입 작업 지시서 원문(5장 할 일, 6장 검증, 7장 주의, 8장 작업 방식).
-- 테스트 실행: `python -B tests/test_events.py`, `python -B tests/test_qc.py`, `python -B tests/test_instances.py`,
-  `python -B tests/test_tau.py`, `python -B tests/test_dots.py`, `python -B tests/test_binarized.py`, `python -B tests/test_prelabel.py`, `python -B tests/test_raw.py` (pytest로도 실행 가능).
+## 저장소 구성 (2026-10-21 정리, 사용자 요청: "앞으로 쓸 것만 모으고 옛날 파일은 old/에 보존")
+- 사용자용 안내는 `README.md`(한국어). 폴더 하나만 PC에 복사하면 동작하게 했다.
+- `raw/` — 비이진화 버전(앞으로 주로 사용). `1_raw_train.py`, `2_raw_track.py`, `3_tracking_qc.py`. 전부 `tools/build_raw.py`가 생성(직접 고치지 않음).
+- `binarized/` — 이진화 버전. `0_prelabel.py`(손으로 씀), `1_bin_train.py`, `2_bin_track.py`, `3_tracking_qc.py`. **이 폴더가 이진화 코드의 기준이며 직접 고친다.** 고친 뒤 `python tools/build_raw.py`.
+  - `3_tracking_qc.py`의 기준은 `binarized/3_tracking_qc.py`(raw/는 복사본).
+- `tools/` — `build_raw.py`, `raw_parts/`(raw 생성 재료), `shrink_ckpt.py`(best.pt 분할/fp16).
+- `tests/` — 지금 코드의 테스트.
+  - `bundles.py`: binarized/의 1파일 버전을 원래 모듈 이름(tracker3, piv_field, tau_unet, tau_tracker, watershed, dot_labels)으로 import하게 한다. `importlib.reload`가 되도록 binarized/를 sys.path에 넣고 이름으로 import.
+  - `test_events.py`, `test_instances.py`, `test_tau.py`, `test_dots.py`: 원래 테스트를 bundles 경유로 binarized/에 대해 돈다. 바꾼 곳: import 경로, 학습 스크립트 경로(`bundles.TRAIN_PATH`), dot의 OUT/REVIEW/main → DOT_OUT/DOT_REVIEW/main_dots, 학습 main → main_train, test_tau f는 USE_PRIOR=True(번들 기본값 False).
+  - `test_qc.py`(binarized/3_tracking_qc.py), `test_prelabel.py`, `test_binarized.py`(번들 전용 d STEP 연결, e 3ch/5ch 디스패치만 남김), `test_raw.py`, `fake_detector.py`(테스트용 사본).
+- `old/` — 보관(`old/README.md`에 목록). tracker2/3, watershed, piv_field, tau_unet, tau_tracker, 1_tau_unet_train, dot_labels, 3_tracking_qc(정리 시점 사본), fake_detector, sim_compare, sim_piv, qc_compare, reference/piv_prior.py, docs/PIV_TASK.md, tools/build_binarized.py, tests/.
+  - `cd old && python -B tests/test_events.py` 등으로 예전 테스트가 그대로 돈다(정리 시점에 events 11, instances 14, qc 12, tau 7, dots 8 모두 통과). old/tests/test_binarized.py와 old/tools/build_binarized.py는 old/binarized/를 찾으므로 동작하지 않는다.
+  - 위의 각 절에 나오는 `tracker3.py`, `docs/PIV_TASK.md`, `reference/piv_prior.py` 등은 이제 old/ 아래 경로다.
+- 테스트 실행 (루트에서): `python -B tests/test_events.py`, `tests/test_qc.py`, `tests/test_instances.py`, `tests/test_tau.py`, `tests/test_dots.py`,
+  `tests/test_binarized.py`, `tests/test_prelabel.py`, `tests/test_raw.py` (pytest로도 실행 가능).

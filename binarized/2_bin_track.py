@@ -16,7 +16,7 @@
 
 設定はこの下にまとめてある (パス・気泡の分け方・トラッキング・PIV・TAU の多パス)。
 
-中身 (tools/build_binarized.py が元のファイルからまとめたもの。処理は元と同じ):
+中身 (元は old/ のファイルを old/tools/build_binarized.py でまとめたもの。今はこのファイルを直接直す。直したら python tools/build_raw.py):
   [A] PIV (大きさ別の速度場。新しい気泡の初速度)                 元 piv_field.py
   [B] TAU の部品 (事前マスク・TAU モデルの読み込み)               元 tau_unet.py
   [C] 前処理・U-Net・気泡の分け方・トラッカー・CSV/オーバーレイ/QC   元 watershed.py (= tracker3.py の既定値違い)

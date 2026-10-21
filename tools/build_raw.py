@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""二値化しない版の 2ファイル (raw/1_raw_train.py, raw/2_raw_track.py) を作る
+"""二値化しない版のファイル (raw/1_raw_train.py, raw/2_raw_track.py, raw/3_tracking_qc.py) を作る
 
     python tools/build_raw.py           # 作り直す
     python tools/build_raw.py --check   # 作り直した内容と今のファイルが同じか確認だけ (違えば終了コード 1)
@@ -10,18 +10,17 @@
                    binarized/1_bin_train.py の共通の部品 (HELPERS。ラベル変換・後処理・test の照合など) を写したもの
   2_raw_track.py = binarized/2_bin_track.py から TAU (事前マスク・多パス) を除き、
                    U-Net の入力を tools/raw_parts/ の RawDetector (元画像 + 背景画像 -> B, D) に替えたもの
+  3_tracking_qc.py = binarized/3_tracking_qc.py をそのまま写したもの (raw/ だけで全部そろうように)
   置き換えの回数は決めておき、元が変わって数が合わなければ止まる。
-  binarized/ を作り直したら (python tools/build_binarized.py) これも作り直す。
+  binarized/ のファイルを直したら、これも作り直す (tests/test_raw.py の a が最新か確かめる)。
 """
 import argparse
 import ast
+import re
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-from build_binarized import sub   # noqa: E402
-
 ROOT = HERE.parent
 PARTS = HERE / 'raw_parts'
 OUT_DIR = ROOT / 'raw'
@@ -29,12 +28,22 @@ TRAIN_NAME = '1_raw_train.py'
 TRACK_NAME = '2_raw_track.py'
 BIN_TRAIN = ROOT / 'binarized' / '1_bin_train.py'
 BIN_TRACK = ROOT / 'binarized' / '2_bin_track.py'
+QC_NAME = '3_tracking_qc.py'
+BIN_QC = ROOT / 'binarized' / QC_NAME
 
 # binarized/1_bin_train.py から写す部品 (この順に並べる)
 HELPERS = ('resolve', 'list_images', 'unique_dir', 'edge_thickness', 'make_target', 'label_preview', 'load_coco',
            'score_of', 'build_model', 'state_in_channels', 'expand_state_dict', 'extract_instances',
            'instance_overlay', 'SIZE_CLASSES', '_size_cls', 'load_gt_instances', 'match_by_size')
 BAR = '# ' + '=' * 70
+
+
+def sub(text, pattern, repl, count, what):
+    """正規表現の置き換え。回数が count と違えば止まる (元ファイルが変わったことに気付くため)"""
+    new, n = re.subn(pattern, repl, text, flags=re.M)
+    if n != count:
+        raise SystemExit(f'置き換えの回数が違います ({what}): 期待 {count} 回, 実際 {n} 回  パターン {pattern!r}')
+    return new
 
 
 def read(p):
@@ -166,7 +175,7 @@ def build_track():
 
 
 def build_all():
-    out = {TRAIN_NAME: build_train(), TRACK_NAME: build_track()}
+    out = {TRAIN_NAME: build_train(), TRACK_NAME: build_track(), QC_NAME: read(BIN_QC)}
     for name, text in out.items():
         ast.parse(text)
     return out

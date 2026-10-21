@@ -8,7 +8,7 @@ best.pt を分割して渡せるようにする (アップロードの大きさ�
 分割したファイルは全部そろえて結合すれば元に戻る:
   Windows: copy /b best.pt.part01 + best.pt.part02 + best.pt.part03 best.pt
   Linux:   cat best.pt.part* > best.pt
-best_fp16.pt は tracker3.py / watershed.py / 1_unet_train.py (FINETUNE_FROM) がそのまま読める (読み込むときに float32 に戻る)。
+best_fp16.pt は 2_raw_track.py / 2_bin_track.py (UNET_CKPT) と 1_raw_train.py / 1_bin_train.py (FINETUNE_FROM) がそのまま読める (読み込むときに float32 に戻る)。
 ただし重みを丸めるので確率がわずかに変わる (学習していない resnet34 U-Net の確認では最大 0.08〜0.13)。
 結果を完全に同じにしたいときは --fp16 を使わず分割だけにすること。
 """

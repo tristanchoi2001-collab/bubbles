@@ -29,6 +29,7 @@ extract_instances を通した検出に変換してから tracker3.run_laptrack 
   イベント   = new / merge / split / merged_into (normal は含めない)
   相手       = merge: 吸収したトラック, split: 親, merged_into: 吸収先のトラック
 
+対象: binarized/2_bin_track.py (元 tracker3.py。tests/bundles.py が tracker3 の名前で読ませる)
 使い方: リポジトリのルートで  python -B tests/test_events.py     (pytest でも実行できる)
 """
 import csv
@@ -44,9 +45,10 @@ from dataclasses import dataclass, field
 import numpy as np
 from scipy import ndimage
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import bundles         # noqa: E402,F401  (tracker3 などの名前で binarized/2_bin_track.py を読む)
 
 import fake_detector   # noqa: E402
 import tracker3        # noqa: E402

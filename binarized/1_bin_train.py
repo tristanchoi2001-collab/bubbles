@@ -15,7 +15,7 @@ STEP で何をするか選ぶ (設定はこの下):
                      USE_PRIOR = True  -> TAU (画像 + 事前マスクの 5チャンネル)
                    -> OUT/best.pt を 2_bin_track.py の UNET_CKPT に入れる (どちらのモデルも自動で見分ける)
 
-中身 (tools/build_binarized.py が元のファイルからまとめたもの。処理は元と同じ):
+中身 (元は old/ のファイルを old/tools/build_binarized.py でまとめたもの。今はこのファイルを直接直す。直したら python tools/build_raw.py):
   [A] TAU の部品 (モデル・入力・学習用の事前マスク・画像を崩す増強)   元 tau_unet.py
   [B] 小さい点のラベル補充 (STEP = 'dots')                           元 dot_labels.py
   [C] 学習 (STEP = 'train')                                           元 1_tau_unet_train.py

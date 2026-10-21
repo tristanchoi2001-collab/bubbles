@@ -94,7 +94,7 @@ def test_c_main_end_to_end():
     except ImportError as e:
         raise Skip(f"torch なし ({e})")
     from test_tau import save_fake_ckpt
-    spec = importlib.util.spec_from_file_location("tau_train_pl", os.path.join(ROOT, "1_tau_unet_train.py"))
+    spec = importlib.util.spec_from_file_location("tau_train_pl", os.path.join(ROOT, "binarized", "1_bin_train.py"))
     M = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(M)
     with tempfile.TemporaryDirectory() as td:

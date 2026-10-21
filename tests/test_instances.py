@@ -17,6 +17,7 @@
   m) リング気泡: 画面の端にかかる気泡は拾わない
   n) 気泡の中の気泡 (UNET_DROP_NESTED): 大きい気泡の中 (周りがその気泡) の気泡は除き、
      液の島 (周りが背景) の中の気泡と、大きい気泡に接しているだけの気泡は残す。外側の気泡は変えない
+対象: binarized/2_bin_track.py (元 tracker3.py。tests/bundles.py が tracker3 の名前で読ませる)
 使い方: リポジトリのルートで  python -B tests/test_instances.py     (pytest でも実行できる)
 """
 import os
@@ -25,9 +26,10 @@ import sys
 import numpy as np
 from scipy import ndimage
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import bundles         # noqa: E402,F401  (tracker3 などの名前で binarized/2_bin_track.py を読む)
 
 import fake_detector   # noqa: E402
 import tracker3 as T   # noqa: E402

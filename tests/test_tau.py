@@ -11,6 +11,7 @@ Tracking-aware U-Net (tau_unet.py / tau_tracker.py / 1_tau_unet_train.py) の配
      最後は1本のトラックになる。1フレームだけの誤検出は (事前マスクをそのまま写す最悪の検出器でも) 広がらない
   f) 学習スクリプトの配管: 小さな偽の COCO データで データセット変換 -> 1 epoch (2 step) -> test 確認 まで通る
      (本物の学習ではない。乱数の重み・96x128 の画像。torch が無ければ飛ばす)
+対象: binarized/2_bin_track.py (元 tau_unet / tau_tracker / tracker3) と binarized/1_bin_train.py (元 1_tau_unet_train)
 使い方: リポジトリのルートで  python -B tests/test_tau.py     (pytest でも実行できる)
 """
 import importlib.util
@@ -22,9 +23,10 @@ import tempfile
 import cv2
 import numpy as np
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import bundles         # noqa: E402,F401  (tracker3 などの名前で binarized/2_bin_track.py を読む)
 
 import fake_detector      # noqa: E402
 import tau_unet as TU     # noqa: E402
@@ -260,7 +262,7 @@ def test_e2_forward_prior_and_stop():
 
 def test_f_train_script_smoke():
     need_torch()
-    spec = importlib.util.spec_from_file_location("tau_train", os.path.join(ROOT, "1_tau_unet_train.py"))
+    spec = importlib.util.spec_from_file_location("tau_train", bundles.TRAIN_PATH)
     M = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(M)
     rng = np.random.default_rng(0)
@@ -287,7 +289,8 @@ def test_f_train_script_smoke():
         save_fake_ckpt(ck, [96, 128])
         M.SRC, M.DST, M.OUT, M.FINETUNE_FROM = src, os.path.join(td, "ds"), os.path.join(td, "runs", "tau"), ck
         M.FINETUNE_EPOCHS, M.BS, M.CROP, M.CP_SAVE_PREVIEW = 1, 2, (64, 96), 1
-        M.main()
+        M.USE_PRIOR = True                     # 1_bin_train.py の既定は False (TAU は保留)
+        M.main_train()
         ins = cv2.imread(os.path.join(td, "ds", "instances", "train", "img0.png"), cv2.IMREAD_UNCHANGED)
         assert ins.dtype == np.uint16 and ins.max() >= 1
         out = os.path.join(td, "runs", "tau")

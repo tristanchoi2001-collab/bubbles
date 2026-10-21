@@ -14,6 +14,7 @@
   f) 確認画面の状態 (クリック・Enter・戻る) と、タイルの位置の計算 (GUI なし)
   g) 判定の保存と、探し直しても同じ候補なら同じ名前
 
+対象: binarized/1_bin_train.py (元 dot_labels.py + 1_tau_unet_train.py)
 使い方: リポジトリのルートで  python -B tests/test_dots.py     (pytest でも実行できる)
 """
 import importlib.util
@@ -26,9 +27,10 @@ import cv2
 import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-for p in (ROOT, os.path.join(ROOT, "tests")):
-    if p not in sys.path:
-        sys.path.insert(0, p)
+HERE = os.path.join(ROOT, "tests")
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import bundles            # noqa: E402  (dot_labels の名前で binarized/1_bin_train.py を読む)
 
 import dot_labels as DL   # noqa: E402
 
@@ -46,7 +48,7 @@ def need_torch():
 
 
 def load_train_module():
-    spec = importlib.util.spec_from_file_location("tau_train_dots", os.path.join(ROOT, "1_tau_unet_train.py"))
+    spec = importlib.util.spec_from_file_location("tau_train_dots", bundles.TRAIN_PATH)
     M = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(M)
     return M
@@ -269,16 +271,16 @@ def test_c_export_and_dataset():
             except ValueError:
                 pass
         assert len(os.listdir(os.path.join(out, "coco", "train"))) == n_before
-        saved = (DL.SRC, DL.OUT, DL.REVIEW)
+        saved = (DL.SRC, DL.DOT_OUT, DL.DOT_REVIEW)
         try:
-            DL.SRC, DL.OUT, DL.REVIEW = os.path.join(out, "coco"), out, False
+            DL.SRC, DL.DOT_OUT, DL.DOT_REVIEW = os.path.join(out, "coco"), out, False
             try:
-                DL.main()
+                DL.main_dots()
                 raise AssertionError("main: SRC が OUT の中なのに止まらない")
             except ValueError:
                 pass
         finally:
-            DL.SRC, DL.OUT, DL.REVIEW = saved
+            DL.SRC, DL.DOT_OUT, DL.DOT_REVIEW = saved
         assert len(os.listdir(os.path.join(out, "coco", "train"))) == n_before
 
 
@@ -370,7 +372,7 @@ def test_e_train_3ch_with_ignore():
             seen.append(ignore)
             return orig(gts, inst, thr, ignore)
         M.match_by_size = spy
-        M.main()
+        M.main_train()
         assert seen and all(s_ is not None and s_.any() for s_ in seen), "test の評価に ignore が渡っていない"
         best_p = os.path.join(td, "runs", "u", "best.pt")
         best = torch.load(best_p, map_location="cpu")

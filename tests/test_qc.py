@@ -22,7 +22,7 @@ import tempfile
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-QC_PATH = os.path.join(HERE, "..", "3_tracking_qc.py")
+QC_PATH = os.path.join(HERE, "..", "binarized", "3_tracking_qc.py")
 
 HEADER = ["ファイル名", "フレーム", "トラックID", "イベント", "親トラックID", "面積(px)", "ROI内面積(px)",
           "先端部X", "先端部Y", "中心X", "中心Y", "上昇速度(px/frame)", "周長(px)", "フレーム接触"]
