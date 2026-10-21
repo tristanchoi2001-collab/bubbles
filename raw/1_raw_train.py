@@ -38,15 +38,18 @@ INPUT_MODE = 'bin+diff'       # 'bin+diff' (おすすめ) / 'diff' / 'bin'
 PREPROC = (15, 4, 0)          # 前処理 (Noise Cut, Brightness, Median)。今の二値化と同じ値 (B はこの値で作る)
 OLD_BIN_SRC = None            # 今までの二値化画像の Roboflow 書き出し (例 480枚。train/ valid/ test/ を含む)。None なら使わない。
                               #   train/ -> 学習に混ぜる
-                              #   valid/ -> best.pt の選び方にも使う (OLD_VAL_WEIGHT。今までの画像で悪くなった epoch を選ばない)
+                              #   valid/ -> best.pt の選び方にも使う (OLD_VAL_WEIGHT と OLD_VAL_TOL)
                               #   test/  -> [3] で別の表 (今までの画像で今の best.pt より悪くなっていないか)
                               # 新しいデータが少ないうちは使うのがおすすめ (小さい気泡などの今の力を保つ)
 OLD_SHARE = 0.5               # 1 epoch で OLD_BIN_SRC の train の画像が占める割合 (新しい画像は 1 epoch に平均1回ずつ出る)
 OLD_VAL_WEIGHT = 0.5          # best.pt を選ぶ点数 = (1 - この値) × 新しい val の点数 + この値 × OLD_BIN_SRC の val の点数。
                               # 0 なら新しい val だけで選ぶ (今までの val は表示だけ)
+OLD_VAL_TOL = 0.01            # OLD_BIN_SRC の val の点数 (0.4×内部 IoU + 0.6×境界 IoU) が開始モデルよりこの値を超えて下がった epoch は
+                              # best.pt に選ばない (新しい val で良くなっても、今までの画像で悪くなったものは使わない)。None なら確認しない
 DST = r'dataset_raw'          # 変換したデータセットのフォルダ (毎回作り直す)
 OUT = r'runs/raw'             # 結果のフォルダ。既にあれば runs/raw2, raw3 ... を自動で作る
 REBUILD_DATASET = True        # True: 毎回 SRC から作り直す / False: DST に変換済みがあればそのまま使う
+                              # (SRC / OLD_BIN_SRC / PREPROC が前と違えば作り直す)
 
 # [1] ラベル変換 (今の学習と同じ)
 EDGE_PX   = 4                 # 大きい気泡の境界の太さ (px)。小さい気泡は自動で 1〜3px
@@ -106,6 +109,7 @@ IGNORE_LABEL = 255
 ANN_NAME = '_annotations.coco.json'
 OLD_SPLIT = {'train': 'old', 'val': 'old_val', 'test': 'old_test'}   # OLD_BIN_SRC の split -> DST の中の名前
 OLD_PREFIX = 'old_'                                                 # OLD_BIN_SRC の画像の名前の頭 (SRC と重ならないように)
+DATASET_LAYOUT = 2            # DST の作り方の版 (変わったら REBUILD_DATASET = False でも作り直す)
 
 # ======================================================================
 # 入力の作り方 — 1_raw_train.py と 2_raw_track.py で同じ (tools/raw_parts/raw_input.py から入れる)
@@ -443,6 +447,15 @@ def _preview(B, D, lbl):
     return np.hstack([c(B), sep, c(D), sep, label_preview(B, lbl)])
 
 
+def dataset_key(src, old_src, train_hw=None):
+    """DST/meta.json に書く「何から作ったか」。REBUILD_DATASET = False のとき、今の設定と違えば作り直す"""
+    k = {'layout': DATASET_LAYOUT, 'src': str(Path(src).resolve()),
+         'old_src': str(Path(old_src).resolve()) if old_src else None, 'preproc': list(PREPROC)}
+    if train_hw is not None:
+        k['train_hw'] = train_hw
+    return k
+
+
 def build_dataset(src, dst, old_src=None):
     """SRC (元画像) -> DST/{bin,diff,masks}/<split>/。OLD_BIN_SRC があればその train / valid / test を
     DST/*/old/, old_val/, old_test/ に (D = B)。
@@ -509,7 +522,7 @@ def build_dataset(src, dst, old_src=None):
     for split in ('train', 'val', 'test'):
         print(f'  [{split}] 画像 {stats[split]}枚  気泡 {stats[split + "_bubbles"]}個')
     if not stats['test']:
-        print('  ※ test がありません。今の best.pt との比較 [3] ができないので、Roboflow で test を分けてください')
+        print('  ※ 新しい画像の test がありません。元画像での比較 [3] ができないので、Roboflow で test を分けてください')
     if old_src:
         n_old = Counter()
         for sdir in _split_dirs(old_src):
@@ -528,7 +541,7 @@ def build_dataset(src, dst, old_src=None):
         print(f'  [old] 今までの二値化画像 (D = B): train {n_old["old"]}枚 (学習に混ぜる), '
               f'valid {n_old["old_val"]}枚 (best の選び方), test {n_old["old_test"]}枚 (悪くなっていないかの確認)')
     hw = [int(v) for v in shapes.most_common(1)[0][0]] if shapes else None
-    (dst / 'meta.json').write_text(json.dumps({'train_hw': hw, 'preproc': list(PREPROC)}), encoding='utf-8')
+    (dst / 'meta.json').write_text(json.dumps(dataset_key(src, old_src, train_hw=hw)), encoding='utf-8')
     print(f'  -> {dst}   (確認: {dst / "preview"}  左から B, D, ラベル)')
     return hw
 
@@ -681,12 +694,21 @@ def make_model(dev):
     return model.to(dev).train(), 'resnet34'
 
 
+def old_val_ok(ev_old, ev0_old, tol=None):
+    """今までの val (OLD_BIN_SRC の valid) が開始モデルから tol (OLD_VAL_TOL) を超えて下がっていないか"""
+    tol = OLD_VAL_TOL if tol is None else tol
+    if tol is None or ev_old is None or ev0_old is None:
+        return True
+    return score_of(ev_old) >= score_of(ev0_old) - tol
+
+
 def train(root, out, dev, train_hw):
     root = Path(root)
-    has_old = bool(list_images(root / 'bin' / 'old'))
+    use_old = bool(OLD_BIN_SRC)        # test_check と同じ条件 (DST に残っている古いフォルダは使わない)
+    has_old = use_old and bool(list_images(root / 'bin' / 'old'))
     tr = RawDS(root, ['train'] + (['old'] if has_old else []), True)
     va = RawDS(root, ['val'], False)
-    va_old = RawDS(root, ['old_val'], False)
+    va_old = RawDS(root, ['old_val'] if use_old else [], False)
     w_old = OLD_VAL_WEIGHT if len(va_old) else 0.0
     n_new = sum(1 for s, _ in tr.items if s == 'train')
     n_old = len(tr) - n_new
@@ -719,7 +741,7 @@ def train(root, out, dev, train_hw):
             'input': {'mode': INPUT_MODE, 'preproc': list(PREPROC)}, 'train_hw': train_hw,
             'edge_px': EDGE_PX, 'edge_w': EDGE_W, 'crop': list(CROP), 'seed': SEED,
             'n_train': n_new, 'n_train_old': n_old, 'old_share': OLD_SHARE if n_old else None, 'n_val': len(va),
-            'n_val_old': len(va_old), 'old_val_weight': w_old,
+            'n_val_old': len(va_old), 'old_val_weight': w_old, 'old_val_tol': OLD_VAL_TOL if len(va_old) else None,
             'src': str(SRC), 'old_src': str(OLD_BIN_SRC) if OLD_BIN_SRC else None,
             'date': datetime.now().strftime('%Y-%m-%d %H:%M'), 'finetuned_from': str(FINETUNE_FROM) if FINETUNE_FROM else None}
     dl_va = DataLoader(va, 1, shuffle=False, num_workers=WORKERS)
@@ -735,7 +757,7 @@ def train(root, out, dev, train_hw):
     def old_msg(ev_old):
         return '' if ev_old is None else f'  | 今までの val 内部 {ev_old["iou"][1]:.3f} 境界 {ev_old["iou"][2]:.3f}'
 
-    best, best_ep = -1.0, 0
+    best, best_ep, ev0_old = -1.0, 0, None
     if FINETUNE_FROM:      # 開始モデル自体を基準にする -> 悪くなったら best.pt は開始モデルのまま
         best, ev0, ev0_old = validate()
         torch.save(dict(meta, state_dict=model.state_dict(), epoch=0, val=ev0, val_old=ev0_old), out / 'best.pt')
@@ -764,7 +786,11 @@ def train(root, out, dev, train_hw):
         ck = dict(meta, state_dict=model.state_dict(), epoch=ep, val=ev, val_old=ev_old)
         torch.save(ck, out / 'last.pt')
         mark = ''
-        if sc > best:
+        if not old_val_ok(ev_old, ev0_old):
+            entry['old_val_drop'] = True
+            if sc > best:
+                mark = '  (今までの val で悪くなったので best にしない)'
+        elif sc > best:
             best, best_ep = sc, ep
             torch.save(ck, out / 'best.pt')
             mark = '  <- best'
@@ -865,9 +891,13 @@ def main():
     dev = 'cuda' if torch.cuda.is_available() else 'cpu'
     dst = resolve(DST)
     print('\n[1] データセットの変換 (B = 二値化, D = 差分)')
+    src, old_src = resolve(SRC), (resolve(OLD_BIN_SRC) if OLD_BIN_SRC else None)
     meta = json.loads((dst / 'meta.json').read_text(encoding='utf-8')) if (dst / 'meta.json').exists() else None
-    if REBUILD_DATASET or meta is None or meta.get('preproc') != list(PREPROC):   # PREPROC を変えたら作り直す
-        train_hw = build_dataset(resolve(SRC), dst, resolve(OLD_BIN_SRC) if OLD_BIN_SRC else None)
+    same = meta is not None and {k: meta.get(k) for k in ('layout', 'src', 'old_src', 'preproc')} == dataset_key(src, old_src)
+    if REBUILD_DATASET or not same:     # SRC / OLD_BIN_SRC / PREPROC / 作り方の版 のどれかが変わったら作り直す
+        if not REBUILD_DATASET and meta is not None:
+            print('  変換済みのデータセットが今の設定 (SRC / OLD_BIN_SRC / PREPROC) と違うので作り直します')
+        train_hw = build_dataset(src, dst, old_src)
     else:
         train_hw = meta['train_hw']
         print(f'  変換済みのデータセットを使います: {dst}')

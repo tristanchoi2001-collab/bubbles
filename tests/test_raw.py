@@ -193,6 +193,7 @@ def make_src(td, name="coco", n_train=3, binarized=False):
 def _configure(TR, td, src, mode, base_ckpt, old=None, out="runs"):
     TR.SRC, TR.BACKGROUNDS, TR.DEFAULT_BACKGROUND = src, {"test": os.path.join(td, "bg_test.png"), "zz": "none"}, None
     TR.INPUT_MODE, TR.OLD_BIN_SRC, TR.OLD_SHARE = mode, old, 0.5
+    TR.OLD_VAL_WEIGHT, TR.OLD_VAL_TOL, TR.REBUILD_DATASET = 0.3, 0.01, True
     TR.DST, TR.OUT = os.path.join(td, f"ds_{mode}"), os.path.join(td, out, mode.replace("+", "_"))
     TR.FINETUNE_FROM, TR.EPOCHS, TR.BS, TR.CROP, TR.WORKERS = base_ckpt, 1, 2, (64, 96), 0
     TR.CP_PROB = 1.0
@@ -230,7 +231,7 @@ def test_d_train_smoke():
             ck = torch.load(str(out / "best.pt"), map_location="cpu")
             assert ck["input"] == {"mode": mode, "preproc": [15, 4, 0]} and ck["in_channels"] == TR.input_channels(mode)
             assert ck["train_hw"] == [96, 128] and ck["n_train"] == 3 and ck["n_train_old"] == (2 if o else 0)
-            assert ck["n_val_old"] == (1 if o else 0) and ck["old_val_weight"] == (0.5 if o else 0.0)
+            assert ck["n_val_old"] == (1 if o else 0) and ck["old_val_weight"] == (0.3 if o else 0.0)
             assert (ck["val_old"] is not None) == bool(o)
             rep = json.load(open(out / "test_report.json", encoding="utf-8"))
             assert len(rep["columns"]) == 2 and rep["input_mode"] == mode
@@ -243,7 +244,7 @@ def test_d_train_smoke():
             log = json.load(open(out / "log.json"))
             assert len(log) == 1 and (("diff_w" in log[0]) == (mode == "bin+diff"))
             sc = lambda iou: 0.4 * iou[1] + 0.6 * iou[2]
-            want = 0.5 * sc(log[0]["iou"]) + 0.5 * sc(log[0]["iou_old"]) if o else sc(log[0]["iou"])
+            want = 0.7 * sc(log[0]["iou"]) + 0.3 * sc(log[0]["iou_old"]) if o else sc(log[0]["iou"])
             assert abs(log[0]["score"] - want) < 1e-9 and (log[0]["iou_old"] is None) == (not o)
             ds = TR.resolve(TR.DST)
             for sub in ("bin", "diff", "masks"):
@@ -253,6 +254,30 @@ def test_d_train_smoke():
             cks[mode] = str(out / "best.pt")
             det = TRACK.RawDetector(cks[mode])
             assert det.mode == mode and det.preproc == (15, 4, 0) and det.train_hw == (96, 128)
+        # 今までの val が開始モデルより下がった epoch は best にしない (OLD_VAL_TOL < 0 = 必ず「下がった」扱い)
+        ev = lambda i, e: {"iou": [0.9, i, e]}
+        assert TR.old_val_ok(ev(0.90, 0.50), ev(0.90, 0.51)) and not TR.old_val_ok(ev(0.90, 0.48), ev(0.90, 0.51))
+        assert TR.old_val_ok(None, ev(0.9, 0.5)) and TR.old_val_ok(ev(0.1, 0.1), None)
+        _configure(TR, td, src, "bin+diff", base, old, out="runs_tol")
+        TR.OLD_VAL_TOL = -1.0
+        TR.main()
+        out = TR.resolve(TR.OUT)
+        log = json.load(open(out / "log.json"))
+        assert log[0].get("old_val_drop") and torch.load(str(out / "best.pt"), map_location="cpu")["epoch"] == 0
+        # REBUILD_DATASET = False: 設定が同じなら使い回す / OLD_BIN_SRC を外したら作り直す (古い old/ を使わない)
+        ds_meta = TR.resolve(TR.DST) / "meta.json"
+        t0 = os.path.getmtime(ds_meta)
+        _configure(TR, td, src, "bin+diff", base, old, out="runs_reuse")
+        TR.REBUILD_DATASET = False
+        TR.main()
+        assert os.path.getmtime(ds_meta) == t0, "設定が同じなのに作り直した"
+        _configure(TR, td, src, "bin+diff", base, None, out="runs_noold")
+        TR.REBUILD_DATASET = False
+        TR.main()
+        ck = torch.load(str(TR.resolve(TR.OUT) / "best.pt"), map_location="cpu")
+        assert ck["n_train_old"] == 0 and ck["n_val_old"] == 0 and ck["old_src"] is None
+        assert not TR.list_images(TR.resolve(TR.DST) / "bin" / "old")
+        assert "old_test" not in json.load(open(TR.resolve(TR.OUT) / "test_report.json", encoding="utf-8"))
         # 学習した 4ch から続けて学習 (開始モデルの列は ckpt の入力で評価)
         _configure(TR, td, src, "bin+diff", cks["bin+diff"], out="runs_b")
         TR.main()
