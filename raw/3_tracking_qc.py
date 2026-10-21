@@ -611,7 +611,7 @@ def print_report(s, roi):
                     print("      → 新しく現れた気泡の初速度を同じサイズの PIV 速度場から推定する USE_PIV_PRIOR を使うこと "
                           "(この qc_report.json には USE_PIV_PRIOR の記録がない = PIV prior 対応前の tracker3)")
                 elif not g2.get("USE_PIV_PRIOR"):
-                    print("      → tracker3 の USE_PIV_PRIOR = True にして、新しく現れた気泡の初速度を PIV 速度場から推定すること "
+                    print("      → トラッカー (2_bin_track.py / 2_raw_track.py) の USE_PIV_PRIOR = True にして、新しく現れた気泡の初速度を PIV 速度場から推定すること "
                           "(沸騰実験など静止状態から出発する気泡が主なら False のままでよい)")
             elif not g2.get("SPACING_GATE_FRAC"):
                 print("      → 新しく現れた気泡の初速度推定と間隔ゲートを持つトラッカー (USE_FLOW_PRIOR / SPACING_GATE_FRAC) を使うこと")

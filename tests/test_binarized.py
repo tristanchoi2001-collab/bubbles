@@ -6,6 +6,8 @@ binarized/1_bin_train.py, 2_bin_track.py は元は tools/build_binarized.py が 
 経由でこの 2ファイルを読んで行う)。ここでは 1ファイル版にしかない起動部分を確かめる:
   d) 1_bin_train.py の STEP: 'dots' の結果を 'train' が自動で使う
   e) 2_bin_track.py の起動: 3チャンネルのモデル -> main_single (元 watershed.py)、5チャンネル -> main_tau (元 tau_tracker.py)
+  f) 1_bin_train.py と 2_bin_track.py に同じ名前で入っている部品 (TAU の部品・モデルの読み込み) が同じ中身
+     (元は tau_unet.py 1つ。今は 2ファイルを直接直すので、片方だけ直すと学習と検出で食い違う)
 
 使い方: リポジトリのルートで  python -B tests/test_binarized.py     (pytest でも実行できる)
 """
@@ -86,11 +88,36 @@ def test_e_track_dispatch():
         called = []
         B.main_single = lambda: called.append("single")
         B.main_tau = lambda: called.append("tau")
-        for path, passes, want in ((ck3, 2, "single"), (ck5, 2, "tau"), (ck5, 0, "single")):
+        for path, passes, want in ((ck3, 2, "single"), (ck5, 2, "tau"), (ck5, 0, "tau"), (ck3, 0, "single")):
             B.UNET_CKPT, B.PRIOR_PASSES = path, passes
             B.main()
             assert called[-1] == want, f"{os.path.basename(path)}, PRIOR_PASSES={passes}: {called[-1]} (期待 {want})"
 
+
+
+SHARED_DIFFER = {"main", "extract_instances", "HERE"}   # 2ファイルで中身が違ってよいもの (意図した違い)
+
+
+def _top_defs(path):
+    import ast
+    text = open(path, encoding="utf-8").read()
+    out = {}
+    for n in ast.parse(text).body:
+        names = [n.name] if isinstance(n, (ast.FunctionDef, ast.ClassDef)) else \
+            [t.id for t in getattr(n, "targets", []) if isinstance(t, ast.Name)]
+        for name in names:
+            out[name] = ast.get_source_segment(text, n)
+    return out
+
+
+def test_f_shared_parts_same():
+    a, b = _top_defs(TRAIN), _top_defs(TRACK)
+    shared = sorted(set(a) & set(b) - SHARED_DIFFER)
+    for must in ("synth_prior", "PriorAug", "degrade_image", "render_prior", "expand_state_dict", "build_model",
+                 "TauDetector", "load_tau_model", "make_input", "PRIOR_EDGE_PX", "PRIOR_CHANNELS", "IMAGE_CHANNELS"):
+        assert must in shared, f"{must} が両方に無い (部品の名前が変わった?)"
+    diff = [n for n in shared if a[n] != b[n]]
+    assert not diff, f"1_bin_train.py と 2_bin_track.py で中身が違う部品: {diff} (両方を同じに直す)"
 
 def main() -> int:
     tests = [(n, f) for n, f in globals().items() if n.startswith("test_") and callable(f)]

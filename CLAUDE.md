@@ -460,13 +460,15 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `raw/` — 비이진화 버전(앞으로 주로 사용). `1_raw_train.py`, `2_raw_track.py`, `3_tracking_qc.py`. 전부 `tools/build_raw.py`가 생성(직접 고치지 않음).
 - `binarized/` — 이진화 버전. `0_prelabel.py`(손으로 씀), `1_bin_train.py`, `2_bin_track.py`, `3_tracking_qc.py`. **이 폴더가 이진화 코드의 기준이며 직접 고친다.** 고친 뒤 `python tools/build_raw.py`.
   - `3_tracking_qc.py`의 기준은 `binarized/3_tracking_qc.py`(raw/는 복사본).
+  - 1_bin_train.py와 2_bin_track.py에 같은 이름으로 들어 있는 TAU/모델 부품(synth_prior, degrade_image, TauDetector, build_model 등, 원래 tau_unet.py)은 **두 파일을 같이 고친다.** `tests/test_binarized.py` f가 같은지 확인한다(의도한 차이 main, extract_instances, HERE만 예외).
+  - 2_bin_track.py의 main(): 5ch(TAU) ckpt는 PRIOR_PASSES = 0이어도 main_tau(패스0만). 예전에는 main_single로 가서 3ch 검출기에서 실패했다(정리 후 점검에서 발견).
 - `tools/` — `build_raw.py`, `raw_parts/`(raw 생성 재료), `shrink_ckpt.py`(best.pt 분할/fp16).
 - `tests/` — 지금 코드의 테스트.
-  - `bundles.py`: binarized/의 1파일 버전을 원래 모듈 이름(tracker3, piv_field, tau_unet, tau_tracker, watershed, dot_labels)으로 import하게 한다. `importlib.reload`가 되도록 binarized/를 sys.path에 넣고 이름으로 import.
+  - `bundles.py`: binarized/의 1파일 버전을 원래 모듈 이름(tracker3, piv_field, tau_unet, tau_tracker, watershed, dot_labels)으로 import하게 한다. `importlib.reload`가 되도록 binarized/를 sys.path에 넣고 이름으로 import. 같은 이름의 다른 모듈(old/)이 이미 읽혀 있으면 오류로 멈춘다.
   - `test_events.py`, `test_instances.py`, `test_tau.py`, `test_dots.py`: 원래 테스트를 bundles 경유로 binarized/에 대해 돈다. 바꾼 곳: import 경로, 학습 스크립트 경로(`bundles.TRAIN_PATH`), dot의 OUT/REVIEW/main → DOT_OUT/DOT_REVIEW/main_dots, 학습 main → main_train, test_tau f는 USE_PRIOR=True(번들 기본값 False).
   - `test_qc.py`(binarized/3_tracking_qc.py), `test_prelabel.py`, `test_binarized.py`(번들 전용 d STEP 연결, e 3ch/5ch 디스패치만 남김), `test_raw.py`, `fake_detector.py`(테스트용 사본).
 - `old/` — 보관(`old/README.md`에 목록). tracker2/3, watershed, piv_field, tau_unet, tau_tracker, 1_tau_unet_train, dot_labels, 3_tracking_qc(정리 시점 사본), fake_detector, sim_compare, sim_piv, qc_compare, reference/piv_prior.py, docs/PIV_TASK.md, tools/build_binarized.py, tests/.
   - `cd old && python -B tests/test_events.py` 등으로 예전 테스트가 그대로 돈다(정리 시점에 events 11, instances 14, qc 12, tau 7, dots 8 모두 통과). old/tests/test_binarized.py와 old/tools/build_binarized.py는 old/binarized/를 찾으므로 동작하지 않는다.
   - 위의 각 절에 나오는 `tracker3.py`, `docs/PIV_TASK.md`, `reference/piv_prior.py` 등은 이제 old/ 아래 경로다.
 - 테스트 실행 (루트에서): `python -B tests/test_events.py`, `tests/test_qc.py`, `tests/test_instances.py`, `tests/test_tau.py`, `tests/test_dots.py`,
-  `tests/test_binarized.py`, `tests/test_prelabel.py`, `tests/test_raw.py` (pytest로도 실행 가능).
+  `tests/test_binarized.py`, `tests/test_prelabel.py`, `tests/test_raw.py`. 또는 `python -m pytest`(루트의 pytest.ini가 tests/만 모은다. old/tests는 이름이 겹치므로 `cd old`에서 따로). 정리 후 63개 통과.

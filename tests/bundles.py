@@ -27,6 +27,9 @@ if BIN_DIR not in sys.path:
 
 track = importlib.import_module("2_bin_track")             # 元 tracker3 / watershed / piv_field / tau_unet / tau_tracker
 train = importlib.import_module("1_bin_train")             # 元 dot_labels (学習の部品は TRAIN_PATH を別に読む)
-for _name in ("tracker3", "watershed", "piv_field", "tau_unet", "tau_tracker"):
-    sys.modules.setdefault(_name, track)
-sys.modules.setdefault("dot_labels", train)
+for _name, _mod in (("tracker3", track), ("watershed", track), ("piv_field", track), ("tau_unet", track),
+                    ("tau_tracker", track), ("dot_labels", train)):
+    _have = sys.modules.setdefault(_name, _mod)
+    if _have is not _mod:      # old/ のモジュールが先に読まれていると、そちらをテストしてしまう
+        raise ImportError(f"{_name} が old/ などから既に読み込まれています ({getattr(_have, '__file__', '?')})。"
+                          "tests/ と old/tests は別々に実行してください")

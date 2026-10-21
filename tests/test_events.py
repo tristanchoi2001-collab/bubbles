@@ -221,8 +221,8 @@ def track(frames, piv: bool):
     res = summarize(T, rows, dets_all, gids_all, missing)
     stats = getattr(T.run_laptrack, "last_stats", None) or {}
     res.prior_counts = dict(stats.get("prior_counts", {}))
-    if piv and getattr(T, "piv_field", None) is None:
-        msg = "piv_field.py を読み込めないので PIV prior ありでも速度場を使っていない (比較は無意味)"
+    if piv and getattr(T, "piv_field", None) is None and not hasattr(T, "PIVSequence"):   # 元 tracker3 / 1ファイル版
+        msg = "PIV の部品を読み込めないので PIV prior ありでも速度場を使っていない (比較は無意味)"
         if msg not in NOTES:
             NOTES.append(msg)
     return res

@@ -3745,9 +3745,11 @@ def ckpt_uses_prior(path):
 
 
 def main():
-    """普通の U-Net なら main_single (元 watershed.py)、TAU なら main_tau (元 tau_tracker.py)"""
-    if PRIOR_PASSES > 0 and ckpt_uses_prior(UNET_CKPT):
-        print("TAU のモデル (5チャンネル) なので、事前マスク付きの多パス検出をします")
+    """普通の U-Net なら main_single (元 watershed.py)、TAU なら main_tau (元 tau_tracker.py)。
+    TAU のモデルは PRIOR_PASSES = 0 でも main_tau (パス0 だけ。main_single の検出器は 3チャンネル専用)"""
+    if ckpt_uses_prior(UNET_CKPT):
+        print("TAU のモデル (5チャンネル) なので、事前マスク付きの多パス検出をします"
+              + (" (PRIOR_PASSES = 0: 事前マスクなしの1回だけ)" if PRIOR_PASSES <= 0 else ""))
         return main_tau()
     return main_single()
 

@@ -37,5 +37,5 @@
 ## 개발 메모
 
 - `raw/`의 파일은 `tools/build_raw.py`가 `binarized/` + `tools/raw_parts/`로 만든다. `binarized/`나 `tools/raw_parts/`를 고치면 `python tools/build_raw.py`.
-- 테스트: `python -B tests/test_raw.py` 등 (`tests/` 안의 `test_*.py`, pytest로도 실행 가능).
+- 테스트: `python -B tests/test_raw.py` 등 (`tests/` 안의 `test_*.py`), 또는 루트에서 `python -m pytest`.
 - 자세한 경위와 결정 사항은 `CLAUDE.md`.
