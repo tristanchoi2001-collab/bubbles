@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""二値化しない版のファイル (raw/1_raw_train.py, raw/2_raw_track.py, raw/3_tracking_qc.py) を作る
+"""二値化しない版のファイル (raw/1_raw_train.py, raw/2_raw_track.py, raw/3_tracking_qc.py, raw/4_link_audit.py) を作る
 
     python tools/build_raw.py           # 作り直す
     python tools/build_raw.py --check   # 作り直した内容と今のファイルが同じか確認だけ (違えば終了コード 1)
@@ -11,6 +11,7 @@
   2_raw_track.py = binarized/2_bin_track.py から TAU (事前マスク・多パス) を除き、
                    U-Net の入力を tools/raw_parts/ の RawDetector (元画像 + 背景画像 -> B, D) に替えたもの
   3_tracking_qc.py = binarized/3_tracking_qc.py をそのまま写したもの (raw/ だけで全部そろうように)
+  4_link_audit.py  = binarized/4_link_audit.py をそのまま写したもの (CSV と画像だけを読むので入力の種類によらない)
   置き換えの回数は決めておき、元が変わって数が合わなければ止まる。
   binarized/ のファイルを直したら、これも作り直す (tests/test_raw.py の a が最新か確かめる)。
 """
@@ -30,6 +31,8 @@ BIN_TRAIN = ROOT / 'binarized' / '1_bin_train.py'
 BIN_TRACK = ROOT / 'binarized' / '2_bin_track.py'
 QC_NAME = '3_tracking_qc.py'
 BIN_QC = ROOT / 'binarized' / QC_NAME
+AUDIT_NAME = '4_link_audit.py'
+BIN_AUDIT = ROOT / 'binarized' / AUDIT_NAME
 
 # binarized/1_bin_train.py から写す部品 (この順に並べる)
 HELPERS = ('resolve', 'list_images', 'unique_dir', 'edge_thickness', 'make_target', 'label_preview', 'load_coco',
@@ -229,7 +232,7 @@ def build_track():
 
 
 def build_all():
-    out = {TRAIN_NAME: build_train(), TRACK_NAME: build_track(), QC_NAME: read(BIN_QC)}
+    out = {TRAIN_NAME: build_train(), TRACK_NAME: build_track(), QC_NAME: read(BIN_QC), AUDIT_NAME: read(BIN_AUDIT)}
     for name, text in out.items():
         ast.parse(text)
     return out

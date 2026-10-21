@@ -12,7 +12,7 @@
 | `tools/`, `tests/` | 개발용 (생성 스크립트, 테스트), `tools/shrink_ckpt.py` (best.pt 분할) | 안 봐도 됨 |
 
 `raw/`와 `binarized/`는 **그 폴더만 PC에 복사하면 동작**한다. 설정은 각 파일 맨 위에 모여 있다.
-각 폴더의 `3_tracking_qc.py`는 같은 파일이다.
+각 폴더의 `3_tracking_qc.py`와 `4_link_audit.py`는 같은 파일이다.
 
 ## raw/ — 비이진화 (앞으로)
 
@@ -21,6 +21,7 @@
 | 1 | `1_raw_train.py` | 학습. `SRC`(새 원본 라벨), `BACKGROUNDS`(파일명 앞부분 → 배경), `FINETUNE_FROM = best.pt`, `OLD_BIN_SRC`(예전 이진화 480장) 설정 → `runs/raw/best.pt`. 마지막에 test 표 2개 (새 원본 / 예전 이진화) |
 | 2 | `2_raw_track.py` | 검출·추적. `UNET_CKPT`, `IMAGE_FOLDER`, `BACKGROUND_PATH`, `OUTPUT_FOLDER` → `result_tracking.csv` 등 |
 | 3 | `3_tracking_qc.py` | 추적 점검. `TRACKING_CSV` = 2의 `result_tracking.csv` |
+| (선택) | `4_link_audit.py` | **연결 감사**: 기포를 무작위로 골라 다음 프레임 연결이 맞는지 y/n으로 판정 → 크기별 연결 정확도·끊김 비율(95% 구간). 논문용 실데이터 추적 정확도 |
 
 - `INPUT_MODE`: `'bin+sign'`(기본, 이진화 + 어두워진 분 + 밝아진 분) / `'bin+diff'` / `'diff'` / `'bin'`(비교용).
 - 추가 부품 (on/off): `CTX_LAYERS`(작은 트랜스포머, 0 = 끔, 시도 2), `USE_PRIOR`(TAU, 앞뒤 프레임의 검출을 함께 입력).
@@ -36,6 +37,15 @@
 | 1 | `1_bin_train.py` | `STEP = 'dots'`: 작은 점 후보를 y/n으로 확인 → `STEP = 'train'`: 학습 |
 | 2 | `2_bin_track.py` | 검출·추적 (이진화 입력) |
 | 3 | `3_tracking_qc.py` | 추적 점검 |
+| (선택) | `4_link_audit.py` | 연결 감사 (위와 같은 파일) |
+
+## 연결 감사 (`4_link_audit.py`) 사용법
+
+1. 맨 위의 `TRACKING_CSV`를 `2_*_track.py`가 만든 `result_tracking.csv`로 바꾼다. 표시 화상은 기본으로 같은 폴더의 `_cache_processed`(이진화 화상)를 쓴다.
+2. `python 4_link_audit.py` → 창에 한 건씩 t-1, t, t+1, t+2가 나온다. 노란 원 = 확인할 기포, 초록 원 = 트래커가 이은 기포.
+   - `y` 맞음 / `n` 틀림 / `m` 놓침(끝냈지만 t+1에 검출이 있음) / `d` t+1에 보이는데 검출이 안 됨 / `u` 모르겠음 / `b` 뒤로 / `q` 저장 후 종료(다시 실행하면 이어서).
+3. 끝나면 `link_audit/link_audit_report.json`과 화면에 크기별 표가 나온다. 크기별 100건이면 300건, 15~30분 정도.
+4. 설정을 바꾼 두 실행(예: `SPACING_GATE_FRAC = 0`과 `0.7`)을 각각 감사해서 정확도를 비교한다.
 
 ## 개발 메모
 

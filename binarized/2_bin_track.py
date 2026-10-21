@@ -140,6 +140,15 @@ MAX_AGE_NEW_LARGE = 3        # 速度未知のトラックでも、面積が LAR
 LARGE_NEW_AREA = 2000        # 上の「大きい」の面積 (px)
 COAST_GATE_GROWTH = 0.5      # 見失っている間、1フレームごとに位置ゲートを何倍ずつ広げるか
 VELOCITY_EMA_ALPHA = 0.5
+SPACING_GATE_FRAC = 0.7      # 小さい気泡どうし (トラックも検出も面積 < SPACING_GATE_MAX_AREA) をつなぐとき、予測位置からのずれが
+                             # 「その検出から同じフレームで一番近い別の検出 (中心) までの距離 × この値」を超えたらつながない。
+                             # 小さい気泡は形が似ているので、本物が検出から1フレーム抜けると、位置ゲート (POS_GATE + 直径分) の中に
+                             # 入った隣の気泡を奪う (実データ: 自動の POS_GATE 20.4 px ≈ tiny の隣との間隔の中央値 21.5 px)。
+                             # tracker2 (v2) の間隔ゲートと同じ考え方。v2 は大きさを問わず掛けたので、スラグのゲートが隣の小さい気泡で
+                             # 狭まって途切れた -> ここでは小さい気泡どうしだけ。速度既知のトラックと PIV の初速度があるトラックだけに
+                             # 掛ける (速度未知のトラックは予測が「静止」なので、1フレームの移動量が間隔に近い高速の条件で全部切れる)。
+                             # 画面端に接する気泡は対象外。0 で無効
+SPACING_GATE_MAX_AREA = 500  # 上の「小さい気泡」の面積の上限 (px。QC の tiny + small)
 EDGE_TOUCH_PX = 3            # 外接矩形が画面端からこの px 以内なら「画面端に接している (切れた気泡)」とみなす。
                              # U-Net の気泡は画面端の 1〜2 px 手前で止まることが多い (実データで確認)。ぴったり接するときだけだと、
                              # 入ってくる途中/出ていく途中の大きい気泡が画面内の気泡として扱われ、見えている面積が増減するたびに
@@ -206,7 +215,11 @@ BOOTSTRAP_NUM_SEGMENTS = 20   # 映像全体を何等分して均等サンプリ
 # 少数の速い気泡の移動量がゲートの外になり、毎フレーム新規トラックになっていた。
 # ここでは「最大移動量 (速度未知のとき)」と「予測ずれ (速度既知のとき)」を分けて求める。
 BOOTSTRAP_SPEED_PERCENTILE = 99   # 最大移動量 MAX_SPEED: 移動量分布のこのパーセンタイル × 安全係数
-BOOTSTRAP_RESID_PERCENTILE = 95   # 予測ずれ POS_GATE: 3フレーム連続で対応した気泡の「等速と仮定した予測からのずれ」のこのパーセンタイル × 安全係数
+BOOTSTRAP_RESID_PERCENTILE = 95   # 予測ずれ POS_GATE: 連続して対応した気泡の「トラッカーと同じ予測からのずれ」のこのパーセンタイル × 安全係数
+BOOTSTRAP_CHAIN_FRAMES = 5   # POS_GATE の統計に使う連続フレーム数 (3 以上)。トラッカーの予測と同じく、最初の移動量で速度を決め、
+                             # 以降は VELOCITY_EMA_ALPHA の EMA で更新した速度からのずれを集める。
+                             # 3 なら従来どおり (3フレーム連続・「前フレームと同じ速度」の予測からのずれだけ)。
+                             # 従来は トラッカーが EMA で予測するのに ゲートを「前フレームと同じ速度」の予測のずれで決めていた
 BOOTSTRAP_AREA_PERCENTILE = 99    # 面積比ゲート
 BOOTSTRAP_JUMP_MARGIN = 1.3  # 位置ゲートの安全係数 (パーセンタイル値 × この値)
 BOOTSTRAP_AREA_MARGIN = 1.1  # 面積比ゲートの安全係数
@@ -1691,6 +1704,7 @@ class Detection:
     conf: float = 1.0
     area_in_roi: float = 0.0  # ROIと重なる部分の面積 (統計用)
     in_roi: bool = True       # ROIに少しでもかかっているか (個数カウント用)
+    nn_dist: float = math.inf  # 同じフレームで一番近い別の検出 (中心) までの距離 (px)。SPACING_GATE_FRAC 用 (トラッカーが設定)
 
 
 def leading_edge_from_points(pts: np.ndarray, percentile: float = LEADING_EDGE_PERCENTILE):
@@ -1967,6 +1981,10 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
     iou_pred = max(mask_iou(ps, t.area, d.shape, d.area) for ps in t.predicted_shapes(frame_idx))
     if gate_dist > radius and iou_pred < OVERLAP_ACCEPT_IOU:
         return None
+    if (SPACING_GATE_FRAC > 0 and (t.v_known or t.prior_src == "piv") and not touching
+            and max(t.area, d.area) < SPACING_GATE_MAX_AREA
+            and resid > SPACING_GATE_FRAC * d.nn_dist and iou_pred < OVERLAP_ACCEPT_IOU):
+        return None   # 小さい気泡: 隣の検出までの距離に比べて予測から離れすぎ (本物が抜けて隣の気泡を奪う形)
     size_w = min(1.0, min(t.area, d.area) / SHAPE_AREA_REF)
     if smaller_cut:   # 切れ端と全体の比較になるので、面積と形は判断材料にしない
         c_area = c_shape = 0.0
@@ -1979,6 +1997,19 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
             + W_COAST * (k - 1)
             + (0.0 if t.v_known else W_UNKNOWN_V)
             + extra)
+
+
+def set_neighbor_distances(dets: List[Detection]):
+    """各検出の nn_dist に、同じフレームで一番近い別の検出 (中心どうし) までの距離を入れる (SPACING_GATE_FRAC 用)"""
+    if len(dets) < 2:
+        for d in dets:
+            d.nn_dist = math.inf
+        return
+    xy = np.array([(d.cx, d.cy) for d in dets], np.float64)
+    dist = np.hypot(xy[:, None, 0] - xy[None, :, 0], xy[:, None, 1] - xy[None, :, 1])
+    np.fill_diagonal(dist, np.inf)
+    for d, r in zip(dets, dist.min(1)):
+        d.nn_dist = float(r)
 
 
 def _max_age(t: Track) -> int:
@@ -2049,6 +2080,7 @@ class LeadingEdgeLapTracker:
         新しく現れた気泡の初速度にだけ使う (None なら従来どおり)"""
         det_ids = [j for j, d in enumerate(detections) if d.area >= MIN_TRACK_AREA]   # 元の検出番号
         dets = [detections[j] for j in det_ids]
+        set_neighbor_distances(dets)
         self.tracks = [t for t in self.tracks if t.time_since_update <= _max_age(t)]
         active = list(self.tracks)
         n_t, n_d = len(active), len(dets)
@@ -2767,7 +2799,7 @@ def _bootstrap_confident_pairs(dets_a: List[Detection], dets_b: List[Detection])
 def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]], image_size=None):
     """映像全体から均等に抽出した隣接フレームで確実な対応だけを集め、
       speed_list      : 1フレームの移動量 |d|            -> MAX_SPEED (速度未知のトラックの探索半径)
-      resid_list      : 3フレーム連続の対応で「前フレームと同じ速度」と仮定した予測からのずれ
+      resid_list      : BOOTSTRAP_CHAIN_FRAMES フレームまで連続した対応で、トラッカーと同じ予測 (最初の移動量 -> EMA) からのずれ
                         (等価直径に比例する分 POS_GATE_SIZE_FRAC × 直径 を差し引いたもの) -> POS_GATE
       area_ratio_list : 面積比                             -> AREA_RATIO_GATE
       piv_resid_list  : PIV 速度場 (同じ大きさ区分) で予測した位置からのずれ (同じく直径分を差し引く) -> PIV_GATE
@@ -2810,17 +2842,29 @@ def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]], image_
                 if ok:
                     res = math.hypot(dx - (pdx if PIV_USE_DX else 0.0), dy - pdy)
                     piv_resid_list.append(max(0.0, res - POS_GATE_SIZE_FRAC * eq_diameter(a.area)))
-        if f + 2 < total_frames:
-            p2 = pairs_of(f + 1)
-            C = detections_per_frame[f + 2]
-            for i, j in p.items():
-                if j not in p2:
-                    continue
-                a, b, c = A[i], B[j], C[p2[j]]
-                dx1, dy1, _ = displacement(a, b)
-                dx2, dy2, _ = displacement(b, c)
-                res = math.hypot(dx2 - dx1, dy2 - dy1)
-                resid_list.append(max(0.0, res - POS_GATE_SIZE_FRAC * eq_diameter(b.area)))
+        # 予測ずれ: 確実な対応を BOOTSTRAP_CHAIN_FRAMES フレームまでつなぎ、トラッカーと同じ予測
+        # (最初の移動量で速度を決め、以降は VELOCITY_EMA_ALPHA の EMA で更新) からのずれを集める
+        chains = {i: [A[i], B[j]] for i, j in p.items()}
+        tip = dict(p)                  # 鎖の番号 -> 鎖の最後の検出の番号 (フレーム f + step - 1)
+        for step in range(2, max(3, int(BOOTSTRAP_CHAIN_FRAMES))):
+            g = f + step
+            if g >= total_frames or not tip:
+                break
+            pg = pairs_of(g - 1)
+            C = detections_per_frame[g]
+            tip = {i: pg[j] for i, j in tip.items() if j in pg}
+            for i, j in tip.items():
+                chains[i].append(C[j])
+        for obs in chains.values():
+            if len(obs) < 3:
+                continue
+            vx, vy, _ = displacement(obs[0], obs[1])
+            for k in range(2, len(obs)):
+                dx, dy, _ = displacement(obs[k - 1], obs[k])
+                res = math.hypot(dx - vx, dy - vy)
+                resid_list.append(max(0.0, res - POS_GATE_SIZE_FRAC * eq_diameter(obs[k - 1].area)))
+                vx = VELOCITY_EMA_ALPHA * vx + (1 - VELOCITY_EMA_ALPHA) * dx
+                vy = VELOCITY_EMA_ALPHA * vy + (1 - VELOCITY_EMA_ALPHA) * dy
 
     quality = {
         "pairs": len(speed_list),
@@ -2960,7 +3004,8 @@ def run_bootstrap_calibration(detections_per_frame, filenames, cache_dir, image_
         print("  [ブートストラップ] 有効なマッチングサンプルがないため自動算出をスキップします。現在の手動値を維持します。")
         return
 
-    print(f"  確実な対応ペア: {quality['pairs']}個, 3フレーム連続: {quality['chains']}個, "
+    print(f"  確実な対応ペア: {quality['pairs']}個, 予測ずれの標本 (連続 {max(3, int(BOOTSTRAP_CHAIN_FRAMES))} フレームまで): "
+          f"{quality['chains']}個, "
           f"対応なし率: {quality['match_fail_rate']*100:.0f}%")
     if piv_resid_list:
         print(f"  PIV 予測のずれ (直径分を除く): 中央値 {np.median(piv_resid_list):.1f}px, "
@@ -3277,6 +3322,8 @@ def used_params(roi_rect, preprocess_params) -> dict:
         "MAX_AGE": MAX_AGE, "COAST_GATE_GROWTH": COAST_GATE_GROWTH, "MIN_TRACK_AREA": MIN_TRACK_AREA,
         "MAX_AGE_NEW": MAX_AGE_NEW, "MAX_AGE_NEW_LARGE": MAX_AGE_NEW_LARGE, "LARGE_NEW_AREA": LARGE_NEW_AREA,
         "EDGE_TOUCH_PX": EDGE_TOUCH_PX,
+        "SPACING_GATE_FRAC": SPACING_GATE_FRAC, "SPACING_GATE_MAX_AREA": SPACING_GATE_MAX_AREA,
+        "BOOTSTRAP_CHAIN_FRAMES": BOOTSTRAP_CHAIN_FRAMES,
         "weights": {"pos": W_POS, "area": W_AREA, "overlap": W_OVERLAP, "shape": W_SHAPE,
                     "coast": W_COAST, "unknown_v": W_UNKNOWN_V},
         "SHAPE_AREA_REF": SHAPE_AREA_REF,
