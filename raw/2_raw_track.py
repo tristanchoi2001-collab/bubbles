@@ -650,7 +650,8 @@ class RawDetector:
     """1_raw_train.py の ckpt を読み込み、元画像 + 背景画像から 背景/内部/境界 の確率 (3, H, W) を返す。
     入力の作り方 (INPUT_MODE と前処理の値) は ckpt に記録したものを使う -> 学習と同じ入力になる。
     記録の無い ckpt (今の二値化の best.pt など) は 'bin' と PREPROC_FIXED (None なら PREPROC_DEFAULT) で動く
-    (= 二値化版の UNetDetector と同じ確率)"""
+    (= 二値化版の UNetDetector と同じ確率)。TAU (5チャンネル) は事前マスクの重みを捨てて 'bin' で動く
+    (= 事前マスクなしの TAU と同じ確率)"""
 
     def __init__(self, ckpt_path, train_hw=None):
         import torch
@@ -662,10 +663,15 @@ class RawDetector:
         inp = ck.get("input") or {}
         self.mode = inp.get("mode", "bin")
         self.preproc = tuple(int(v) for v in (inp.get("preproc") or PREPROC_FIXED or PREPROC_DEFAULT))
-        in_ch = next(int(v.shape[1]) for k, v in sd.items() if k.startswith("encoder.") and v.ndim == 4)
+        k0 = next(k for k, v in sd.items() if k.startswith("encoder.") and v.ndim == 4)
+        in_ch = int(sd[k0].shape[1])
+        tau = in_ch == 5 and not inp
+        if tau:                     # TAU (画像3 + 事前マスク2): 事前マスクの入口の重みを捨てる
+            sd[k0] = sd[k0][:, :3].contiguous()
+            in_ch = 3
         if in_ch != input_channels(self.mode):
             raise ValueError(f"{ckpt_path}: 入力 {self.mode!r} には {input_channels(self.mode)}チャンネルが要るのに "
-                             f"重みは {in_ch}チャンネル (TAU の 5チャンネルには対応していません)")
+                             f"重みは {in_ch}チャンネル")
         self.model = smp.Unet(ck["encoder"], encoder_weights=None, in_channels=in_ch,
                               classes=ck.get("classes", 3)).to(self.dev)
         self.model.load_state_dict(sd)
@@ -676,7 +682,7 @@ class RawDetector:
         self.train_hw = (int(hw[0]), int(hw[1])) if hw else None
         self._resize_notice = False
         print(f"  U-Net: {ckpt_path}  (epoch {ck.get('epoch')}, device {self.dev}, 入力 {self.mode!r}, "
-              f"前処理 {self.preproc}{'' if inp else ' (ckpt に記録なし)'}, "
+              f"前処理 {self.preproc}{'' if inp else ' (ckpt に記録なし)'}{', TAU の事前マスクは使わない' if tau else ''}, "
               f"学習画像サイズ {self.train_hw if self.train_hw else '記録なし'})")
         if self.dev == "cpu":
             print("  ※ GPUが見つかりません。CPUでも動きますが遅くなります。")

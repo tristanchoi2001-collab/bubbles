@@ -191,6 +191,9 @@ def build_dataset(src, dst, old_src=None):
         if raw is None:
             print(f'    読み込み失敗 (飛ばします): {sdir / im["file_name"]}')
             continue
+        if (cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY) < 15).mean() > 0.5:
+            raise SystemExit(f'SRC の画像が二値化画像に見えます (黒い画素が半分以上): {sdir.name}/{im["file_name"]}\n'
+                             '  SRC には背景の残った元画像の書き出しを、今までの二値化画像は OLD_BIN_SRC に指定してください')
         if bgp not in bg_cache:
             bg = cv2.imread(str(resolve(bgp)))
             if bg is None:
@@ -225,7 +228,11 @@ def build_dataset(src, dst, old_src=None):
     if not stats['test']:
         print('  ※ 新しい画像の test がありません。元画像での比較 [3] ができないので、Roboflow で test を分けてください')
     if old_src:
+        if Path(old_src).resolve() == src.resolve():
+            raise SystemExit(f'OLD_BIN_SRC が SRC と同じフォルダです: {old_src}\n'
+                             '  OLD_BIN_SRC には今までの「二値化画像」の書き出し (best.pt を学習したときの 480枚) を指定してください')
         n_old = Counter()
+        not_bin = []
         for sdir in _split_dirs(old_src):
             split = OLD_SPLIT[SPLIT_MAP[sdir.name]]
             images, by_img = load_coco(sdir / ANN_NAME)
@@ -233,12 +240,18 @@ def build_dataset(src, dst, old_src=None):
                 g = cv2.imread(str(sdir / im['file_name']), cv2.IMREAD_GRAYSCALE)
                 if g is None:
                     continue
+                if (g < 15).mean() < 0.5:          # 二値化画像は 9割以上が黒。元画像 (背景が灰色) なら黒はほぼ 0
+                    not_bin.append(f'{sdir.name}/{im["file_name"]}')
                 lbl, _ = make_target(by_img.get(im['id'], []), *g.shape, EDGE_PX)
                 stem = OLD_PREFIX + Path(im['file_name']).stem
                 for sub, a in (('bin', g), ('diff', g), ('masks', lbl)):   # D は作れないので B と同じ
                     (dst / sub / split).mkdir(parents=True, exist_ok=True)
                     cv2.imwrite(str(dst / sub / split / (stem + '.png')), a)
                 n_old[split] += 1
+        if not_bin:
+            raise SystemExit(f'OLD_BIN_SRC に二値化画像に見えない画像が {len(not_bin)}枚あります (黒い画素が半分未満):\n  '
+                             + '\n  '.join(not_bin[:10]) + ('\n  ...' if len(not_bin) > 10 else '')
+                             + '\n  OLD_BIN_SRC は今までの二値化画像の書き出し、SRC は元画像の書き出しです')
         print(f'  [old] 今までの二値化画像 (D = B): train {n_old["old"]}枚 (学習に混ぜる), '
               f'valid {n_old["old_val"]}枚 (best の選び方), test {n_old["old_test"]}枚 (悪くなっていないかの確認)')
     hw = [int(v) for v in shapes.most_common(1)[0][0]] if shapes else None
@@ -367,11 +380,24 @@ def make_losses(dev):
             smp.losses.DiceLoss(mode='multiclass', ignore_index=IGNORE_LABEL))
 
 
+def drop_prior_channels(sd):
+    """TAU (5チャンネル = 画像3 + 事前マスク2) の重み -> 画像 3チャンネルだけの重み。
+    事前マスクの入口の重みを捨てるだけなので、「事前マスクなし (全部 0) の TAU」と全く同じ結果になる"""
+    k0 = next(k for k, v in sd.items() if k.startswith('encoder.') and v.ndim == 4)
+    sd = dict(sd)
+    sd[k0] = sd[k0][:, :3].contiguous()
+    return sd
+
+
 def load_model(path, mode, dev):
-    """ckpt -> mode の入力のモデル。3チャンネルの best.pt から 'bin+diff' を作るときは D の重みを 0 で足す"""
+    """ckpt -> mode の入力のモデル。3チャンネルの best.pt から 'bin+diff' を作るときは D の重みを 0 で足す。
+    TAU (1_bin_train.py の USE_PRIOR = True、5チャンネル) は事前マスクの重みを捨てて 3チャンネルとして使う"""
     ck = torch.load(str(path), map_location='cpu')
     sd = {k: (v.float() if v.is_floating_point() else v) for k, v in ck['state_dict'].items()}
     src_ch, want = state_in_channels(sd), input_channels(mode)
+    if src_ch == 5 and not ck.get('input'):
+        sd, src_ch = drop_prior_channels(sd), 3
+        ck = dict(ck, tau_dropped_prior=True)
     model = build_model(ck['encoder'], ck.get('classes', 3), want)
     if src_ch == want:
         model.load_state_dict(sd)
@@ -389,6 +415,7 @@ def make_model(dev):
             raise FileNotFoundError(f'FINETUNE_FROM が見つかりません: {path}')
         model, ck0 = load_model(path, INPUT_MODE, dev)
         print(f'  開始モデル: {path} (epoch {ck0.get("epoch")}, エンコーダ {ck0["encoder"]})'
+              + ('  — TAU (5チャンネル) の事前マスクの重みは使わない (事前マスクなしの TAU と同じ)' if ck0.get('tau_dropped_prior') else '')
               + ('  — D の重みを 0 で足した 4チャンネル版 (学習前は今の best.pt と同じ結果)' if INPUT_MODE == 'bin+diff' else ''))
         return model.train(), ck0['encoder']
     model = build_model('resnet34', 3, input_channels(INPUT_MODE), 'imagenet')

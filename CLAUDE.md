@@ -447,6 +447,9 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - FINETUNE_FROM=best.pt, epoch 0(시작 모델)을 기준으로 best를 고른다. 'bin+diff'는 epoch마다 D 가중치 크기 표시.
   - test: 시작 모델(그 ckpt의 입력) vs 새 모델의 화소 IoU + 크기별 재현율/적합율, test_preview(배경 D).
   - dot 라벨/ignore, TAU는 넣지 않았다.
+  - FINETUNE_FROM에 TAU(5ch) ckpt도 쓸 수 있다: 사전 마스크 입구 가중치를 버리고 3ch로 쓴다(= 사전 마스크 없는 TAU와 같은 결과). RawDetector도 같다. 사용자가 runs/tau3/best.pt로 시작하려다 오류가 나서 추가(2026-10-21).
+  - 취소 방지: OLD_BIN_SRC == SRC면 멈춤. OLD_BIN_SRC 화상이 이진화 화상이 아니면(검은 화소 < 50%) 멈춤. SRC 화상이 이진화 화상이면(검은 화소 > 50%) 멈춤.
+    (사용자 로그에서 새 train 44 / val 8과 예전 train 44 / val 8이 같아서 같은 폴더를 지정한 것으로 의심됨)
 - `raw/2_raw_track.py`: binarized/2_bin_track.py에서 TAU(설정, [B] 부품, [D] 다중 패스, 디스패처)를 빼고 UNetDetector를 RawDetector로 바꾼 것.
   - 전처리 값은 ckpt 기록을 쓰고 슬라이더는 안 띄운다. 배경 화상은 필수. 오버레이/확률맵 png 배경은 B. qc_report의 used_params.UNET.detection.input에 입력 기록.
 - 생성: `python tools/build_raw.py`(`--check`). 재료는 `tools/raw_parts/`(train.py 본체, raw_input.py, raw_detector.py) + binarized/1_bin_train.py의 공통 부품(AST로 복사) + binarized/2_bin_track.py + binarized/3_tracking_qc.py(그대로 복사). **binarized/나 tools/raw_parts/를 고치면 다시 만든다.**

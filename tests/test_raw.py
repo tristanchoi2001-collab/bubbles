@@ -148,7 +148,18 @@ def test_c_detector():
         dd = TRACK.RawDetector(ckd)
         _, D = TRACK.bin_diff(f, bg, (20, 3, 0))
         assert dd.preproc == (20, 3, 0) and np.array_equal(dd.prob_raw(f, bg), BIN.UNetDetector(ckd).prob(D))
-        for bad, inp in ((m3, {"mode": "bin+diff"}), (m4, None)):
+        # TAU (5ch): 事前マスクの重みを捨てる = 事前マスクなしの TAU (2_bin_track の TauDetector) と同じ確率
+        m5 = TR.build_model("resnet34", 3, 5).eval()
+        sd5 = TR.expand_state_dict(m3.state_dict(), m5)
+        sd5["encoder.conv1.weight"][:, 3:] = torch.randn_like(sd5["encoder.conv1.weight"][:, 3:])   # 事前マスクの重み (0 でない)
+        m5.load_state_dict(sd5)
+        ck5 = os.path.join(td, "tau5.pt")
+        save_ckpt(ck5, m5, None)
+        d5 = TRACK.RawDetector(ck5)
+        B, _ = TRACK.bin_diff(f, bg, TRACK.PREPROC_FIXED)
+        d = float(np.abs(d5.prob_raw(f, bg) - BIN.TauDetector(ck5).prob(B)).max())
+        assert d5.mode == "bin" and d < 1e-5, d
+        for bad, inp in ((m3, {"mode": "bin+diff"}), (m4, None), (m5, {"mode": "bin+diff"})):
             ckb = os.path.join(td, "bad.pt")
             save_ckpt(ckb, bad, None, inp)
             try:
@@ -223,6 +234,16 @@ def test_d_train_smoke():
             raise AssertionError("背景の決まらない画像で止まらない")
         except SystemExit as e:
             assert "test00000.jpg" in str(e) and "5枚" in str(e), str(e)
+        # SRC と OLD_BIN_SRC の取り違えは止める (同じフォルダ / OLD_BIN_SRC が元画像 / SRC が二値化画像)
+        for s_, o_, word in ((src, src, "同じフォルダ"), (src, make_src(td, "raw_as_old"), "二値化画像に見えない"),
+                             (old, None, "二値化画像に見えます")):
+            _configure(TR, td, s_, "bin+diff", base, o_, out="runs_guard")
+            TR.BACKGROUNDS = {"test": os.path.join(td, "bg_test.png"), "old": os.path.join(td, "bg_test.png")}
+            try:
+                TR.main()
+                raise AssertionError(f"取り違えで止まらない ({word})")
+            except SystemExit as e:
+                assert word in str(e), str(e)
         cks = {}
         for mode, o in (("bin+diff", old), ("diff", None), ("bin", None)):
             _configure(TR, td, src, mode, base, o)
@@ -278,6 +299,16 @@ def test_d_train_smoke():
         assert ck["n_train_old"] == 0 and ck["n_val_old"] == 0 and ck["old_src"] is None
         assert not TR.list_images(TR.resolve(TR.DST) / "bin" / "old")
         assert "old_test" not in json.load(open(TR.resolve(TR.OUT) / "test_report.json", encoding="utf-8"))
+        # TAU (5ch) の ckpt からも始められる (事前マスクの重みは捨てる)
+        tau = TR.build_model("resnet34", 3, 5)
+        tau.load_state_dict(TR.expand_state_dict(torch.load(base, map_location="cpu")["state_dict"], tau))
+        tau_p = os.path.join(td, "tau3_best.pt")
+        save_ckpt(tau_p, tau, [96, 128], epoch=14)
+        _configure(TR, td, src, "bin+diff", tau_p, None, out="runs_tau")
+        TR.main()
+        rep = json.load(open(TR.resolve(TR.OUT) / "test_report.json", encoding="utf-8"))
+        assert list(rep["columns"])[0] == "開始モデル (bin)"
+        assert torch.load(str(TR.resolve(TR.OUT) / "best.pt"), map_location="cpu")["in_channels"] == 4
         # 学習した 4ch から続けて学習 (開始モデルの列は ckpt の入力で評価)
         _configure(TR, td, src, "bin+diff", cks["bin+diff"], out="runs_b")
         TR.main()
