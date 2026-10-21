@@ -458,6 +458,42 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - d 학습 스모크(3모드, Roboflow 이름, OLD_BIN_SRC의 train/valid/test 사용과 합산 점수(가중치 0.3으로 뒤바뀜 검출)·OLD_VAL_TOL·REBUILD_DATASET=False 재사용/재생성, 배경 누락 오류, 학습한 4ch에서 이어 학습), e 기록 없는 3ch ckpt면 2_bin_track과 CSV 바이트 동일 + 학습한 bin+diff ckpt로 끝까지 실행.
 - 실데이터 학습·검증은 하지 않았다(사용자 PC에서).
 
+## 비이진화 첫 학습 결과와 거대 기포 대책 (2026-10-21)
+- **첫 학습 (사용자 PC, 새 원본 50장 + 예전 480장, 시작 = tau3, 'bin+diff')**
+  - D 가중치 0.0005→0.00098(B 0.073)로 D를 거의 쓰지 않았다.
+  - 새 test: 경계 IoU 0.46→0.57, 맞힌 기포 277→258(tiny 하락), large 21/21 동일. 예전 test: 1401→1421로 거의 같다.
+  - 17번 프레임에서 이전 모델(Noise Cut 25 + TAU 패스)이 놓친 위쪽 거대 기포를 대부분 잡았지만, 오른쪽 위 얼룩 부분에서 조각났다. QC 합계는 트랙 1566→1786, 신규/검출 10.9→11.8%. 조건(Noise Cut)이 달라 엄밀한 비교는 아니다.
+- **측정 (images/27 = 17번 원본, 28 = 배경, 31 = 다른 프레임; scratchpad/interior)**
+  - 화면 안 닫힌 기포 내부 − 주변 액체: −3~−8, 중앙값 −5(17/17개). 테두리 근처 −6, 안쪽 −3.
+  - 화면 끝에 닿은 거대 슬러그: 경계 근처 −1~−2, 안쪽 깊이 +2~+3. **거대 기포에는 내부 단서가 없다**(D가 쓸모 있을 곳에 정보가 없음).
+  - 오른쪽 위 얼룩은 +17로 **밝다**. 이진화와 |D|(절대값)는 이것과 어두운 메니스커스를 같은 흰색으로 만든다 → 모델이 경계로 오인한다.
+  - 교훈(세 번째): 새 입력·학습을 제안하기 전에 그 정보가 데이터에 있는지 원본 1장으로 먼저 잰다.
+- **리서치 (workflow, 결과 tasks/w0rkxpyq9.output)**
+  - 근본 해결은 액체 염색(흡광, Brilliant Blue FCF 10~30 mg/L + 적색 LED)이지만 사용자가 불가하다고 했다.
+  - 프로토타입(scratchpad/interior/proto, 17번 1장, 정답 없음):
+    - p_edge만으로 영역 parity를 하면 슬러그가 8~16조각이 된다(가짜 세로 경계).
+    - 부호 있는 차분으로 "어둡지 않은 벽"(+9~+16)을 지우고 parity를 하면 슬러그 100%, p_in을 절반으로 줄여도 100%. 진짜 계면은 −40~−100.
+    - 주 실패는 벽 틈 누출(아래 오른쪽 기포 0%)과, 기포에 감싸인 기포의 parity 오류다.
+  - 트랜스포머/SAM으로 바꾸는 것은 근거가 약하다(Villalobos 2021 insideness, LRA Path-X). 다음 후보는 후처리(부호 검증 벽 + 영역 parity, 학습 불필요)지만 아직 구현하지 않았다.
+- **추가 구현 (사용자 요청 "할 수 있는 건 다 해 보자", 전부 on/off)**
+  - `INPUT_MODE = 'bin+sign'`(새 기본값): B×3 + DK(어두워진 분) + DB(밝아진 분). `make_planes`. 예전 이진화 데이터는 DK = B, DB = 0.
+  - `CTX_LAYERS`(기본 0, 시도 2): U-Net 인코더 가장 깊은 특징(1/32)에 작은 트랜스포머.
+    - 2D sin/cos 위치를 쓰고 pre-norm이다. 출구 Linear는 0으로 초기화 → 학습 전에는 같은 결과.
+    - `build_unet`이 encoder forward hook으로 붙이므로 smp 버전과 무관하다. 1088×416이면 442토큰이다. log의 `ctx_w`로 사용 여부를 본다.
+  - `USE_PRIOR`(raw TAU): 학습은 synth_prior(1_bin_train에서 복사, PRIOR_*)를 쓴다.
+    - val은 사전 없음/있음 평균으로 best를 고른다. test는 개시 / 새(사전 없음) / 새(사전 있음) 3열이다. 데이터셋에 instances/를 저장한다.
+  - 2_raw_track: TAU 다중 패스([D])를 되살렸다. 사전 마스크를 넣는 ckpt이고 PRIOR_PASSES > 0이면 main_tau다. RawDetector.prob_frame이 원본 + 배경에서 입력을 만든다.
+  - 가중치 이어받기는 채널 이름(`channel_names`, `ckpt_layout`, `remap_first_conv`)으로 한다. 없는 채널은 0이고, 'diff'만 B 가중치를 D에 쓴다(종래).
+    - TAU ckpt를 USE_PRIOR=False로 읽으면 사전 가중치를 버리고, True면 이어받는다.
+    - 트랜스포머 층 수가 다른 ckpt는 오류다.
+  - ckpt 메타: `input: {mode, preproc, prior, prior_edge_px}`, `ctx: {layers, heads}` 또는 None. 데이터셋 layout 3(dark/bright/instances 추가).
+  - 테스트 `tests/test_raw.py` a~f (64개 전체 통과)
+    - b DK/DB 부호 분리.
+    - c 0 초기화한 입력·트랜스포머 = 3ch, 트랜스포머가 실제로 효과가 있는지, TAU = TauDetector(사전 없음/있음).
+    - d 4모드 + 트랜스포머 + TAU 학습 스모크.
+    - f 이진화 TAU ckpt로 2_raw_track main = 2_bin_track main_tau(CSV 바이트 동일), raw 사전 ckpt 다중 패스, PRIOR_PASSES=0.
+  - 실데이터 학습·검증은 사용자 PC에서 한다. 학습 전에 확인할 것: 거대 기포가 있는 프레임을 test에 넣는다.
+
 ## 저장소 구성 (2026-10-21 정리, 사용자 요청: "앞으로 쓸 것만 모으고 옛날 파일은 old/에 보존")
 - 사용자용 안내는 `README.md`(한국어). 폴더 하나만 PC에 복사하면 동작하게 했다.
 - `raw/` — 비이진화 버전(앞으로 주로 사용). `1_raw_train.py`, `2_raw_track.py`, `3_tracking_qc.py`. 전부 `tools/build_raw.py`가 생성(직접 고치지 않음).

@@ -33,8 +33,15 @@ BIN_QC = ROOT / 'binarized' / QC_NAME
 
 # binarized/1_bin_train.py から写す部品 (この順に並べる)
 HELPERS = ('resolve', 'list_images', 'unique_dir', 'edge_thickness', 'make_target', 'label_preview', 'load_coco',
-           'score_of', 'build_model', 'state_in_channels', 'expand_state_dict', 'extract_instances',
-           'instance_overlay', 'SIZE_CLASSES', '_size_cls', 'load_gt_instances', 'match_by_size')
+           'score_of', 'state_in_channels', 'extract_instances',
+           'instance_overlay', 'SIZE_CLASSES', '_size_cls', 'load_gt_instances', 'match_by_size',
+           # TAU (事前マスク) の部品: 学習用の事前マスクを正解から作る
+           'PRIOR_CHANNELS', 'PRIOR_EDGE_PX', 'Shape', '_paste_or', 'render_prior', 'label_shapes', 'PriorAug',
+           '_deform', '_split', '_touching_pairs', 'synth_prior', 'prior_aug')
+# binarized/2_bin_track.py の [B] (TAU の部品) のうち 2_raw_track.py で使わないもの (事前マスクを描く render_prior だけ残す)
+TAU_DROP = ('IMAGE_CHANNELS', 'build_model', 'state_in_channels', 'expand_state_dict', 'load_tau_model', 'make_input',
+            'label_shapes', 'PriorAug', '_deform', '_split', '_touching_pairs', 'synth_prior', 'ImageDegrade',
+            'degrade_image', 'TauDetector')
 BAR = '# ' + '=' * 70
 
 
@@ -44,6 +51,22 @@ def sub(text, pattern, repl, count, what):
     if n != count:
         raise SystemExit(f'置き換えの回数が違います ({what}): 期待 {count} 回, 実際 {n} 回  パターン {pattern!r}')
     return new
+
+
+def drop_defs(text, names):
+    """最上位の定義 (関数・クラス・代入) を名前で除く。無い名前があれば止まる"""
+    tree = ast.parse(text)
+    lines = text.splitlines(keepends=True)
+    cut, found = set(), set()
+    for n in tree.body:
+        hit = [nm for nm in _names(n) if nm in names]
+        if hit:
+            first = min([n.lineno] + [d.lineno for d in getattr(n, 'decorator_list', [])])
+            cut.update(range(first, n.end_lineno + 1))
+            found.update(hit)
+    if set(names) - found:
+        raise SystemExit(f'除く定義が見つからない: {sorted(set(names) - found)}')
+    return re.sub(r'\n{4,}', '\n\n\n', ''.join(ln for i, ln in enumerate(lines, start=1) if i not in cut))
 
 
 def read(p):
@@ -77,8 +100,6 @@ def helpers_source():
     if missing:
         raise SystemExit(f'{BIN_TRAIN.name} に見つからない部品: {missing}')
     src = '\n\n'.join(found[h] for h in HELPERS)
-    # 既定の入力チャンネル数は TAU (画像 3 + 事前マスク 2) -> ここでは 3 (呼ぶ側が必ず指定する)
-    src = sub(src, r'in_channels: int = IMAGE_CHANNELS \+ PRIOR_CHANNELS', 'in_channels: int = 3', 1, 'build_model の既定値')
     return (banner('共通の部品 — binarized/1_bin_train.py と同じ (tools/build_raw.py が写したもの)') + '\n' + src)
 
 
@@ -90,30 +111,42 @@ def build_train():
 
 
 TRACK_DOC = '''#!/usr/bin/env python
-"""
+\"\"\"
 二値化しない版 — 気泡の検出と追跡 (1ファイル)
 =====================================================================
     python 2_raw_track.py
 
-元画像 + 背景画像 -> 二値化画像 B と差分画像 D (1_raw_train.py と同じ作り方) -> U-Net (背景 / 気泡内部 / 気泡境界)
--> 気泡ごとのマスク -> トラッキング -> result_tracking.csv / result_area_count.csv / オーバーレイ / qc_report.json
-このファイルだけで動く (3_tracking_qc.py は今までと同じものをそのまま使う)。
+元画像 + 背景画像 -> 二値化画像 B・差分画像 D・暗く/明るくなった分 DK/DB (1_raw_train.py と同じ作り方)
+-> U-Net (背景 / 気泡内部 / 気泡境界) -> 気泡ごとのマスク -> トラッキング
+-> result_tracking.csv / result_area_count.csv / オーバーレイ / qc_report.json
+このファイルだけで動く (3_tracking_qc.py が同じフォルダにあれば、TAU のパスごとの比較表も出す)。
 
-UNET_CKPT に入れるもの:
-  - 1_raw_train.py の best.pt: 入力の作り方 (INPUT_MODE) と前処理の値は ckpt の記録を自動で使う (スライダーは出ない)
+UNET_CKPT に入れるもの (入力の作り方・部品は ckpt の記録を見て自動で合わせる。スライダーは出ない):
+  - 1_raw_train.py の best.pt: INPUT_MODE・前処理の値・トランスフォーマー・事前マスク (TAU) の有無
   - 今の二値化の best.pt (記録なし): 二値化画像 B だけ (前処理は PREPROC_FIXED) = 2_bin_track.py と同じ結果
+  - 二値化の TAU の best.pt (5チャンネル): B + 事前マスク = 2_bin_track.py の TAU と同じ結果
+事前マスクを入力するモデル (TAU) なら、前のパスの追跡結果から事前マスクを作って PRIOR_PASSES 回 検出し直す。
 オーバーレイ・確率マップの確認画像の背景は二値化画像 B。
 
 中身 (tools/build_raw.py が binarized/2_bin_track.py から作ったもの):
-  [A] PIV (大きさ別の速度場。新しい気泡の初速度)              2_bin_track.py と同じ
-  [B] 入力の作り方 (B, D) と U-Net の読み込み (RawDetector)     tools/raw_parts/
-  [C] 前処理・気泡の分け方・トラッカー・CSV/オーバーレイ/QC     2_bin_track.py と同じ (U-Net に入れる画像だけ違う)
-  [D] 起動
-"""
+  [A] PIV (大きさ別の速度場。新しい気泡の初速度)                       2_bin_track.py と同じ
+  [B] TAU の事前マスクを描く部品                                       2_bin_track.py と同じ (使う部分だけ)
+  [B2] 入力の作り方・モデルの形 (トランスフォーマー)・RawDetector      tools/raw_parts/
+  [C] 前処理・気泡の分け方・トラッカー・CSV/オーバーレイ/QC             2_bin_track.py と同じ (U-Net に入れる画像だけ違う)
+  [D] TAU の多パス検出                                                 2_bin_track.py と同じ (U-Net に入れる画像だけ違う)
+  [E] 起動
+\"\"\"
 '''
 
-TRACK_TAIL = banner('[D] 起動') + '''def main():
-    main_single()
+TRACK_TAIL = banner('[E] 起動') + '''def main():
+    \"\"\"事前マスク (TAU) を入力するモデルで PRIOR_PASSES > 0 なら多パス (main_tau)、それ以外は 1回 (main_single)\"\"\"
+    import torch
+    ck = torch.load(UNET_CKPT, map_location="cpu")
+    _, prior, _ = ckpt_layout(ck, ck["state_dict"])
+    if prior and PRIOR_PASSES > 0:
+        print("事前マスク (TAU) を入力するモデルなので、前のパスの追跡結果から事前マスクを作って検出し直します")
+        return main_tau()
+    return main_single()
 
 
 if __name__ == "__main__":
@@ -136,13 +169,16 @@ def build_track():
     t = read(BIN_TRACK)
     i = t.index('\n\n\n' + BAR + '\n# 設定')
     t = TRACK_DOC + t[i:]
-    # TAU の設定・TAU の部品 [B]・多パス [D] と起動 [E] を除く
-    t = sub(t, '(?s)^' + BAR + r'\n# TAU の多パス検出の設定.*?(?=^' + BAR + r'\n# import\n)', '', 1, 'TAU の設定')
-    t = sub(t, '(?s)^' + BAR + r'\n# \[B\] TAU の部品.*?(?=^' + BAR + r'\n# \[C\])',
-            lambda m: banner('[B] 入力の作り方 (B, D) と U-Net — tools/raw_parts/') + '\n'
-            + read(PARTS / 'raw_input.py').split(BAR + '\n', 2)[2].lstrip('\n') + '\n\n'
-            + read(PARTS / 'raw_detector.py') + '\n\n', 1, '[B] TAU の部品')
-    t = sub(t, '(?s)^' + BAR + r'\n# \[D\] TAU の多パス検出.*\Z', lambda m: TRACK_TAIL, 1, '[D] と [E]')
+    # [B] TAU の部品: 事前マスクを描く部分だけ残し、その後ろに raw の部品 [B2] を入れる
+    m = re.search('(?s)^' + BAR + r'\n# \[B\] TAU の部品.*?(?=^' + BAR + r'\n# \[C\])', t, flags=re.M)
+    if not m:
+        raise SystemExit('[B] TAU の部品が見つからない')
+    seg = drop_defs(m.group(0), TAU_DROP).replace('# [B] TAU の部品 — 元 tau_unet.py', '# [B] TAU の事前マスクを描く部品 — 元 tau_unet.py の一部', 1)
+    raw = (banner('[B2] 入力の作り方 (B, D, DK, DB)・モデルの形・RawDetector — tools/raw_parts/') + '\n'
+           + read(PARTS / 'raw_input.py').split(BAR + '\n', 2)[2].lstrip('\n') + '\n\n'
+           + read(PARTS / 'raw_detector.py') + '\n\n')
+    t = t[:m.start()] + seg.rstrip('\n') + '\n\n\n' + raw + t[m.end():]
+    t = sub(t, '(?s)^' + BAR + r'\n# \[E\] 起動.*\Z', lambda m: TRACK_TAIL, 1, '[E]')
     # [C] (元 watershed.py) の U-Net の入力を RawDetector に替える
     t = sub(t, r'(?s)^class UNetDetector:\n.*?(?=^def _wall_regions)', '', 1, 'UNetDetector')
     t = sub(t, r'output_bin"', 'output_raw"', 1, '出力フォルダ')
@@ -152,7 +188,7 @@ def build_track():
             'ENABLE_PREPROCESSING の説明')
     t = sub(t, r'detector = UNetDetector\(UNET_CKPT, TRAIN_IMAGE_HW\)', 'detector = RawDetector(UNET_CKPT, TRAIN_IMAGE_HW)', 1,
             '検出器')
-    t = sub(t, r'if bg_img is None and ENABLE_PREPROCESSING:', 'if bg_img is None:', 1, '背景画像は必須')
+    t = sub(t, r'if bg_img is None and ENABLE_PREPROCESSING:', 'if bg_img is None:', 2, '背景画像は必須')
     t = sub(t, r'print\("  \[前処理OFF\] 元画像をそのままU-Netに入力します \(2値化画像で学習したモデルには非推奨\)。"\)',
             'print("  [前処理OFF] オーバーレイ・確認画像を元画像にします (U-Net の入力は変わりません)")', 1, '前処理OFF')
     t = sub(t, r'thresh_val, bright_val, median_val = PREPROC_FIXED if PREPROC_FIXED else PREPROC_DEFAULT\n'
@@ -160,15 +196,24 @@ def build_track():
             'thresh_val, bright_val, median_val = detector.preproc   # U-Net の入力と同じ値 (ckpt の記録 / PREPROC_FIXED)\n'
             '    use_ui = False\n', 1, '前処理の値')
     t = sub(t, r'prob = detector\.prob\(gray\)', 'prob = detector.prob_raw(img, bg_img)', 1, 'U-Net の入力')
-    t = sub(t, r'(    DETECTION_STATS\["mode"\] = UNET_INSTANCE_MODE\n)',
+    t = sub(t, r'(\n\n    DETECTION_STATS\.clear\(\)\n    DETECTION_STATS\["mode"\] = UNET_INSTANCE_MODE\n)',
             lambda m: m.group(1) + '    DETECTION_STATS["input"] = {"mode": detector.mode, "preproc": list(detector.preproc)}\n',
             1, '入力の記録')
-    # TAU を除いて使わなくなった import
-    t = sub(t, r'^from collections import defaultdict, Counter\n', 'from collections import defaultdict\n', 1, 'import')
-    t = sub(t, r'^from typing import Dict, List, Optional, Tuple, Sequence, Callable\n',
-            'from typing import Dict, List, Optional, Tuple\n', 1, 'import')
-    t = sub(t, r'^import shutil\n', '', 1, 'import')
-    for name in ('TauDetector(', 'UNetDetector(', 'class UNetDetector', 'def main_tau', 'PRIOR_PASSES', 'render_prior('):
+    # [D] (元 tau_tracker.py) も RawDetector で (元画像 + 背景 -> 入力。事前マスクはそのまま)
+    t = sub(t, r'detector = TauDetector\(UNET_CKPT, TRAIN_IMAGE_HW\)', 'detector = RawDetector(UNET_CKPT, TRAIN_IMAGE_HW)', 1,
+            'TAU の検出器')
+    t = sub(t, r'    tv, bv, mv = PREPROC_FIXED if PREPROC_FIXED else PREPROC_DEFAULT\n'
+               r'    use_ui = ENABLE_PREPROCESSING and PREPROC_FIXED is None\n',
+            '    tv, bv, mv = detector.preproc   # U-Net の入力と同じ値 (ckpt の記録 / PREPROC_FIXED)\n'
+            '    use_ui = False\n', 1, 'TAU の前処理の値')
+    t = sub(t, r'^(    names = \[os\.path\.basename\(p\) for p in files\]\n)',
+            lambda m: m.group(1) + '    detector.raw_of = lambda f: (cv2.imread(files[f]), bg_img)   # U-Net の入力は元画像 + 背景から作る\n',
+            1, 'TAU の元画像')
+    t = sub(t, r'prob = detector\.prob\(gray, prior\)', 'prob = detector.prob_frame(f, gray, prior)', 1, 'TAU の U-Net の入力')
+    t = sub(t, r'tau_params = \{"UNET_CKPT": UNET_CKPT, ',
+            'tau_params = {"UNET_CKPT": UNET_CKPT, "input": {"mode": detector.mode, "preproc": list(detector.preproc)}, ',
+            1, 'TAU の入力の記録')
+    for name in ('TauDetector(', 'UNetDetector(', 'class UNetDetector', 'class TauDetector', 'ckpt_uses_prior('):
         if name in t:
             raise SystemExit(f'2_raw_track.py に {name} が残っている')
     return t

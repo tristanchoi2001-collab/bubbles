@@ -4,20 +4,25 @@
 =====================================================================
     python 2_raw_track.py
 
-元画像 + 背景画像 -> 二値化画像 B と差分画像 D (1_raw_train.py と同じ作り方) -> U-Net (背景 / 気泡内部 / 気泡境界)
--> 気泡ごとのマスク -> トラッキング -> result_tracking.csv / result_area_count.csv / オーバーレイ / qc_report.json
-このファイルだけで動く (3_tracking_qc.py は今までと同じものをそのまま使う)。
+元画像 + 背景画像 -> 二値化画像 B・差分画像 D・暗く/明るくなった分 DK/DB (1_raw_train.py と同じ作り方)
+-> U-Net (背景 / 気泡内部 / 気泡境界) -> 気泡ごとのマスク -> トラッキング
+-> result_tracking.csv / result_area_count.csv / オーバーレイ / qc_report.json
+このファイルだけで動く (3_tracking_qc.py が同じフォルダにあれば、TAU のパスごとの比較表も出す)。
 
-UNET_CKPT に入れるもの:
-  - 1_raw_train.py の best.pt: 入力の作り方 (INPUT_MODE) と前処理の値は ckpt の記録を自動で使う (スライダーは出ない)
+UNET_CKPT に入れるもの (入力の作り方・部品は ckpt の記録を見て自動で合わせる。スライダーは出ない):
+  - 1_raw_train.py の best.pt: INPUT_MODE・前処理の値・トランスフォーマー・事前マスク (TAU) の有無
   - 今の二値化の best.pt (記録なし): 二値化画像 B だけ (前処理は PREPROC_FIXED) = 2_bin_track.py と同じ結果
+  - 二値化の TAU の best.pt (5チャンネル): B + 事前マスク = 2_bin_track.py の TAU と同じ結果
+事前マスクを入力するモデル (TAU) なら、前のパスの追跡結果から事前マスクを作って PRIOR_PASSES 回 検出し直す。
 オーバーレイ・確率マップの確認画像の背景は二値化画像 B。
 
 中身 (tools/build_raw.py が binarized/2_bin_track.py から作ったもの):
-  [A] PIV (大きさ別の速度場。新しい気泡の初速度)              2_bin_track.py と同じ
-  [B] 入力の作り方 (B, D) と U-Net の読み込み (RawDetector)     tools/raw_parts/
-  [C] 前処理・気泡の分け方・トラッカー・CSV/オーバーレイ/QC     2_bin_track.py と同じ (U-Net に入れる画像だけ違う)
-  [D] 起動
+  [A] PIV (大きさ別の速度場。新しい気泡の初速度)                       2_bin_track.py と同じ
+  [B] TAU の事前マスクを描く部品                                       2_bin_track.py と同じ (使う部分だけ)
+  [B2] 入力の作り方・モデルの形 (トランスフォーマー)・RawDetector      tools/raw_parts/
+  [C] 前処理・気泡の分け方・トラッカー・CSV/オーバーレイ/QC             2_bin_track.py と同じ (U-Net に入れる画像だけ違う)
+  [D] TAU の多パス検出                                                 2_bin_track.py と同じ (U-Net に入れる画像だけ違う)
+  [E] 起動
 """
 
 
@@ -215,6 +220,20 @@ BOOTSTRAP_PREVIEW_FRAMES = 4  # 承認画面に表示するサンプルオーバ
 
 
 # ======================================================================
+# TAU の多パス検出の設定 (元 tau_tracker.py)
+# ======================================================================
+# ------------------------------------------------------------
+# TAU (5チャンネルのモデル) の多パス検出の設定。普通の U-Net では使わない
+# ------------------------------------------------------------
+PRIOR_PASSES = 2          # 事前マスク付きで検出し直す回数 (0 なら tracker3.py と同じ 1回だけ)
+PRIOR_FROM = "both"       # "both" = 前後のフレームから予測 / "forward" = 前のフレームだけ (オンライン処理と同じ情報。比較用)
+PRIOR_MIN_HITS = 2        # 事前マスクに入れるトラックの観測回数の下限 (そのフレーム自身を除く)
+SAVE_PASS_RESULTS = True  # パスごとの result_tracking.csv / qc_report.json を OUTPUT_FOLDER/passes/pass<k>/ に保存
+SAVE_PRIOR_DEBUG = True   # 前のパスと検出が変わったフレームの確認画像を OUTPUT_FOLDER/prior_debug/ に保存
+PRIOR_DEBUG_MAX = 30      # 確認画像の上限 (パスごと)
+
+
+# ======================================================================
 # import
 # ======================================================================
 import cv2
@@ -225,12 +244,13 @@ import glob
 import csv
 import json
 import time
-from collections import defaultdict
+from collections import defaultdict, Counter
 from dataclasses import dataclass, field, replace
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Sequence, Callable
 from scipy import ndimage
 from scipy.optimize import linear_sum_assignment
 from skimage.segmentation import watershed
+import shutil
 
 
 # ======================================================================
@@ -607,10 +627,95 @@ def draw(img_gray: np.ndarray, fld: DisplacementField, scale: float = 1.0) -> np
 
 
 # ======================================================================
-# [B] 入力の作り方 (B, D) と U-Net — tools/raw_parts/
+# [B] TAU の事前マスクを描く部品 — 元 tau_unet.py の一部
+# ======================================================================
+# 元 tau_unet.py の説明:
+# Tracking-aware U-Net (TAU) の共通部品
+# =====================================================================
+# U-Net の入力に「このフレームに気泡がどこにあるはずか」(トラッカーが前後のフレームから予測した気泡マスク) を足す。
+#   ch 0-2 : 前処理画像 (グレーを3回。best.pt と同じ正規化)
+#   ch 3   : 事前マスク・内部 (予測した気泡の塗りつぶし 0/1)
+#   ch 4   : 事前マスク・輪郭 (予測した気泡ごとの内側の輪郭 PRIOR_EDGE_PX 幅 0/1。くっついた気泡の境目が分かる)
+# 出力は best.pt と同じ 3クラス (背景/内部/境界) なので、気泡の分け方 (wall / hybrid) とトラッカーはそのまま使う。
+#
+# best.pt (3チャンネル) から学習を始めるときは、最初の畳み込みの事前マスク用の重みを 0 で足す (expand_state_dict)。
+# 学習前のモデルは事前マスクに関係なく best.pt と同じ確率を出す (tests/test_tau.py の a で確認)。
+# 事前マスクが全部 0 のときは、学習後のモデルも事前マスクなしの検出器として働く (学習で PriorAug.p_empty の割合だけ練習する)。
+#
+# 学習用の事前マスクは、正解ラベルの気泡を崩して作る (synth_prior。MaskTrack, Perazzi et al., CVPR 2017 と同じ考え方)。
+# 連続フレームのラベルは要らない。崩し方 = 前のパスの検出・トラッカーの予測で起きる誤り:
+#   見落とし (消す) / 位置ずれ / 変形 (拡大縮小・膨張収縮) / 一部欠け / 隣と融合 / 割れ / 何も無い所の気泡
+#
+# 1_tau_unet_train.py (学習) と tau_tracker.py (推論) の両方が使う。2つと同じフォルダに置くこと。
+
+PRIOR_CHANNELS = 2       # 事前マスクのチャンネル数 (内部, 輪郭)
+PRIOR_EDGE_PX = 2        # 事前マスクの輪郭の幅 (px)。学習と推論で同じ値を使う (ckpt の prior_edge_px に記録)
+
+Shape = Tuple[np.ndarray, int, int]   # (bbox で切り出した bool マスク, x0, y0)。tracker3.py と同じ
+
+
+# ==============================================================
+# 1. モデル
+# ==============================================================
+
+
+# ==============================================================
+# 2. 入力
+# ==============================================================
+
+
+def _paste_or(canvas: np.ndarray, m: np.ndarray, x0: int, y0: int):
+    """canvas[y0:, x0:] |= m (画面からはみ出す部分は切る)"""
+    H, W = canvas.shape
+    h, w = m.shape
+    ya, yb, xa, xb = max(y0, 0), min(y0 + h, H), max(x0, 0), min(x0 + w, W)
+    if ya < yb and xa < xb:
+        canvas[ya:yb, xa:xb] |= m[ya - y0:yb - y0, xa - x0:xb - x0]
+
+
+def render_prior(shapes: Sequence[Shape], H: int, W: int, edge_px: int = PRIOR_EDGE_PX) -> np.ndarray:
+    """気泡マスクの一覧 -> 事前マスク (2, H, W) float32 [内部(塗りつぶし), 輪郭(気泡ごとの内側 edge_px 幅)]
+    画面からはみ出す部分は切ってから輪郭を取る (画面端で切れた気泡は画面端にも輪郭が付く。学習と推論で同じ)"""
+    fill = np.zeros((H, W), bool)
+    ring = np.zeros((H, W), bool)
+    for m, x0, y0 in shapes:
+        if m is None or not m.any():
+            continue
+        h, w = m.shape
+        ya, yb, xa, xb = max(y0, 0), min(y0 + h, H), max(x0, 0), min(x0 + w, W)
+        if ya >= yb or xa >= xb:
+            continue
+        c = m[ya - y0:yb - y0, xa - x0:xb - x0]
+        if not c.any():
+            continue
+        fill[ya:yb, xa:xb] |= c
+        inner = ndimage.binary_erosion(np.pad(c, 1), iterations=edge_px)[1:-1, 1:-1] if edge_px > 0 else c
+        ring[ya:yb, xa:xb] |= c & ~inner
+    return np.stack([fill, ring]).astype(np.float32)
+
+
+# ==============================================================
+# 3. 学習用の事前マスク (正解ラベルを崩して作る)
+# ==============================================================
+
+
+# ==============================================================
+# 4. 推論
+# ==============================================================
+
+
+# ======================================================================
+# [B2] 入力の作り方 (B, D, DK, DB)・モデルの形・RawDetector — tools/raw_parts/
 # ======================================================================
 
-INPUT_MODES = ('bin', 'diff', 'bin+diff')
+INPUT_MODES = ('bin', 'diff', 'bin+diff', 'bin+sign')
+PLANES = {                      # INPUT_MODE -> 使う画像 (B = 二値化, D = |差分|, DK = 暗くなった分, DB = 明るくなった分)
+    'bin': ('B',),
+    'diff': ('D',),
+    'bin+diff': ('B', 'D'),
+    'bin+sign': ('B', 'DK', 'DB'),
+}
+PLANE_DIRS = {'B': 'bin', 'D': 'diff', 'DK': 'dark', 'DB': 'bright'}   # 学習データセットのフォルダ名
 
 
 def bin_diff(raw_bgr, bg_bgr, preproc):
@@ -626,91 +731,215 @@ def bin_diff(raw_bgr, bg_bgr, preproc):
     return cv2.convertScaleAbs(cut, alpha=bright), cv2.convertScaleAbs(g, alpha=bright)
 
 
-def input_channels(mode):
-    """INPUT_MODE -> ネットワークの入力チャンネル数"""
+def make_planes(raw_bgr, bg_bgr, preproc):
+    """元画像 + 背景画像 -> {'B', 'D', 'DK', 'DB'} (どれも uint8 (H, W))
+    DK / DB: 背景より暗くなった分 / 明るくなった分 (×Brightness)。気液の界面 (メニスカス) は暗く、
+    大きい気泡の中の液膜のむら (乾いた所) は明るい -> B と D (絶対値) では区別できないが、DK と DB なら分かれる"""
+    B, D = bin_diff(raw_bgr, bg_bgr, preproc)
+    _, bright, median = (int(v) for v in preproc)
+    if bg_bgr.shape != raw_bgr.shape:
+        bg_bgr = cv2.resize(bg_bgr, (raw_bgr.shape[1], raw_bgr.shape[0]))
+    s = (cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2GRAY).astype(np.int16)
+         - cv2.cvtColor(bg_bgr, cv2.COLOR_BGR2GRAY).astype(np.int16))
+    out = {'B': B, 'D': D}
+    for k, v in (('DK', -s), ('DB', s)):
+        v = cv2.medianBlur(np.clip(v, 0, 255).astype(np.uint8), median * 2 + 1)
+        out[k] = cv2.convertScaleAbs(v, alpha=bright)
+    return out
+
+
+def input_channels(mode, prior=False):
+    """INPUT_MODE (+ 事前マスク) -> ネットワークの入力チャンネル数"""
+    return len(channel_names(mode, prior))
+
+
+def channel_names(mode, prior=False):
+    """入力チャンネルの名前 (重みの引き継ぎに使う)。最初の画像は 3回 (best.pt と同じ)、ほかの画像は 1回ずつ、
+    事前マスク (TAU) は 内部 / 輪郭 の 2チャンネル"""
     if mode not in INPUT_MODES:
         raise ValueError(f'INPUT_MODE は {INPUT_MODES} のどれか: {mode!r}')
-    return 4 if mode == 'bin+diff' else 3
+    p = PLANES[mode]
+    names = [f'{p[0]}{i}' for i in range(3)] + list(p[1:])
+    return names + (['P_IN', 'P_EDGE'] if prior else [])
 
 
-def make_input_raw(B, D, mode, mean, std):
-    """(B, D) -> ネットワーク入力 (C, H, W) float32
-    'bin'      : B を3回 (今の best.pt と同じ入力)
-    'diff'     : D を3回
-    'bin+diff' : B を3回 + D (4チャンネル目)。best.pt から始めると 4チャンネル目の重みは 0 = 学習前は 'bin' と同じ結果"""
-    input_channels(mode)
-    base = (D if mode == 'diff' else B).astype(np.float32) / 255.0
+def make_input_raw(planes, mode, mean, std, prior=None, uses_prior=False):
+    """画像 {'B', 'D', ...} (+ 事前マスク (2, H, W)) -> ネットワーク入力 (C, H, W) float32
+    最初の画像を 3回 (best.pt と同じ正規化)、ほかの画像は1回ずつ (1チャンネル目と同じ正規化)。
+    uses_prior なら事前マスク 2チャンネルを足す (prior が None なら 0 = 事前情報なし)"""
+    names = PLANES[mode]
+    base = planes[names[0]].astype(np.float32) / 255.0
     x = [(base - float(m)) / float(s) for m, s in zip(mean, std)]
-    if mode == 'bin+diff':
-        x.append((D.astype(np.float32) / 255.0 - float(mean[0])) / float(std[0]))
+    for n in names[1:]:
+        x.append((planes[n].astype(np.float32) / 255.0 - float(mean[0])) / float(std[0]))
+    if uses_prior:
+        if prior is None:
+            x += [np.zeros_like(base)] * 2
+        else:
+            if prior.shape != (2,) + base.shape:
+                raise ValueError(f'事前マスクの形 {prior.shape} が画像 {base.shape} と合いません')
+            x += [prior[c].astype(np.float32) for c in range(2)]
     return np.stack(x)
 
 
+def ckpt_layout(ck, sd):
+    """ckpt -> (INPUT_MODE, 事前マスクを使うか, 入力チャンネルの名前)。
+    記録 (input) の無い ckpt はチャンネル数から: 3 = 二値化の best.pt ('bin')、5 = TAU ('bin' + 事前マスク)"""
+    k0 = next(k for k, v in sd.items() if k.startswith('encoder.') and v.ndim == 4)
+    in_ch = int(sd[k0].shape[1])
+    inp = ck.get('input') or {}
+    if inp:
+        mode, prior = inp.get('mode', 'bin'), bool(inp.get('prior', False))
+    else:
+        mode, prior = 'bin', in_ch == 5
+    names = channel_names(mode, prior)
+    if len(names) != in_ch:
+        raise ValueError(f'ckpt の入力チャンネル数 {in_ch} が記録 ({mode!r}, 事前マスク {prior}) と合いません')
+    return mode, prior, names
+
+
+def remap_first_conv(sd, src_names, dst_names):
+    """最初の畳み込みの重みを、入力チャンネルの名前で並べ替える。無いチャンネルは 0 (= 学習前は出力に影響しない)。
+    'diff' (D×3) を二値化の重み (B×3) から始めるときだけ、B の重みをそのまま D に使う (今までの動作)"""
+    import torch
+    k0 = next(k for k, v in sd.items() if k.startswith('encoder.') and v.ndim == 4)
+    w = sd[k0]
+    out = torch.zeros((w.shape[0], len(dst_names)) + tuple(w.shape[2:]), dtype=w.dtype)
+    for j, n in enumerate(dst_names):
+        if n in src_names:
+            out[:, j] = w[:, src_names.index(n)]
+        elif n in ('D0', 'D1', 'D2') and 'B' + n[1] in src_names:
+            out[:, j] = w[:, src_names.index('B' + n[1])]
+    sd = dict(sd)
+    sd[k0] = out
+    return sd
+
+
+def _pos2d(h, w, dim, device):
+    """2次元の位置 (sin / cos)。画像の大きさが学習と違っても同じ式で作れる"""
+    import torch
+    d = dim // 4
+    omega = 1.0 / (10000 ** (torch.arange(d, device=device, dtype=torch.float32) / max(1, d)))
+    ys = torch.arange(h, device=device, dtype=torch.float32)[:, None] * omega[None]
+    xs = torch.arange(w, device=device, dtype=torch.float32)[:, None] * omega[None]
+    pe = torch.cat([torch.sin(ys)[:, None].expand(h, w, d), torch.cos(ys)[:, None].expand(h, w, d),
+                    torch.sin(xs)[None].expand(h, w, d), torch.cos(xs)[None].expand(h, w, d)], -1)
+    pe = pe.reshape(h * w, 4 * d)
+    if 4 * d < dim:
+        pe = torch.cat([pe, pe.new_zeros(h * w, dim - 4 * d)], 1)
+    return pe[None]
+
+
+def _context_block(dim, layers, heads):
+    """小さいトランスフォーマー (画面全体の関係を見る)。出口の重みは 0 -> 学習前は何もしない (足す前と同じ結果)"""
+    import torch.nn as nn
+
+    class ContextBlock(nn.Module):
+        def __init__(self):
+            super().__init__()
+            layer = nn.TransformerEncoderLayer(dim, heads, dim_feedforward=2 * dim, dropout=0.1,
+                                               batch_first=True, norm_first=True)
+            try:
+                self.enc = nn.TransformerEncoder(layer, layers, enable_nested_tensor=False)
+            except TypeError:      # 古い torch
+                self.enc = nn.TransformerEncoder(layer, layers)
+            self.norm = nn.LayerNorm(dim)
+            self.out = nn.Linear(dim, dim)
+            nn.init.zeros_(self.out.weight)
+            nn.init.zeros_(self.out.bias)
+
+        def forward(self, f):
+            b, c, h, w = f.shape
+            t = f.flatten(2).transpose(1, 2) + _pos2d(h, w, c, f.device).to(f.dtype)
+            t = self.out(self.norm(self.enc(t)))
+            return f + t.transpose(1, 2).reshape(b, c, h, w)
+
+    return ContextBlock()
+
+
+def build_unet(encoder, classes, in_ch, ctx_layers=0, ctx_heads=8, encoder_weights=None):
+    """smp.Unet。ctx_layers > 0 ならエンコーダの一番深い特徴 (画像の 1/32) に小さいトランスフォーマーを足す
+    (model.ctx。小さい点と輪郭は今までどおり U-Net が見て、トランスフォーマーは画面全体の関係だけを見る)"""
+    import segmentation_models_pytorch as smp
+    model = smp.Unet(encoder, encoder_weights=encoder_weights, in_channels=in_ch, classes=classes)
+    if ctx_layers > 0:
+        model.ctx = _context_block(model.encoder.out_channels[-1], int(ctx_layers), int(ctx_heads))
+        model.encoder.register_forward_hook(lambda m, i, out: list(out[:-1]) + [model.ctx(out[-1])])
+    return model
+
+
 class RawDetector:
-    """1_raw_train.py の ckpt を読み込み、元画像 + 背景画像から 背景/内部/境界 の確率 (3, H, W) を返す。
-    入力の作り方 (INPUT_MODE と前処理の値) は ckpt に記録したものを使う -> 学習と同じ入力になる。
+    """1_raw_train.py の ckpt を読み込み、元画像 + 背景画像 (+ 事前マスク) から 背景/内部/境界 の確率 (3, H, W) を返す。
+    入力の作り方 (INPUT_MODE、事前マスクの有無) と前処理の値は ckpt に記録したものを使う -> 学習と同じ入力になる。
     記録の無い ckpt (今の二値化の best.pt など) は 'bin' と PREPROC_FIXED (None なら PREPROC_DEFAULT) で動く
-    (= 二値化版の UNetDetector と同じ確率)。TAU (5チャンネル) は事前マスクの重みを捨てて 'bin' で動く
-    (= 事前マスクなしの TAU と同じ確率)"""
+    (= 二値化版の UNetDetector と同じ確率)。TAU (5チャンネル) は 'bin' + 事前マスク (= 二値化版の TauDetector と同じ確率)。
+    事前マスクを使うモデルに事前マスクを渡さなければ 0 (事前情報なし) を入れる"""
 
     def __init__(self, ckpt_path, train_hw=None):
         import torch
-        import segmentation_models_pytorch as smp
         self.torch = torch
         self.dev = "cuda" if torch.cuda.is_available() else "cpu"
         ck = torch.load(ckpt_path, map_location="cpu")
         sd = {k: (v.float() if v.is_floating_point() else v) for k, v in ck["state_dict"].items()}
         inp = ck.get("input") or {}
-        self.mode = inp.get("mode", "bin")
+        self.mode, self.uses_prior, names = ckpt_layout(ck, sd)
         self.preproc = tuple(int(v) for v in (inp.get("preproc") or PREPROC_FIXED or PREPROC_DEFAULT))
-        k0 = next(k for k, v in sd.items() if k.startswith("encoder.") and v.ndim == 4)
-        in_ch = int(sd[k0].shape[1])
-        tau = in_ch == 5 and not inp
-        if tau:                     # TAU (画像3 + 事前マスク2): 事前マスクの入口の重みを捨てる
-            sd[k0] = sd[k0][:, :3].contiguous()
-            in_ch = 3
-        if in_ch != input_channels(self.mode):
-            raise ValueError(f"{ckpt_path}: 入力 {self.mode!r} には {input_channels(self.mode)}チャンネルが要るのに "
-                             f"重みは {in_ch}チャンネル")
-        self.model = smp.Unet(ck["encoder"], encoder_weights=None, in_channels=in_ch,
-                              classes=ck.get("classes", 3)).to(self.dev)
+        self.edge_px = int(inp.get("prior_edge_px") or ck.get("prior_edge_px") or PRIOR_EDGE_PX)
+        ctx = ck.get("ctx") or {}
+        self.model = build_unet(ck["encoder"], ck.get("classes", 3), len(names),
+                                ctx.get("layers", 0), ctx.get("heads", 8)).to(self.dev)
         self.model.load_state_dict(sd)
         self.model.eval()
         self.mean = np.array(ck["mean"], np.float32)
         self.std = np.array(ck["std"], np.float32)
         hw = ck.get("train_hw") or train_hw
         self.train_hw = (int(hw[0]), int(hw[1])) if hw else None
+        self.raw_of = None          # TAU の多パス: フレーム番号 -> (元画像, 背景画像)
         self._resize_notice = False
         print(f"  U-Net: {ckpt_path}  (epoch {ck.get('epoch')}, device {self.dev}, 入力 {self.mode!r}, "
-              f"前処理 {self.preproc}{'' if inp else ' (ckpt に記録なし)'}{', TAU の事前マスクは使わない' if tau else ''}, "
+              f"前処理 {self.preproc}{'' if inp else ' (ckpt に記録なし)'}"
+              f"{', 事前マスク (TAU) あり' if self.uses_prior else ''}"
+              f"{', トランスフォーマー ' + str(ctx.get('layers')) + '層' if ctx.get('layers') else ''}, "
               f"学習画像サイズ {self.train_hw if self.train_hw else '記録なし'})")
         if self.dev == "cpu":
             print("  ※ GPUが見つかりません。CPUでも動きますが遅くなります。")
 
-    def _forward(self, B, D):
+    def _forward(self, planes, prior):
         torch = self.torch
-        H, W = B.shape
+        H, W = planes["B"].shape
         ph, pw = (-H) % 32, (-W) % 32
-        B = cv2.copyMakeBorder(B, 0, ph, 0, pw, cv2.BORDER_REFLECT_101)
-        D = cv2.copyMakeBorder(D, 0, ph, 0, pw, cv2.BORDER_REFLECT_101)
-        x = torch.from_numpy(make_input_raw(B, D, self.mode, self.mean, self.std))[None].to(self.dev)
+        planes = {k: cv2.copyMakeBorder(v, 0, ph, 0, pw, cv2.BORDER_REFLECT_101) for k, v in planes.items()}
+        p = None
+        if self.uses_prior and prior is not None:
+            p = np.pad(prior.astype(np.float32), ((0, 0), (0, ph), (0, pw)))   # 事前マスクのパディングは 0 (学習と同じ)
+        x = make_input_raw(planes, self.mode, self.mean, self.std, p, self.uses_prior)
+        x = torch.from_numpy(x)[None].to(self.dev)
         with torch.no_grad():
-            p = self.model(x).softmax(1)[0].cpu().numpy()
-        return p[:, :H, :W]
+            out = self.model(x).softmax(1)[0].cpu().numpy()
+        return out[:, :H, :W]
 
-    def prob_raw(self, raw_bgr, bg_bgr):
-        """元画像 (BGR) + 背景画像 (BGR) -> 確率 (3, H, W)"""
-        B, D = bin_diff(raw_bgr, bg_bgr, self.preproc)
-        H, W = B.shape
+    def prob_raw(self, raw_bgr, bg_bgr, prior=None):
+        """元画像 (BGR) + 背景画像 (BGR) (+ 事前マスク (2, H, W)) -> 確率 (3, H, W)"""
+        planes = make_planes(raw_bgr, bg_bgr, self.preproc)
+        H, W = planes["B"].shape
         if self.train_hw is None or (H, W) == self.train_hw:
-            return self._forward(B, D)
+            return self._forward(planes, prior)
         th, tw = self.train_hw
         if not self._resize_notice:
             print(f"  ※ 画像サイズ {H}x{W} が学習画像 {th}x{tw} と異なるため、学習サイズに合わせて推論します")
             self._resize_notice = True
         interp = cv2.INTER_AREA if th * tw < H * W else cv2.INTER_LINEAR
-        p = self._forward(cv2.resize(B, (tw, th), interpolation=interp), cv2.resize(D, (tw, th), interpolation=interp))
+        planes = {k: cv2.resize(v, (tw, th), interpolation=interp) for k, v in planes.items()}
+        pr = None
+        if self.uses_prior and prior is not None:
+            pr = np.stack([cv2.resize(c.astype(np.float32), (tw, th), interpolation=interp) for c in prior])
+        p = self._forward(planes, pr)
         return np.stack([cv2.resize(c, (W, H), interpolation=cv2.INTER_LINEAR) for c in p])
+
+    def prob_frame(self, f, gray, prior=None):
+        """TAU の多パス用: フレーム番号 f の確率 (gray は表示用の二値化画像。U-Net の入力は元画像から作る)"""
+        raw, bg = self.raw_of(f)
+        return self.prob_raw(raw, bg, prior)
 
 
 # ======================================================================
@@ -2951,10 +3180,416 @@ def main_single():
 
 
 # ======================================================================
-# [D] 起動
+# [D] TAU の多パス検出 — 元 tau_tracker.py
+# ======================================================================
+# 元 tau_tracker.py の説明:
+# Microgap Bubble Tracking - Tracking-aware U-Net 版 (tau_tracker)
+# =====================================================================
+# U-Net に「このフレームに気泡がどこにあるはずか」(前のパスのトラックから予測した気泡マスク) を一緒に入力し、
+# 見落とし・ちらつき・くっついた気泡の境目の揺れを、前後のフレームの情報で直す。
+# モデルは 1_tau_unet_train.py で作る (入力 5チャンネル: 画像 ×3 + 事前マスクの 内部・輪郭。tau_unet.py)。
+# 前処理・気泡の分け方・トラッキング・CSV/オーバーレイ/QC は tracker3.py をそのまま使う (tracker3.py を import する)。
+#
+# 処理の流れ (オフライン。動画を何回か通す):
+#   パス0 : 事前マスクなし (= 普通の U-Net) で全フレームを検出 -> ブートストラップ -> トラッキング
+#   パス1 : フレーム t の事前マスク = パス0 のトラックから予測した t の気泡マスク
+#             t-1 と t+1 の両方にいるトラック -> t-1 のマスクを「t-1 -> t+1 の移動量の半分」だけ動かす (内挿)
+#             t-1 だけ                       -> t-1 のマスクを「t-2 -> t-1 の移動量」だけ前へ (分からなければ動かさない)
+#             t+1 だけ                       -> t+1 のマスクを「t+1 -> t+2 の移動量」だけ後ろへ
+#           t 自身の検出は使わない (誤検出が自分自身を支えないように)。
+#           観測が PRIOR_MIN_HITS 回未満 (t を除く) のトラックも使わない (1フレームだけの誤検出を広げないように)
+#           -> 事前マスク付きで全フレームを検出し直す -> 同じゲートでトラッキング
+#   パス2.. : PRIOR_PASSES まで繰り返す (検出が前のパスと同じになったら終了)。
+#             何フレームも続けて見落とした気泡は、両端のフレームから 1パスごとに1フレームずつ取り戻す
+#   最後のパスの結果を tracker3.py と同じ形式で出力する (result_tracking.csv / result_area_count.csv / オーバーレイ / qc_report.json)
+#   パスごとの CSV (OUTPUT_FOLDER/passes/pass<k>/) と QC の比較表 (pass_summary.json) も出す
+#
+# best.pt (3チャンネルのモデル) を UNET_CKPT に入れると事前マスクは使われず、全パスが tracker3.py と同じ検出になる
+# (パス1 で「前のパスと同じ」になって終了する)。動作確認用。
+# tau_unet.py, tracker3.py, piv_field.py を同じフォルダに置いて実行すること。
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+# ==============================================================
+# 1. 前のパスのトラック -> 事前マスク
+# ==============================================================
+class TrackObservations:
+    """パスの結果 (検出 + トラッキングの行) を「フレーム -> {トラックID: (検出, 行)}」に並べ替えたもの"""
+
+    def __init__(self, dets_per_frame: List[List[Detection]], rows_by_frame: Dict[int, List[dict]]):
+        self.obs: Dict[int, Dict[int, tuple]] = defaultdict(dict)
+        self.count: Counter = Counter()
+        for f, rows in rows_by_frame.items():
+            for r in rows:
+                di = r["det_index"]
+                if di is None:   # 合体で吸収された記録 (merged_into_...)
+                    continue
+                tid = r["track_id"]
+                if tid not in self.obs[f]:
+                    self.count[tid] += 1
+                self.obs[f][tid] = (dets_per_frame[f][di], r)
+
+    @staticmethod
+    def _steady(row) -> bool:
+        """この観測の直前からの移動量を気泡の速度として使ってよいか (合体/分裂・輪郭の付け替えの直後は使わない)"""
+        return row["event"] == "normal" and not row.get("hold_v")
+
+    def prior_shapes(self, t: int, mode: str = "both", min_hits: int = 2) -> List[Shape]:
+        """フレーム t の事前マスク用の気泡マスク (t 自身の検出は使わない)"""
+        prev, nxt = self.obs.get(t - 1, {}), (self.obs.get(t + 1, {}) if mode == "both" else {})
+        here = self.obs.get(t, {})
+        shapes = []
+        for tid in sorted(set(prev) | set(nxt)):
+            if self.count[tid] - (1 if tid in here else 0) < min_hits:
+                continue
+            a, b = prev.get(tid), nxt.get(tid)
+            if a and b:
+                dx, dy, _ = displacement(a[0], b[0])
+                shapes.append(shift_shape(a[0].shape, dx / 2, dy / 2))
+            elif a:
+                p2 = self.obs.get(t - 2, {}).get(tid)
+                dx, dy = (displacement(p2[0], a[0])[:2] if p2 and self._steady(a[1]) else (0.0, 0.0))
+                shapes.append(shift_shape(a[0].shape, dx, dy))
+            else:
+                n2 = self.obs.get(t + 2, {}).get(tid)
+                dx, dy = (displacement(b[0], n2[0])[:2] if n2 and self._steady(n2[1]) else (0.0, 0.0))
+                shapes.append(shift_shape(b[0].shape, -dx, -dy))
+        return shapes
+
+
+# ==============================================================
+# 2. パスの実行
+# ==============================================================
+def inst_from_dets(dets: List[Detection], H: int, W: int) -> np.ndarray:
+    """検出の一覧 -> 気泡ラベルマップ (比較用)"""
+    inst = np.zeros((H, W), np.int32)
+    for k, d in enumerate(dets, start=1):
+        m, x0, y0 = d.shape
+        inst[y0:y0 + m.shape[0], x0:x0 + m.shape[1]][m] = k
+    return inst
+
+
+def same_detections(a: List[Detection], b: List[Detection]) -> bool:
+    if len(a) != len(b):
+        return False
+    return all(da.shape[1:] == db.shape[1:] and da.shape[0].shape == db.shape[0].shape
+               and np.array_equal(da.shape[0], db.shape[0]) for da, db in zip(a, b))
+
+
+def save_prior_debug(path: str, gray: np.ndarray, prior: np.ndarray, prev_inst: np.ndarray, inst: np.ndarray,
+                     only_prev: List[int], only_now: List[int], k: int):
+    """左: 入力 + 事前マスク (青 = 内部, 黄 = 輪郭) / 右: 検出 (灰 = 全気泡, 赤 = 前のパスだけ, 緑 = このパスだけ)"""
+    left = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    if prior is not None:
+        tint = left.copy()
+        tint[prior[0] > 0.5] = (255, 120, 0)
+        left = cv2.addWeighted(left, 0.6, tint, 0.4, 0)
+        left[prior[1] > 0.5] = (0, 255, 255)
+    right = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    cs, _ = cv2.findContours((inst > 0).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(right, cs, -1, (128, 128, 128), 1)
+    for lab, ids, col in ((prev_inst, only_prev, (0, 0, 255)), (inst, only_now, (0, 255, 0))):
+        if ids:
+            cs, _ = cv2.findContours(np.isin(lab, ids).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+            cv2.drawContours(right, cs, -1, col, 2)
+    cv2.putText(left, f"pass{k} prior", (6, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+    cv2.putText(right, f"red: pass{k - 1} only {len(only_prev)}  green: pass{k} only {len(only_now)}", (6, 20),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+    cv2.imwrite(path, np.hstack([left, np.full((gray.shape[0], 4, 3), 128, np.uint8), right]))
+
+
+def detect_pass(k: int, n_frames: int, gray_of: Callable[[int], np.ndarray], detector, roi_bool,
+                prev: Optional[TrackObservations] = None, prev_dets=None, names=None, debug_dir=None,
+                on_frame=None, log=print):
+    """パス k の検出。prev (前のパスの結果) があれば事前マスクを作って入れる。
+    戻り値: (フレームごとの検出, 集計)"""
+    dets_all: List[List[Detection]] = []
+    st = {"pass": k, "prior_shapes": 0, "changed_frames": 0, "only_prev": 0, "only_now": 0, "debug_saved": 0}
+    inst_stats: Dict[str, int] = {}
+    for f in range(n_frames):
+        gray = gray_of(f)
+        H, W = gray.shape
+        prior = None
+        if prev is not None:
+            shapes = prev.prior_shapes(f, PRIOR_FROM, PRIOR_MIN_HITS)
+            st["prior_shapes"] += len(shapes)
+            prior = render_prior(shapes, H, W, getattr(detector, "edge_px", PRIOR_EDGE_PX))
+        prob = detector.prob_frame(f, gray, prior)
+        n_res0, n_ring0 = inst_stats.get("rescued", 0), inst_stats.get("ring", 0)
+        inst = unet_instances(prob, stats=inst_stats)
+        dets = instances_to_detections(inst, roi_bool)
+        dets_all.append(dets)
+        msg = ""
+        if prev_dets is not None:
+            pinst = inst_from_dets(prev_dets[f], H, W)
+            cinst = inst_from_dets(dets, H, W)
+            only_prev, only_now = unmatched_instances(pinst, cinst), unmatched_instances(cinst, pinst)
+            st["only_prev"] += len(only_prev)
+            st["only_now"] += len(only_now)
+            if only_prev or only_now:
+                st["changed_frames"] += 1
+                msg = f"  | パス{k - 1}だけ {len(only_prev)}個, パス{k}だけ {len(only_now)}個"
+                if debug_dir and st["debug_saved"] < PRIOR_DEBUG_MAX:
+                    stem = os.path.splitext(names[f])[0] if names else f"{f:06d}"
+                    save_prior_debug(os.path.join(debug_dir, f"{stem}_pass{k}.png"), gray, prior, pinst, cinst,
+                                     only_prev, only_now, k)
+                    st["debug_saved"] += 1
+        n_res, n_ring = inst_stats.get("rescued", 0) - n_res0, inst_stats.get("ring", 0) - n_ring0
+        if on_frame is not None:
+            on_frame(f, gray, prob, inst, dets)
+        name = names[f] if names else str(f)
+        log(f"  [パス{k} {name}] 検出{len(dets)}個" + (f", 事前マスクの気泡 {len(shapes)}個" if prev is not None else "")
+            + (f"  | 救済 {n_res}個" if n_res else "") + (f"  | リング気泡 {n_ring}個" if n_ring else "") + msg)
+    st["rescued"] = inst_stats.get("rescued", 0)
+    st["ring"] = inst_stats.get("ring", 0)
+    st["pair_split"] = inst_stats.get("pair_split", 0)
+    st["nested"] = inst_stats.get("nested", 0)
+    return dets_all, st
+
+
+def run_passes(n_frames: int, gray_of: Callable[[int], np.ndarray], detector, roi_bool, image_size,
+               passes: int = PRIOR_PASSES, names=None, debug_dir=None, after_pass0=None, on_frame0=None,
+               log=print):
+    """全パスを実行する。detector は prob(gray, prior) を持つもの (TauDetector など)。
+    after_pass0(dets): パス0 の検出のあと、トラッキングの前に呼ぶ (ブートストラップ用)。
+    戻り値: [(検出, トラッキングの行, 集計) ...] パス0 から順に"""
+    results = []
+    log("\n[パス0] 事前マスクなしで検出")
+    dets, st = detect_pass(0, n_frames, gray_of, detector, roi_bool, names=names, on_frame=on_frame0, log=log)
+    if after_pass0 is not None:
+        after_pass0(dets)
+    log("\n[パス0] トラッキング")
+    rows = run_laptrack(dets, image_size)
+    results.append((dets, rows, st))
+    if passes > 0 and not getattr(detector, "uses_prior", True):
+        log("  ※ このモデルは事前マスクを入力しない (3チャンネル) ので、パス1 以降もパス0 と同じ検出になります")
+    for k in range(1, passes + 1):
+        log(f"\n[パス{k}] パス{k - 1} のトラックから事前マスクを作って検出し直す")
+        prev = TrackObservations(dets, rows)
+        dets_k, st = detect_pass(k, n_frames, gray_of, detector, roi_bool, prev, dets, names, debug_dir, log=log)
+        log(f"  パス{k - 1} と違う気泡: パス{k - 1}だけ {st['only_prev']}個, パス{k}だけ {st['only_now']}個 "
+            f"({st['changed_frames']} フレーム)")
+        same = all(same_detections(a, b) for a, b in zip(dets, dets_k))
+        if same:
+            log(f"  パス{k} の検出がパス{k - 1} と全く同じなので、ここで終了します")
+            break
+        log(f"\n[パス{k}] トラッキング")
+        dets, rows = dets_k, run_laptrack(dets_k, image_size)
+        results.append((dets, rows, st))
+    return results
+
+
+# ==============================================================
+# 3. パスごとの比較 (3_tracking_qc.py の項目)
+# ==============================================================
+def load_qc_module():
+    import importlib.util
+    path = os.path.join(HERE, "3_tracking_qc.py")
+    if not os.path.exists(path):
+        return None
+    spec = importlib.util.spec_from_file_location("tracking_qc", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def pass_qc(Q, csv_path: str, roi, n_frames: int) -> dict:
+    """パスの CSV に 3_tracking_qc.py の解析をかけ、比較表の項目だけ取り出す"""
+    rows, frame_files, has_touch = Q.load_tracking_csv(csv_path)
+    flags, info = Q.analyze(rows, frame_files, has_touch, None, max_age=MAX_AGE)
+    s = Q.summarize(flags, info, roi)
+    nf = max(1, n_frames)
+    c = s["counts"]
+    dev = s["deviation_from_prediction"]
+    return {
+        "observations_per_frame": {k: round(v / nf, 2) for k, v in s["observations_by_size"].items()},
+        "n_tracks": s["n_tracks"],
+        "interior_new_per_frame": {k: round(v / nf, 3) for k, v in c["INTERIOR_NEW"].items()},
+        "interior_lost_per_frame": {k: round(v / nf, 3) for k, v in c["INTERIOR_LOST"].items()},
+        "swap_likely": dict(c["SWAP_LIKELY"]),
+        "merge_split": dict(c["MERGE_SPLIT"]),
+        "area_jump": dict(c["AREA_JUMP"]),
+        "frac_over_threshold": {k: v["frac_over_threshold"] for k, v in dev.items()},
+        "suspicious_ratio_by_area": s["suspicious_ratio_by_area"],
+    }
+
+
+def print_pass_table(summ: List[dict], log=print):
+    keys = [("observations_per_frame", "検出/フレーム", "{:.1f}"), ("interior_new_per_frame", "内部新規/フレーム", "{:.2f}"),
+            ("interior_lost_per_frame", "内部消失/フレーム", "{:.2f}"), ("swap_likely", "ID乗り移り", "{}"),
+            ("merge_split", "合体直後の分裂", "{}"), ("frac_over_threshold", "基準超え", "{:.1%}")]
+    log("\n=== パスごとの比較 (3_tracking_qc.py の項目) ===")
+    log(f"{'項目':<16}{'大きさ':<8}" + "".join(f"{'パス' + str(s['pass']):>10}" for s in summ))
+    for key, label, fmt in keys:
+        for cls in ("tiny", "small", "large"):
+            vals = [s["qc"].get(key, {}).get(cls) for s in summ]
+            log(f"{label:<16}{cls:<8}" + "".join(f"{(fmt.format(v) if v is not None else '-'):>10}" for v in vals))
+    log(f"{'トラック数':<24}" + "".join(f"{s['qc']['n_tracks']:>10}" for s in summ))
+    log(f"{'疑わしい割合(面積)':<20}" + "".join(f"{s['qc']['suspicious_ratio_by_area']:>10.2%}" for s in summ))
+
+
+# ==============================================================
+# 4. メイン
+# ==============================================================
+def set_detection_stats(st: dict):
+    """qc_report.json の used_params.UNET.detection に入れる集計"""
+    DETECTION_STATS.clear()
+    DETECTION_STATS["mode"] = UNET_INSTANCE_MODE
+    if UNET_INSTANCE_MODE == "hybrid":
+        DETECTION_STATS["rescued"] = st.get("rescued", 0)
+    if UNET_RING_RESCUE and UNET_INSTANCE_MODE != "seed":
+        DETECTION_STATS["ring"] = st.get("ring", 0)
+        DETECTION_STATS["pair_split"] = st.get("pair_split", 0)
+    if UNET_DROP_NESTED:
+        DETECTION_STATS["nested"] = st.get("nested", 0)
+    DETECTION_STATS["pass"] = st["pass"]
+
+
+def main_tau():
+    global IMAGE_FOLDER, BACKGROUND_PATH
+    print(f"実行中のファイル: {os.path.abspath(__file__)}")
+    image_folder = IMAGE_FOLDER or IMAGE_FOLDER
+    bg_path = BACKGROUND_PATH or BACKGROUND_PATH
+    IMAGE_FOLDER, BACKGROUND_PATH = image_folder, bg_path
+    print(f"  モデル {UNET_CKPT}, 気泡の分け方 \"{UNET_INSTANCE_MODE}\", 事前マスク付きの検出 {PRIOR_PASSES}回 "
+          f"(予測元 {PRIOR_FROM}, 観測回数 >= {PRIOR_MIN_HITS}), 出力先 {OUTPUT_FOLDER}")
+    if PRIOR_FROM not in ("both", "forward"):
+        raise ValueError(f'PRIOR_FROM は "both" / "forward": {PRIOR_FROM!r}')
+    unet_instances(np.zeros((3, 8, 8), np.float32))   # 分け方の綴りを最初に確認
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    cache_dir = os.path.join(OUTPUT_FOLDER, "_cache_processed")
+    os.makedirs(cache_dir, exist_ok=True)
+
+    print("U-Netモデルをロード中...")
+    detector = RawDetector(UNET_CKPT, TRAIN_IMAGE_HW)
+
+    bg_img = cv2.imread(bg_path)
+    if bg_img is None:
+        raise FileNotFoundError(f"背景画像が見つかりません: {bg_path}")
+    image_files = []
+    for ext in ('*.png', '*.jpg', '*.jpeg', '*.bmp', '*.tif', '*.tiff'):
+        image_files.extend(glob.glob(os.path.join(image_folder, ext)))
+    image_files = sorted(p for p in set(image_files)
+                         if os.path.normcase(os.path.abspath(p)) != os.path.normcase(os.path.abspath(bg_path)))
+    if not image_files:
+        raise FileNotFoundError(f"'{image_folder}' フォルダに画像がありません。")
+
+    # 前処理の値を最初の1枚で決める (tracker3.py と同じ UI)。読めない画像は除く
+    tv, bv, mv = detector.preproc   # U-Net の入力と同じ値 (ckpt の記録 / PREPROC_FIXED)
+    use_ui = False
+    files, first = [], None
+    for p in image_files:
+        if cv2.imread(p) is None:
+            print(f"  -> {os.path.basename(p)}: 画像の読み込みに失敗、スキップ")
+            continue
+        if first is None:
+            _, first, tv, bv, mv = preprocess_image(p, bg_img, filename=os.path.basename(p), show_ui=use_ui,
+                                                       current_thresh_val=tv, current_bright_val=bv,
+                                                       current_median_val=mv)
+        files.append(p)
+    print(f"合計{len(files)}枚の画像。前処理: Noise={tv}, Brightness={bv}, Median={mv}")
+    roi_rect = ROI_RECT
+    if ENABLE_ROI and roi_rect is None:
+        roi_rect = resolve_roi(first)
+    h, w = first.shape[:2]
+    image_size = (h, w)
+    roi_bool = make_roi_mask(h, w, roi_rect if ENABLE_ROI else None).astype(bool)
+    names = [os.path.basename(p) for p in files]
+    detector.raw_of = lambda f: (cv2.imread(files[f]), bg_img)   # U-Net の入力は元画像 + 背景から作る
+
+    def gray_of(f):
+        _, proc, _, _, _ = preprocess_image(files[f], bg_img, show_ui=False, current_thresh_val=tv,
+                                               current_bright_val=bv, current_median_val=mv)
+        if proc.shape[:2] != image_size:
+            raise ValueError(f"{names[f]}: 画像サイズ {proc.shape[:2]} が最初の画像 {image_size} と違います")
+        return cv2.cvtColor(proc, cv2.COLOR_BGR2GRAY)
+
+    def on_frame0(f, gray, prob, inst, dets):   # パス0: オーバーレイ用の前処理画像を保存、最初のフレームは入力チェック
+        cv2.imwrite(os.path.join(cache_dir, names[f]), cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR))
+        if f == 0:
+            check_unet_input(gray, prob, inst, detector, names[f])
+
+    def after_pass0(dets):
+        if ENABLE_BOOTSTRAP:
+            run_bootstrap_calibration(dets, names, cache_dir, image_size)
+
+    debug_dir = os.path.join(OUTPUT_FOLDER, "prior_debug") if SAVE_PRIOR_DEBUG else None
+    for d in ("prior_debug", "passes"):   # 前回の実行の残り (パスの数が違うと混ざる) を消す
+        shutil.rmtree(os.path.join(OUTPUT_FOLDER, d), ignore_errors=True)
+    if debug_dir:
+        os.makedirs(debug_dir)
+    results = run_passes(len(files), gray_of, detector, roi_bool, image_size, PRIOR_PASSES, names, debug_dir,
+                         after_pass0, on_frame0)
+
+    # パスごとの CSV と比較
+    pp = {"preprocess": {"noise_cut": tv, "brightness": bv, "median": mv}}
+    tau_params = {"UNET_CKPT": UNET_CKPT, "input": {"mode": detector.mode, "preproc": list(detector.preproc)}, "uses_prior": detector.uses_prior, "PRIOR_PASSES": PRIOR_PASSES,
+                  "PRIOR_FROM": PRIOR_FROM, "PRIOR_MIN_HITS": PRIOR_MIN_HITS, "prior_edge_px": detector.edge_px,
+                  "passes_run": len(results)}
+    Q = load_qc_module() if SAVE_PASS_RESULTS else None
+    summ = []
+    n = len(files)
+    roi_q = tuple(roi_rect) if (ENABLE_ROI and roi_rect is not None) else None
+    for dets, rows, st in results:
+        rows = compute_velocity_ema(rows, n)
+        entry = {"pass": st["pass"], "detection": st}
+        if SAVE_PASS_RESULTS:
+            d = os.path.join(OUTPUT_FOLDER, "passes", f"pass{st['pass']}")
+            os.makedirs(d, exist_ok=True)
+            write_tracking_csv(os.path.join(d, "result_tracking.csv"), rows, names, dets)
+            rep = qc_report(rows, n)
+            set_detection_stats(st)
+            rep["used_params"] = dict(used_params(roi_rect, pp["preprocess"]), TAU={**tau_params, "pass": st["pass"]})
+            with open(os.path.join(d, "qc_report.json"), "w", encoding="utf-8") as fp:
+                json.dump(rep, fp, ensure_ascii=False, indent=2)
+            if Q is not None:
+                entry["qc"] = pass_qc(Q, os.path.join(d, "result_tracking.csv"), roi_q, n)
+        summ.append(entry)
+    if summ and all("qc" in s for s in summ):
+        print_pass_table(summ)
+    with open(os.path.join(OUTPUT_FOLDER, "pass_summary.json"), "w", encoding="utf-8") as fp:
+        json.dump(summ, fp, ensure_ascii=False, indent=2)
+
+    # 最後のパスを tracker3.py と同じ形式で出力
+    dets, rows, st = results[-1]
+    total_areas = [float(sum(d.area_in_roi for d in ds)) for ds in dets]
+    roi_counts = [sum(1 for d in ds if d.in_roi) for ds in dets]
+    tracking_csv_path = os.path.join(OUTPUT_FOLDER, "result_tracking.csv")
+    area_csv_path = os.path.join(OUTPUT_FOLDER, "result_area_count.csv")
+    write_tracking_csv(tracking_csv_path, rows, names, dets)
+    write_area_count_csv(area_csv_path, names, total_areas, roi_counts)
+    draw_overlays(cache_dir, OUTPUT_FOLDER, rows, dets, names, total_areas, roi_counts,
+                     roi_rect=(roi_rect if ENABLE_ROI else None))
+    set_detection_stats(st)
+    report = qc_report(rows, n)
+    report["used_params"] = dict(used_params(roi_rect, pp["preprocess"]), TAU=tau_params)
+    with open(os.path.join(OUTPUT_FOLDER, "qc_report.json"), "w", encoding="utf-8") as fp:
+        json.dump(report, fp, ensure_ascii=False, indent=2)
+
+    print(f"\n最後のパス (パス{st['pass']}) の結果を保存しました:")
+    print(f"  - トラッキング: {tracking_csv_path}")
+    print(f"  - 面積・個数:   {area_csv_path}")
+    print(f"  - オーバーレイ / qc_report.json: {OUTPUT_FOLDER}")
+    if SAVE_PASS_RESULTS:
+        print(f"  - パスごとの結果: {os.path.join(OUTPUT_FOLDER, 'passes')}  (3_tracking_qc.py でそれぞれ確認できる)")
+    if debug_dir and any(s["detection"].get("debug_saved") for s in summ):
+        print(f"  - 検出が変わったフレームの確認画像: {debug_dir}  (左: 事前マスク / 右: 赤 = 前のパスだけ, 緑 = このパスだけ)")
+    print("\n全ての処理が完了しました!")
+
+
+# ======================================================================
+# [E] 起動
 # ======================================================================
 def main():
-    main_single()
+    """事前マスク (TAU) を入力するモデルで PRIOR_PASSES > 0 なら多パス (main_tau)、それ以外は 1回 (main_single)"""
+    import torch
+    ck = torch.load(UNET_CKPT, map_location="cpu")
+    _, prior, _ = ckpt_layout(ck, ck["state_dict"])
+    if prior and PRIOR_PASSES > 0:
+        print("事前マスク (TAU) を入力するモデルなので、前のパスの追跡結果から事前マスクを作って検出し直します")
+        return main_tau()
+    return main_single()
 
 
 if __name__ == "__main__":

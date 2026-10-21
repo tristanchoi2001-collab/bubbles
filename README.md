@@ -22,7 +22,10 @@
 | 2 | `2_raw_track.py` | 검출·추적. `UNET_CKPT`, `IMAGE_FOLDER`, `BACKGROUND_PATH`, `OUTPUT_FOLDER` → `result_tracking.csv` 등 |
 | 3 | `3_tracking_qc.py` | 추적 점검. `TRACKING_CSV` = 2의 `result_tracking.csv` |
 
-- `INPUT_MODE`: `'bin+diff'`(권장) / `'diff'` / `'bin'`(비교용). 입력 방식과 전처리 값은 best.pt에 기록되어 `2_raw_track.py`가 자동으로 맞춘다.
+- `INPUT_MODE`: `'bin+sign'`(기본, 이진화 + 어두워진 분 + 밝아진 분) / `'bin+diff'` / `'diff'` / `'bin'`(비교용).
+- 추가 부품 (on/off): `CTX_LAYERS`(작은 트랜스포머, 0 = 끔, 시도 2), `USE_PRIOR`(TAU, 앞뒤 프레임의 검출을 함께 입력).
+  새로 붙인 부분의 가중치는 0에서 시작하므로 학습 전에는 시작 모델과 같은 결과다. 학습 로그의 `入口の重み` / `トランスフォーマー出口`가 0 근처에 머물면 그 부품은 쓰이지 않은 것이다.
+- 입력 방식·부품·전처리 값은 best.pt에 기록되어 `2_raw_track.py`가 자동으로 맞춘다. TAU 모델이면 `2_raw_track.py`가 여러 번 다시 검출한다(`PRIOR_PASSES`).
 - 지금 이진화 best.pt를 `2_raw_track.py`에 넣으면 `binarized/2_bin_track.py`와 같은 결과가 나온다.
 
 ## binarized/ — 이진화
