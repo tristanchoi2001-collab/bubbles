@@ -703,9 +703,35 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     → 재촬영만으로 거대 슬러그의 안/밖 단서가 생긴다는 보장은 없다. 시험 촬영 1장(원본 + 배경, 거대 슬러그 포함)을 먼저 재고 나서 라벨·학습을 정한다.
   - parity 구제를 구현할 때의 미해결 위험: "가장 큰 영역 = 액체(기준)" 가정. 슬러그가 화면의 절반을 넘으면(사용자 CSV 680~696에 약 31만 px = 55%) 기준이 기체가 되어 판정이 뒤집힌다. 기준 선택 규칙(작은 기포를 많이 품은 영역, 낮은 p_in 등)이 필요하다.
 
+## 철(불투명) 배경 채널 + steel/ 폴더 (2026-10-22, 사용자 요청)
+- 사용자 계획: 앞으로 배경이 불투명한 철(溝 있는 금속) 채널에서도 검출한다. 시험 사진 images/44.jpg(원본, 1920×1200, 기포 1개) + 45.jpg(배경). 43.webp는 표시용 캡처.
+- 측정 (scratchpad/steel, 학습 없음)
+  - 노출: 중앙값 134, 1~99% 62~187, 포화 0%. 원본·배경 정합 오차 < 0.1 px(위상 상관).
+  - 원본이 배경보다 전체로 +4.9 계조 밝다(조명 변화, gain 피팅 1.029·bg + 1.08). 보정 후 액체 차분 σ 3.2, |차| p99 9.5. 얼룩(물 자국)은 원본·배경에 같이 있어 빠진다.
+  - 배경 JPEG이 더 거칠다(8 px 블록 비 6.3 vs 원본 2.8) → 배경은 무압축 저장 권장.
+  - **기포(직경 약 115 px) 내부는 액체보다 약 −40 계조**(r < 32 px, σ의 약 12배). 5×5 평균 차분으로 내부/액체 AUC 1.00(원본 밝기만으로는 0.93).
+    투명 채널(닫힌 기포 −5, 거대 슬러그 ≈0 또는 +)과 다르다. 링은 바깥 밝음(+15)·안쪽 어두움(−17~−19)이 섞인다.
+  - 파이프라인 평면(15,4,0): B와 DK에서 **기포 내부가 흰 원판**(평균 141~160), DB는 내부 0·링 일부만. 즉 철 채널 B는 "흰 링 + 검은 속"이 아니라 "흰 원판"이다 → 투명 채널로 학습한 모델·예전 이진화 데이터와 외형이 다르다.
+  - 보정 없으면 DB가 액체의 92% 화소에서 0이 아님(평균 20, ×4). 'offset' 맞춤 후 평균 4.8, B 액체 오검 0.30→0.05%.
+  - 한계: 작은 기포 1개뿐. 거대 슬러그 내부도 어두운지는 모른다(투명 채널에서는 크기에 따라 달랐다). 슬러그가 있는 시험 프레임이 필요하다.
+- `steel/` = raw/(commit bb568f7)를 떼어 낸 **고정 사본**. 사용자 요청: "parity를 강하게 적용하기 전에 철 채널 검출 코드는 따로 빼서 남겨 둔다".
+  - 파일: `1_steel_train.py`, `2_steel_track.py`(raw/의 1·2를 복사해 이름만 바꿈), `3_tracking_qc.py`, `4_link_audit.py`(그대로 복사).
+  - **tools/build_raw.py로 만들지 않는다.** raw/·binarized/의 이후 변경은 들어오지 않는다. 고칠 때는 steel/ 파일을 직접 고친다(1과 2의 make_planes/match_background는 같이).
+  - raw/와 다른 점: `BG_MATCH`(1_steel_train 설정, 기본 'offset' / 'gain' / None)뿐이다.
+    - `match_background(raw, bg, mode)`: 'offset'은 b = median(원본−배경)에서 시작해 |잔차| > max(3·MAD, 3)인 화소(기포)를 빼고 평균을 3번 다시 낸다. 'gain'은 같은 방식의 최소제곱 a·bg + b(배경 무늬가 약하면 a가 작게 나오는 회귀 희석 주의).
+      기포가 화면의 절반 미만이면 액체 값이 된다. a가 0.5~2 밖이면 맞추지 않는다. 20만 화소로 솎아서 피팅.
+    - 학습: DST 평면을 맞춘 배경으로 만든다. DST/meta.json과 ckpt `input.bg_match`에 기록하고, BG_MATCH가 바뀌면 REBUILD_DATASET=False여도 다시 만든다.
+    - 검출: `RawDetector`가 ckpt의 `input.bg_match`를 읽어 매 프레임 `prob_raw`에서 맞춘다(단일·TAU 경로 공통). 기록 없는 ckpt는 맞추지 않음 = raw/와 같은 확률. qc_report의 입력 기록에 bg_match.
+      오버레이·_cache_processed의 B(preprocess_image)는 맞추지 않은 배경으로 만든다(표시용, 검출에는 영향 없음).
+    - 기본값 차이: DST 'dataset_steel', OUT 'runs/steel', OUTPUT_FOLDER ...output_steel. OLD_BIN_SRC는 None 권장(외형이 다름).
+  - 실제 사진(44/45)에서 'offset' 피팅 b = 4.92, 'gain' a = 1.030 b = 1.06 → 앞의 측정과 일치.
+  - 테스트 `tests/test_steel.py` a~d: a 피팅(화면 40% 어두운 띠가 있어도), b None이면 raw/와 비트 동일·'offset'이면 DB가 액체에 안 깔림·1과 2의 함수 동일,
+    c 기록 없는 ckpt = raw/ RawDetector, 'offset' ckpt는 조명 +8에도 확률 변화가 보정 없는 것의 1/4 미만, 모르는 값 오류, d 학습→ckpt/meta 기록→재생성→2_steel_track main 끝까지.
+
 ## 저장소 구성 (2026-10-21 정리, 사용자 요청: "앞으로 쓸 것만 모으고 옛날 파일은 old/에 보존")
 - 사용자용 안내는 `README.md`(한국어). 폴더 하나만 PC에 복사하면 동작하게 했다.
 - `raw/` — 비이진화 버전(앞으로 주로 사용). `1_raw_train.py`, `2_raw_track.py`, `3_tracking_qc.py`, `4_link_audit.py`. 전부 `tools/build_raw.py`가 생성(직접 고치지 않음).
+- `steel/` — 철(불투명) 배경 채널용 고정 사본(2026-10-22, 위 절). 생성하지 않고 직접 고친다.
 - `binarized/` — 이진화 버전. `0_prelabel.py`(손으로 씀), `1_bin_train.py`, `2_bin_track.py`, `3_tracking_qc.py`, `4_link_audit.py`(손으로 씀, raw/에 복사). **이 폴더가 이진화 코드의 기준이며 직접 고친다.** 고친 뒤 `python tools/build_raw.py`.
   - `3_tracking_qc.py`의 기준은 `binarized/3_tracking_qc.py`(raw/는 복사본).
   - 1_bin_train.py와 2_bin_track.py에 같은 이름으로 들어 있는 TAU/모델 부품(synth_prior, degrade_image, TauDetector, build_model 등, 원래 tau_unet.py)은 **두 파일을 같이 고친다.** `tests/test_binarized.py` f가 같은지 확인한다(의도한 차이 main, extract_instances, HERE만 예외).
@@ -714,9 +740,9 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `tests/` — 지금 코드의 테스트.
   - `bundles.py`: binarized/의 1파일 버전을 원래 모듈 이름(tracker3, piv_field, tau_unet, tau_tracker, watershed, dot_labels)으로 import하게 한다. `importlib.reload`가 되도록 binarized/를 sys.path에 넣고 이름으로 import. 같은 이름의 다른 모듈(old/)이 이미 읽혀 있으면 오류로 멈춘다.
   - `test_events.py`, `test_instances.py`, `test_tau.py`, `test_dots.py`: 원래 테스트를 bundles 경유로 binarized/에 대해 돈다. 바꾼 곳: import 경로, 학습 스크립트 경로(`bundles.TRAIN_PATH`), dot의 OUT/REVIEW/main → DOT_OUT/DOT_REVIEW/main_dots, 학습 main → main_train, test_tau f는 USE_PRIOR=True(번들 기본값 False).
-  - `test_qc.py`(binarized/3_tracking_qc.py), `test_prelabel.py`, `test_binarized.py`(번들 전용 d STEP 연결, e 3ch/5ch 디스패치만 남김), `test_raw.py`, `test_gates.py`(게이트 보정), `test_link_audit.py`(연결 감사), `fake_detector.py`(테스트용 사본).
+  - `test_qc.py`(binarized/3_tracking_qc.py), `test_prelabel.py`, `test_binarized.py`(번들 전용 d STEP 연결, e 3ch/5ch 디스패치만 남김), `test_raw.py`, `test_gates.py`(게이트 보정), `test_link_audit.py`(연결 감사), `test_steel.py`(steel/), `fake_detector.py`(테스트용 사본).
 - `old/` — 보관(`old/README.md`에 목록). tracker2/3, watershed, piv_field, tau_unet, tau_tracker, 1_tau_unet_train, dot_labels, 3_tracking_qc(정리 시점 사본), fake_detector, sim_compare, sim_piv, qc_compare, reference/piv_prior.py, docs/PIV_TASK.md, tools/build_binarized.py, tests/.
   - `cd old && python -B tests/test_events.py` 등으로 예전 테스트가 그대로 돈다(정리 시점에 events 11, instances 14, qc 12, tau 7, dots 8 모두 통과). old/tests/test_binarized.py와 old/tools/build_binarized.py는 old/binarized/를 찾으므로 동작하지 않는다.
   - 위의 각 절에 나오는 `tracker3.py`, `docs/PIV_TASK.md`, `reference/piv_prior.py` 등은 이제 old/ 아래 경로다.
 - 테스트 실행 (루트에서): `python -B tests/test_events.py`, `tests/test_qc.py`, `tests/test_instances.py`, `tests/test_tau.py`, `tests/test_dots.py`,
-  `tests/test_binarized.py`, `tests/test_prelabel.py`, `tests/test_raw.py`, `tests/test_gates.py`, `tests/test_link_audit.py`. 또는 `python -m pytest`(루트의 pytest.ini가 tests/만 모은다. old/tests는 이름이 겹치므로 `cd old`에서 따로). 정리 후 63개 통과.
+  `tests/test_binarized.py`, `tests/test_prelabel.py`, `tests/test_raw.py`, `tests/test_gates.py`, `tests/test_link_audit.py`, `tests/test_steel.py`. 또는 `python -m pytest`(루트의 pytest.ini가 tests/만 모은다. old/tests는 이름이 겹치므로 `cd old`에서 따로). 정리 후 63개 통과.
