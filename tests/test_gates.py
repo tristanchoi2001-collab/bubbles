@@ -6,6 +6,7 @@
        SPACING_GATE_FRAC = 0.7     : 奪わない (隣の気泡は新規トラック)。ほかの気泡のトラックは両方で同じ
   b) pair_cost の対象: 小さい気泡どうし・速度既知 (または PIV の初速度あり) だけ。
        大きい気泡、画面端に接する気泡、速度未知のトラック、予測に近い検出 には掛からない
+     b2) 見失っている間 (k フレームぶり) は (1 + COAST_GATE_GROWTH × (k-1)) 倍に広げる
   c) set_neighbor_distances: 同じフレームで一番近い別の検出 (中心) までの距離
   d) BOOTSTRAP_CHAIN_FRAMES = 3 は従来の計算 (3フレーム連続・前フレームと同じ速度の予測) と同じ値。
      5 はトラッカーと同じ予測 (最初の移動量 -> VELOCITY_EMA_ALPHA の EMA) からのずれ
@@ -134,6 +135,19 @@ def test_b_pair_cost_scope():
         assert T.pair_cost(t, d, 1) is not None, "0 で無効"
 
 
+def test_b2_coasting_reconnect():
+    """2フレーム見失った後 (k=2) は間隔ゲートも位置ゲートと同じく広げる: 0.7 × 14 = 9.8 < ずれ 12 <= 0.7 × 1.5 × 14 = 14.7"""
+    with settings(**BASE, SPACING_GATE_FRAC=0.7, SPACING_GATE_MAX_AREA=500, COAST_GATE_GROWTH=0.5):
+        a = detections([(100, 120, 3)])[0]
+        t = _track_from(a)
+        b = detections([(112, 120 - 12, 3)])[0]   # k=2 の予測 (100, 108) から x に 12 px
+        b.nn_dist = 14.0
+        assert T.pair_cost(t, b, 2) is not None, "見失い後 (k=2) の再接続は広げたゲートでつなぐ"
+        b2 = detections([(112, 120 - 6, 3)])[0]   # k=1 なら同じずれ 12 px は切る
+        b2.nn_dist = 14.0
+        assert T.pair_cost(t, b2, 1) is None
+
+
 def test_c_neighbor_distances():
     ds = detections([(50, 50, 3), (70, 50, 3), (50, 90, 3)])
     T.set_neighbor_distances(ds)
@@ -222,12 +236,14 @@ def test_d_bootstrap_chain():
         _, resid5, _, q5, _ = T._bootstrap_collect_stats(dets_pf, (400, W))
     ref5 = _ema_resid(dets_pf, 5)
     assert len(ref5) > len(ref3) and np.allclose(sorted(resid5), ref5), (len(resid5), len(ref5))
-    assert q5["chains"] == len(resid5)
+    assert q5["resid_samples"] == len(resid5) and q3["resid_samples"] == len(resid3)
+    assert q5["chains"] == q3["chains"] == len(ref3), "鎖の数 (独立な標本) は鎖の長さによらない"
     # 位置の揺らぎ (測定誤差) だけなら EMA の予測のほうがずれが小さい (等速の予測の約 0.75 倍)
     assert np.percentile(resid5, 95) < np.percentile(resid3, 95), (np.percentile(resid5, 95), np.percentile(resid3, 95))
 
 
-TESTS = [test_a_spacing_gate_stops_neighbour_theft, test_b_pair_cost_scope, test_c_neighbor_distances,
+TESTS = [test_a_spacing_gate_stops_neighbour_theft, test_b_pair_cost_scope, test_b2_coasting_reconnect,
+         test_c_neighbor_distances,
          test_d_bootstrap_chain]
 
 if __name__ == "__main__":

@@ -147,6 +147,8 @@ SPACING_GATE_FRAC = 0.7      # 小さい気泡どうし (トラックも検出�
                              # tracker2 (v2) の間隔ゲートと同じ考え方。v2 は大きさを問わず掛けたので、スラグのゲートが隣の小さい気泡で
                              # 狭まって途切れた -> ここでは小さい気泡どうしだけ。速度既知のトラックと PIV の初速度があるトラックだけに
                              # 掛ける (速度未知のトラックは予測が「静止」なので、1フレームの移動量が間隔に近い高速の条件で全部切れる)。
+                             # 見失っている間 (k フレームぶり) は位置ゲートと同じく (1 + COAST_GATE_GROWTH × (k-1)) 倍に広げる
+                             # (予測のずれが k とともに大きくなるので、広げないと抜けた後の正しい再接続まで切る: 合成データで確認)。
                              # 画面端に接する気泡は対象外。0 で無効
 SPACING_GATE_MAX_AREA = 500  # 上の「小さい気泡」の面積の上限 (px。QC の tiny + small)
 EDGE_TOUCH_PX = 3            # 外接矩形が画面端からこの px 以内なら「画面端に接している (切れた気泡)」とみなす。
@@ -1983,7 +1985,8 @@ def pair_cost(t: Track, d: Detection, frame_idx: int) -> Optional[float]:
         return None
     if (SPACING_GATE_FRAC > 0 and (t.v_known or t.prior_src == "piv") and not touching
             and max(t.area, d.area) < SPACING_GATE_MAX_AREA
-            and resid > SPACING_GATE_FRAC * d.nn_dist and iou_pred < OVERLAP_ACCEPT_IOU):
+            and resid > SPACING_GATE_FRAC * (1.0 + COAST_GATE_GROWTH * (k - 1)) * d.nn_dist
+            and iou_pred < OVERLAP_ACCEPT_IOU):
         return None   # 小さい気泡: 隣の検出までの距離に比べて予測から離れすぎ (本物が抜けて隣の気泡を奪う形)
     size_w = min(1.0, min(t.area, d.area) / SHAPE_AREA_REF)
     if smaller_cut:   # 切れ端と全体の比較になるので、面積と形は判断材料にしない
@@ -2806,7 +2809,7 @@ def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]], image_
                         (USE_PIV_PRIOR のときだけ。速度場が有効な場所の気泡だけ)
     を返す。静止した気泡が大半でも、少数の速い気泡の移動量が MAX_SPEED に反映されるよう高いパーセンタイルを使う。"""
     total_frames = len(detections_per_frame)
-    quality = {"pairs": 0, "chains": 0, "match_fail_rate": 0.0}
+    quality = {"pairs": 0, "chains": 0, "resid_samples": 0, "match_fail_rate": 0.0}
     if total_frames < 2:
         return [], [], [], quality, []
     seq = make_piv_sequence(detections_per_frame, image_size)
@@ -2826,6 +2829,7 @@ def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]], image_
 
     speed_list, resid_list, area_ratio_list = [], [], []
     total_candidates = 0
+    n_chains = 0
     for f in sample_frames:
         A, B = detections_per_frame[f], detections_per_frame[f + 1]
         p = pairs_of(f)
@@ -2858,6 +2862,7 @@ def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]], image_
         for obs in chains.values():
             if len(obs) < 3:
                 continue
+            n_chains += 1
             vx, vy, _ = displacement(obs[0], obs[1])
             for k in range(2, len(obs)):
                 dx, dy, _ = displacement(obs[k - 1], obs[k])
@@ -2868,21 +2873,22 @@ def _bootstrap_collect_stats(detections_per_frame: List[List[Detection]], image_
 
     quality = {
         "pairs": len(speed_list),
-        "chains": len(resid_list),
+        "chains": n_chains,                  # 3フレーム以上つながった鎖の数 (独立な標本の数)
+        "resid_samples": len(resid_list),    # 予測ずれの標本数 (1本の鎖から最大 BOOTSTRAP_CHAIN_FRAMES - 2 個)
         "match_fail_rate": (1.0 - len(speed_list) / total_candidates) if total_candidates else 0.0,
     }
     return speed_list, resid_list, area_ratio_list, quality, piv_resid_list
 
 
-def _bootstrap_compute_params(speed_list, resid_list, area_ratio_list, piv_resid_list=None):
+def _bootstrap_compute_params(speed_list, resid_list, area_ratio_list, piv_resid_list=None, n_chains=None):
     """収集した分布からゲートパラメータを算出する(パーセンタイル × 安全係数)。
     PIV_GATE は POS_GATE 〜 MAX_SPEED の範囲 (PIV の予測は速度既知のトラックの予測より粗いので POS_GATE より狭くしない)"""
     if not speed_list:
         return None
-    if len(resid_list) >= 10:
+    if len(resid_list) >= 10 and (n_chains is None or n_chains >= 10):
         pos_gate = max(BOOTSTRAP_MIN_JUMP,
                        float(np.percentile(resid_list, BOOTSTRAP_RESID_PERCENTILE)) * BOOTSTRAP_JUMP_MARGIN)
-    else:   # 3フレーム連続の対応が少なすぎる -> 現在値を維持
+    else:   # 3フレーム以上つながった対応 (鎖) が少なすぎる -> 現在値を維持
         pos_gate = POS_GATE
     max_speed = max(2.0 * pos_gate,
                     float(np.percentile(speed_list, BOOTSTRAP_SPEED_PERCENTILE)) * BOOTSTRAP_JUMP_MARGIN)
@@ -2985,7 +2991,7 @@ def _bootstrap_show_approval_window(speed_list, resid_list, area_ratio_list, aut
         ax.set_title(f"frame {f_idx}", fontsize=11)
         ax.axis("off")
 
-    q_txt = (f"pairs={quality['pairs']}   chains={quality['chains']}   "
+    q_txt = (f"pairs={quality['pairs']}   chains={quality['chains']} (resid samples={quality['resid_samples']})   "
              f"match fail={quality['match_fail_rate']*100:.0f}%")
     fig.text(0.05, 0.02, q_txt, fontsize=10, color="#444")
 
@@ -2998,14 +3004,15 @@ def run_bootstrap_calibration(detections_per_frame, filenames, cache_dir, image_
     print("\n[ブートストラップ] 映像全体の均等サンプルから移動量/予測ずれ/面積比の統計を収集します...")
     speed_list, resid_list, area_ratio_list, quality, piv_resid_list = _bootstrap_collect_stats(
         detections_per_frame, image_size)
-    auto_params = _bootstrap_compute_params(speed_list, resid_list, area_ratio_list, piv_resid_list)
+    auto_params = _bootstrap_compute_params(speed_list, resid_list, area_ratio_list, piv_resid_list,
+                                            n_chains=quality["chains"])
 
     if auto_params is None:
         print("  [ブートストラップ] 有効なマッチングサンプルがないため自動算出をスキップします。現在の手動値を維持します。")
         return
 
-    print(f"  確実な対応ペア: {quality['pairs']}個, 予測ずれの標本 (連続 {max(3, int(BOOTSTRAP_CHAIN_FRAMES))} フレームまで): "
-          f"{quality['chains']}個, "
+    print(f"  確実な対応ペア: {quality['pairs']}個, 3フレーム以上つながった鎖: {quality['chains']}本 "
+          f"(予測ずれの標本 {quality['resid_samples']}個, 1本あたり最大 {max(1, int(BOOTSTRAP_CHAIN_FRAMES) - 2)}個), "
           f"対応なし率: {quality['match_fail_rate']*100:.0f}%")
     if piv_resid_list:
         print(f"  PIV 予測のずれ (直径分を除く): 中央値 {np.median(piv_resid_list):.1f}px, "

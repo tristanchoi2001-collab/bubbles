@@ -576,10 +576,62 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   11. (선택) SAM 2 비디오, DINOv2 탐침, Trackastra zero-shot을 추론만으로.
 - 인용 검증 한계: 이번 실행에서 arXiv·DOI 호스트가 프록시에서 막혔다. 보고서의 "미검증" 문헌은 논문에 쓰기 전에 원문을 확인한다.
 
+## 게이트 보정 + 연결 감사 도구 (2026-10-22, 사용자 요청 "3, 2번 진행", 로드맵 6·3)
+- 트래커 (binarized/2_bin_track.py → raw/ 생성, 전부 플래그)
+  - `SPACING_GATE_FRAC = 0.7` / `SPACING_GATE_MAX_AREA = 500` (0이면 종래)
+    - 작은 기포끼리(트랙·검출 모두 500 px 미만) 연결할 때 적용한다. 대상은 속도 기지 트랙 또는 PIV 초속 트랙이다.
+    - 예측 오차가 "그 검출의 같은 프레임 최근접 검출 거리 × 0.7 × (1 + COAST_GATE_GROWTH × (k−1))"를 넘으면 잇지 않는다.
+    - `Detection.nn_dist`는 `set_neighbor_distances`가 update 때 계산한다. 화면 끝, 속도 미지 트랙, 큰 기포는 대상이 아니다.
+    - k(견실 프레임 수) 배율은 독립 검토로 추가했다. 배율이 없으면 끊긴 뒤의 올바른 재연결까지 잘랐다.
+      합성 fast_lateral에서 tiny 트랙/기포가 2.12 → 1.97이 됐다. 대신 k>1에서 게이트를 끄면 fast_static에서 잘못 연결이 늘었다.
+  - `BOOTSTRAP_CHAIN_FRAMES = 5` (3이면 종래)
+    - POS_GATE를 확실한 대응을 5프레임까지 이은 사슬에서, 트래커와 같은 예측(첫 이동량 → EMA)의 오차로 정한다.
+    - 종래에는 3프레임·등속 예측이었다. 승인 창과 로그에는 사슬 수와 오차 표본 수를 따로 표시한다.
+    - POS_GATE 자동값을 유지할지 판정하는 기준(≥ 10)은 사슬 수로 본다.
+  - 실데이터 731~790(저장 인스턴스, U-Net 없음)에서 POS_GATE가 12.4 → 16.1로 **넓어졌다**.
+    EMA 예측 오차가 등속 예측보다 컸기 때문이다(실제 속도 변화). 합성의 측정 잡음만 있는 경우에는 반대로 좁아진다.
+  - 실데이터 QC(종래 → 새 기본값, tiny/small)
+    - SWAP 64/70 → 50/57.
+    - 내부 신규 231/202 → 230/194, 내부 소실 210/154 → 200/160.
+    - 트랙 648 → 636. QC 플래그라 GT가 아니다.
+  - 합성 sim_piv(정답 ID, 시드 3개, 첫 판 = k 배율 없음, 종래 → 새 기본값)
+    - mid: 차이 없음(POS_GATE가 하한 5).
+    - fast: tiny 잘못 연결 1.14 → 1.09%.
+    - fast_lateral: tiny 3.29 → 2.38%, tiny 트랙/기포 2.47 → 2.19, small 0.62 → 0.47%.
+    - fast_static: tiny 1.74 → 1.22%, small 0.67 → 0.50%.
+    - 끊김이 늘어난 조건은 없다.
+  - 테스트: `tests/test_gates.py` a(이웃 가로채기 방지), b(적용 범위), b2(견실 중 배율), c(nn 거리), d(사슬 3 = 종래 계산과 같음, 5 = EMA 계산).
+- `binarized/4_link_audit.py` (raw/에 복사, 손으로 쓴 파일): 실데이터 추적 정확도를 사람이 표본으로 판정한다.
+  - 표본: 크기 구분별로 대응(트랙 × 프레임)을 N_PER_CLASS개 균등 무작위로 뽑는다.
+    - 처음에는 트랙당 1건이었는데, 검토에서 "링크 단위 추정치가 아니다"라는 지적이 나와 바꿨다.
+    - 화면 끝과 마지막 프레임은 제외한다.
+  - 화면
+    - t−1, t, t+1, t+2를 보여준다. 끊긴 뒤 재연결이 t+3 이후면 4번째 칸을 그 프레임으로 바꾼다.
+    - 색: 노랑 = 이 기포, 초록 = 같은 ID, 주황 = 합체 상대(흡수한 상대는 t에 표시), 하늘 = 분열 자식.
+    - 빨강 × = 예측 위치(자기 속도가 없으면 주변 흐름의 중앙값), 마젠타 = 다른 추적 검출, 파랑 = 추적하지 않는 작은 검출.
+    - instances/*.npz가 있으면(SAVE_INSTANCE_MASKS) 원 대신 윤곽을 그린다.
+  - 키: y/n/m/d/u/b/q.
+    - "끊긴 뒤 재연결" 건은 초록이 같은 기포인지만 본다(d와 m도 맞는 것으로 친다).
+    - 이은 건에서 d는 "이웃을 가로챘다"로 센다.
+  - 집계
+    - 크기별 연결 정확도와 놓침률(Wilson 95%)을 낸다.
+    - 트래커 오류율은 모집단의 이음 수/끝 수로 가중한 정규근사를 쓴다.
+    - all 행은 모집단 가중이다.
+    - `link_audit_report_<CSV지문>.json`과 `decisions_<지문>.json`(항목·kind 포함)으로 저장한다.
+  - GUI
+    - 답할 때마다 저장하고, try/finally로 닫는다. × 버튼으로 닫으면 종료로 본다.
+    - 끝 화면에서 b로 돌아갈 수 있고, `REVIEW = True`면 다시 연다.
+    - Windows에서는 IME를 끈다(한글 입력 상태면 키가 안 들어감).
+  - 테스트: `tests/test_link_audit.py` a~f.
+- 독립 검토(workflow 29 에이전트)에서 확인된 17건을 반영했다. 위의 k 배율, 사슬 표시, 표본 방식, 재연결 표시, 판정 규칙, 가중 all, 보고서 파일명, 미추적 검출, 상대 표시, 남은 수 표시, 색, 예측 위치, 끝 화면, IME다.
+- 사용자 PC에서 할 일
+  - 같은 영상을 `SPACING_GATE_FRAC = 0, BOOTSTRAP_CHAIN_FRAMES = 3`(종래)과 기본값으로 OUTPUT_FOLDER를 달리해 돌린다.
+  - 각각 `4_link_audit.py`로 크기별 100건을 판정해서 비교한다.
+
 ## 저장소 구성 (2026-10-21 정리, 사용자 요청: "앞으로 쓸 것만 모으고 옛날 파일은 old/에 보존")
 - 사용자용 안내는 `README.md`(한국어). 폴더 하나만 PC에 복사하면 동작하게 했다.
-- `raw/` — 비이진화 버전(앞으로 주로 사용). `1_raw_train.py`, `2_raw_track.py`, `3_tracking_qc.py`. 전부 `tools/build_raw.py`가 생성(직접 고치지 않음).
-- `binarized/` — 이진화 버전. `0_prelabel.py`(손으로 씀), `1_bin_train.py`, `2_bin_track.py`, `3_tracking_qc.py`. **이 폴더가 이진화 코드의 기준이며 직접 고친다.** 고친 뒤 `python tools/build_raw.py`.
+- `raw/` — 비이진화 버전(앞으로 주로 사용). `1_raw_train.py`, `2_raw_track.py`, `3_tracking_qc.py`, `4_link_audit.py`. 전부 `tools/build_raw.py`가 생성(직접 고치지 않음).
+- `binarized/` — 이진화 버전. `0_prelabel.py`(손으로 씀), `1_bin_train.py`, `2_bin_track.py`, `3_tracking_qc.py`, `4_link_audit.py`(손으로 씀, raw/에 복사). **이 폴더가 이진화 코드의 기준이며 직접 고친다.** 고친 뒤 `python tools/build_raw.py`.
   - `3_tracking_qc.py`의 기준은 `binarized/3_tracking_qc.py`(raw/는 복사본).
   - 1_bin_train.py와 2_bin_track.py에 같은 이름으로 들어 있는 TAU/모델 부품(synth_prior, degrade_image, TauDetector, build_model 등, 원래 tau_unet.py)은 **두 파일을 같이 고친다.** `tests/test_binarized.py` f가 같은지 확인한다(의도한 차이 main, extract_instances, HERE만 예외).
   - 2_bin_track.py의 main(): 5ch(TAU) ckpt는 PRIOR_PASSES = 0이어도 main_tau(패스0만). 예전에는 main_single로 가서 3ch 검출기에서 실패했다(정리 후 점검에서 발견).
@@ -587,9 +639,9 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `tests/` — 지금 코드의 테스트.
   - `bundles.py`: binarized/의 1파일 버전을 원래 모듈 이름(tracker3, piv_field, tau_unet, tau_tracker, watershed, dot_labels)으로 import하게 한다. `importlib.reload`가 되도록 binarized/를 sys.path에 넣고 이름으로 import. 같은 이름의 다른 모듈(old/)이 이미 읽혀 있으면 오류로 멈춘다.
   - `test_events.py`, `test_instances.py`, `test_tau.py`, `test_dots.py`: 원래 테스트를 bundles 경유로 binarized/에 대해 돈다. 바꾼 곳: import 경로, 학습 스크립트 경로(`bundles.TRAIN_PATH`), dot의 OUT/REVIEW/main → DOT_OUT/DOT_REVIEW/main_dots, 학습 main → main_train, test_tau f는 USE_PRIOR=True(번들 기본값 False).
-  - `test_qc.py`(binarized/3_tracking_qc.py), `test_prelabel.py`, `test_binarized.py`(번들 전용 d STEP 연결, e 3ch/5ch 디스패치만 남김), `test_raw.py`, `fake_detector.py`(테스트용 사본).
+  - `test_qc.py`(binarized/3_tracking_qc.py), `test_prelabel.py`, `test_binarized.py`(번들 전용 d STEP 연결, e 3ch/5ch 디스패치만 남김), `test_raw.py`, `test_gates.py`(게이트 보정), `test_link_audit.py`(연결 감사), `fake_detector.py`(테스트용 사본).
 - `old/` — 보관(`old/README.md`에 목록). tracker2/3, watershed, piv_field, tau_unet, tau_tracker, 1_tau_unet_train, dot_labels, 3_tracking_qc(정리 시점 사본), fake_detector, sim_compare, sim_piv, qc_compare, reference/piv_prior.py, docs/PIV_TASK.md, tools/build_binarized.py, tests/.
   - `cd old && python -B tests/test_events.py` 등으로 예전 테스트가 그대로 돈다(정리 시점에 events 11, instances 14, qc 12, tau 7, dots 8 모두 통과). old/tests/test_binarized.py와 old/tools/build_binarized.py는 old/binarized/를 찾으므로 동작하지 않는다.
   - 위의 각 절에 나오는 `tracker3.py`, `docs/PIV_TASK.md`, `reference/piv_prior.py` 등은 이제 old/ 아래 경로다.
 - 테스트 실행 (루트에서): `python -B tests/test_events.py`, `tests/test_qc.py`, `tests/test_instances.py`, `tests/test_tau.py`, `tests/test_dots.py`,
-  `tests/test_binarized.py`, `tests/test_prelabel.py`, `tests/test_raw.py`. 또는 `python -m pytest`(루트의 pytest.ini가 tests/만 모은다. old/tests는 이름이 겹치므로 `cd old`에서 따로). 정리 후 63개 통과.
+  `tests/test_binarized.py`, `tests/test_prelabel.py`, `tests/test_raw.py`, `tests/test_gates.py`, `tests/test_link_audit.py`. 또는 `python -m pytest`(루트의 pytest.ini가 tests/만 모은다. old/tests는 이름이 겹치므로 `cd old`에서 따로). 정리 후 63개 통과.
