@@ -46,7 +46,7 @@
 # ------------------------------------------------------------
 # 設定
 # ------------------------------------------------------------
-TRACKING_CSV = r"C:\Users\Tristan\Desktop\Tau\raw\output\result_tracking.csv"   # 2_*_track.py の出力 CSV
+TRACKING_CSV = r"C:\Users\Tristan\Desktop\Tau\steel\output_steel\result_tracking.csv"   # 2_*_track.py の出力 CSV
 IMAGE_FOLDER = None      # 表示する画像のフォルダ (CSV の ファイル名 の画像)。None なら CSV と同じフォルダの _cache_processed
                          # (二値化画像。輪郭がはっきり見える)。元画像で見たければ元画像のフォルダを指定
 INSTANCE_FOLDER = None   # 検出の輪郭 (2_*_track.py の SAVE_INSTANCE_MASKS = True で保存される instances/*.npz)。

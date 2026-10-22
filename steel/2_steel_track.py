@@ -754,50 +754,85 @@ def bin_diff(raw_bgr, bg_bgr, preproc):
 
 
 BG_MATCH_MODES = (None, 'offset', 'gain')
+BG_MATCH_MAX = 15.0            # これより大きく明るさを直す当てはめは信用しない (気泡の中は -40。照明の変化は実測 +4.9)
+BG_MATCH_JUMP = 5.0            # 検出 (2_steel_track.py) で、直前に信用したフレームからこれより大きく変わる当てはめは信用しない
+                               # (照明はゆっくり変わる。気泡が画面の半分を超えると液体でなく気泡の明るさに合わせてしまうため)。
+                               # 同じくらいの値に BG_MATCH_JUMP_FRAMES フレーム続けて変わったら、本当に照明が変わったとみなして受け入れる
+BG_MATCH_JUMP_FRAMES = 5
+
+
+def fit_background(raw_bgr, bg_bgr, mode='offset', max_shift=BG_MATCH_MAX):
+    """背景画像の明るさを元画像に合わせる式 元画像 ≈ a × 背景 + b を求める (グレーで)。戻り値 (a, b)、信用できなければ None。
+    撮影中に照明が少し変わる対策。鉄の流路の実測 (images/44 と 45) では元画像が全体に +4.9 階調明るく、
+    そのままだと DB (明るくなった分) が液体の 92% の画素で 0 でなくなった (×4 で約 20)。
+      'offset': a = 1。b は (元画像 - 背景) のヒストグラムの山 (いちばん多い値 = 液体) から始め、山のばらつき σ を山の近く
+                (±15 階調) だけで求め、|差 - b| ≤ max(3σ, 3) の画素の平均で 3回 求め直す。
+                気泡がいくら暗くても、液体の画素が一番多い値である限り正しい (中央値から始めると、画面の 45% が暗い気泡で
+                b が -13 になった。レビューで確認)
+      'gain'  : 'offset' で選んだ液体の画素で a, b を最小二乗。背景の模様が弱いと a が小さく出る (回帰の希釈) ので、
+                a が 0.5〜2 の外なら 'offset' の値にする (a = 1)
+    直す量 (背景の明るさの中央値での a × g + b - g) が max_shift を超えたら None (液体より気泡の画素が多いフレームなど)"""
+    if mode is None:
+        return 1.0, 0.0
+    if mode not in BG_MATCH_MODES:
+        raise ValueError(f'BG_MATCH は {BG_MATCH_MODES} のどれか: {mode!r}')
+    if bg_bgr.shape != raw_bgr.shape:
+        bg_bgr = cv2.resize(bg_bgr, (raw_bgr.shape[1], raw_bgr.shape[0]))
+    r = cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2GRAY).astype(np.float64)
+    g = cv2.cvtColor(bg_bgr, cv2.COLOR_BGR2GRAY).astype(np.float64)
+    step = max(1, int(np.sqrt(r.size / 200000)))          # 20万〜80万画素に間引いて当てはめる (結果はほぼ同じで速い)
+    r, g = r[::step, ::step].ravel(), g[::step, ::step].ravel()
+    d = r - g
+    h = np.bincount(np.clip(np.rint(d).astype(np.int64) + 255, 0, 510), minlength=511).astype(np.float64)
+    h = np.convolve(h, np.ones(5) / 5, 'same')
+    b = float(np.argmax(h) - 255)                          # いちばん多い差 = 液体
+    near = np.abs(d - b) < 15
+    if near.sum() < 100:
+        return None
+    tol = max(3.0 * 1.4826 * float(np.median(np.abs(d[near] - b))), 3.0)
+    for _ in range(3):
+        keep = np.abs(d - b) <= tol                        # 液体の画素 (気泡・輪郭は外れる)
+        b = float(np.mean(d[keep]))
+    a = 1.0
+    if mode == 'gain':
+        ka, kb = a, b
+        for _ in range(3):
+            keep = np.abs(r - (ka * g + kb)) <= tol
+            if keep.sum() < 100:
+                break
+            A = np.stack([g[keep], np.ones(int(keep.sum()))], 1)
+            ka, kb = (float(v) for v in np.linalg.lstsq(A, r[keep], rcond=None)[0])
+        if 0.5 <= ka <= 2.0 and np.isfinite(kb):
+            a, b = ka, kb
+    if not np.isfinite(b) or abs((a - 1.0) * float(np.median(g)) + b) > max_shift:
+        return None
+    return a, b
+
+
+def apply_background(bg_bgr, a, b, shape=None):
+    """背景画像 (BGR) に a × 背景 + b をかける (shape = 元画像の (H, W) に大きさを合わせてから)"""
+    if shape is not None and bg_bgr.shape[:2] != tuple(shape[:2]):
+        bg_bgr = cv2.resize(bg_bgr, (shape[1], shape[0]))
+    if a == 1.0 and b == 0.0:
+        return bg_bgr
+    return np.clip(np.rint(bg_bgr.astype(np.float64) * a + b), 0, 255).astype(np.uint8)
 
 
 def match_background(raw_bgr, bg_bgr, mode='offset'):
-    """背景画像の明るさを元画像に合わせる (撮影中に照明が少し明るく/暗くなったときの対策)。
-    鉄の流路の実測 (images/44 と 45): 元画像が背景より全体に +4.9 階調明るく、そのままだと DB (明るくなった分) が
-    液体の 92% の画素で 0 でなくなった (×4 で約 20)。気泡の中 (-40) に比べれば小さいが、学習・検出の入力が動画ごとにずれる。
-      'offset': 元画像 ≈ 背景 + b。b = (元画像 - 背景) の中央値から、大きくずれる画素 (気泡) を除いて平均し直したもの。
-                気泡が画面の半分未満なら液体の値になる。おすすめ (実測では 'gain' とばらつきがほぼ同じ: 3.29 vs 3.22)
-      'gain'  : 元画像 ≈ a × 背景 + b (同じく気泡を除いた最小二乗)。背景の模様が弱いと a が小さめに出る (回帰の希釈) ので、
-                模様のはっきりした背景 (鉄の溝など) でだけ使う
-    戻り値: (合わせた背景画像 uint8 BGR, (a, b))。mode が None なら そのまま (1.0, 0.0)"""
-    if bg_bgr.shape != raw_bgr.shape:
-        bg_bgr = cv2.resize(bg_bgr, (raw_bgr.shape[1], raw_bgr.shape[0]))
-    if mode is None:
-        return bg_bgr, (1.0, 0.0)
-    if mode not in BG_MATCH_MODES:
-        raise ValueError(f'BG_MATCH は {BG_MATCH_MODES} のどれか: {mode!r}')
-    r = cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2GRAY).astype(np.float64)
-    g = cv2.cvtColor(bg_bgr, cv2.COLOR_BGR2GRAY).astype(np.float64)
-    step = max(1, int(np.sqrt(r.size / 200000)))          # 20万画素くらいに間引いて当てはめる (結果はほぼ同じで速い)
-    r, g = r[::step, ::step].ravel(), g[::step, ::step].ravel()
-    a, b = 1.0, float(np.median(r - g))
-    for _ in range(3):
-        res = r - (a * g + b)
-        mad = 1.4826 * float(np.median(np.abs(res - np.median(res))))
-        keep = np.abs(res) <= max(3.0 * mad, 3.0)          # 気泡・輪郭の画素を除く (最低 3 階調の幅は残す)
-        if keep.sum() < 100:
-            break
-        if mode == 'offset':
-            b = float(np.mean((r - g)[keep]))
-        else:
-            A = np.stack([g[keep], np.ones(int(keep.sum()))], 1)
-            a, b = (float(v) for v in np.linalg.lstsq(A, r[keep], rcond=None)[0])
-    if not 0.5 <= a <= 2.0 or not np.isfinite(b):
-        return bg_bgr, (1.0, 0.0)
-    out = np.clip(np.rint(bg_bgr.astype(np.float64) * a + b), 0, 255).astype(np.uint8)
-    return out, (a, b)
+    """fit_background + apply_background。戻り値 (合わせた背景画像 uint8 BGR, (a, b), 当てはめが使えたか)。
+    当てはめが信用できなければ背景はそのまま ((1.0, 0.0), False)。mode が None なら そのまま ((1.0, 0.0), True)"""
+    fit = fit_background(raw_bgr, bg_bgr, mode)
+    ok = fit is not None
+    a, b = fit if ok else (1.0, 0.0)
+    return apply_background(bg_bgr, a, b, raw_bgr.shape), (a, b), ok
 
 
 def make_planes(raw_bgr, bg_bgr, preproc, bg_match=None):
     """元画像 + 背景画像 -> {'B', 'D', 'DK', 'DB'} (どれも uint8 (H, W))
-    DK / DB: 背景より暗くなった分 / 明るくなった分 (×Brightness)。気液の界面 (メニスカス) は暗く、
-    大きい気泡の中の液膜のむら (乾いた所) は明るい -> B と D (絶対値) では区別できないが、DK と DB なら分かれる。
-    鉄の流路では気泡の中 (気体) が液体より約 40 階調暗い -> B では気泡が「白く塗りつぶした円」、DK でも中が白くなる。
+    DK / DB: 背景より暗くなった分 / 明るくなった分 (×Brightness)。
+    鉄の流路の実測 (images/44, 気泡 1個): 気泡の中 (気体) は液体より約 40 階調暗い -> B では「白く塗りつぶした円」、DK でも中が白い。
+    輪郭 (メニスカス) の明暗は向きで変わる: 光の来る側 (画像の上) は明るく (DB)、反対側は暗く (DK)、その外に約 10 px の影 (DK)。
+    (透明な流路では界面はいつも暗く、液膜のむらが明るかった。raw/ の説明はそちらの話)
     bg_match ('offset' / 'gain'): 先に背景画像の明るさを元画像に合わせる (match_background)。None なら raw/ と同じ"""
     if bg_match is not None:
         bg_bgr = match_background(raw_bgr, bg_bgr, bg_match)[0]
@@ -984,7 +1019,13 @@ class RawDetector:
         self.bg_match = inp.get("bg_match")          # 1_steel_train.py の BG_MATCH (記録が無ければ None = 合わせない)
         if self.bg_match not in BG_MATCH_MODES:
             raise ValueError(f"ckpt の input.bg_match が分かりません: {self.bg_match!r} (使えるのは {BG_MATCH_MODES})")
-        self.last_bg_fit = (1.0, 0.0)                # 最後のフレームで当てはめた (a, b) (確認用)
+        self.last_bg_fit = (1.0, 0.0)                # 最後のフレームで使った (a, b) (確認用)
+        self.bg_fits = []                            # フレームごとに使った (a, b) (qc_report に範囲を書く)
+        self.bg_rejected = 0                         # 当てはめを信用しなかったフレームの数 (直前の値を使った)
+        self._good_fit = None
+        self._jump_run = 0                           # 直前の値から大きく変わる「同じくらいの」当てはめが続いたフレーム数
+        self._jump_cand = None                       # その当てはめの直す量
+        self._bg_med = None                          # 背景画像の明るさの中央値 (直す量を比べる所)
         ctx = ck.get("ctx") or {}
         self.model = build_unet(ck["encoder"], ck.get("classes", 3), len(names),
                                 ctx.get("layers", 0), ctx.get("heads", 8)).to(self.dev)
@@ -994,7 +1035,7 @@ class RawDetector:
         self.std = np.array(ck["std"], np.float32)
         hw = ck.get("train_hw") or train_hw
         self.train_hw = (int(hw[0]), int(hw[1])) if hw else None
-        self.raw_of = None          # TAU の多パス: フレーム番号 -> (元画像, 背景画像)
+        self.raw_of = None          # TAU の多パス: フレーム番号 -> (元画像, 明るさを合わせた背景画像)
         self.last_planes = {}
         self._resize_notice = False
         print(f"  U-Net: {ckpt_path}  (epoch {ck.get('epoch')}, device {self.dev}, 入力 {self.mode!r}, "
@@ -1006,10 +1047,59 @@ class RawDetector:
         if self.dev == "cpu":
             print("  ※ GPUが見つかりません。CPUでも動きますが遅くなります。")
 
-    def prob_raw(self, raw_bgr, bg_bgr, prior=None):
-        """元画像 (BGR) + 背景画像 (BGR) (+ 事前マスク (2, H, W)) -> 確率 (3, H, W)"""
-        if self.bg_match is not None:
-            bg_bgr, self.last_bg_fit = match_background(raw_bgr, bg_bgr, self.bg_match)
+    def background_fit(self, raw_bgr, bg_bgr):
+        """このフレームで使う (a, b) (bg_match が None なら (1.0, 0.0))。当てはめが信用できない (気泡が画面の大半など) なら
+        直前に信用できたフレームの値を使う (最初のフレームなら合わせない)"""
+        if self.bg_match is None:
+            return 1.0, 0.0
+        fit = fit_background(raw_bgr, bg_bgr, self.bg_match)
+        why = f"直す量が {BG_MATCH_MAX} 階調を超える" if fit is None else ""
+        if fit is not None and self._good_fit is not None:
+            if self._bg_med is None:
+                self._bg_med = float(np.median(cv2.cvtColor(bg_bgr, cv2.COLOR_BGR2GRAY)))
+            shift = lambda ab: (ab[0] - 1.0) * self._bg_med + ab[1]
+            if abs(shift(fit) - shift(self._good_fit)) > BG_MATCH_JUMP:
+                same = self._jump_cand is not None and abs(shift(fit) - self._jump_cand) <= BG_MATCH_JUMP
+                self._jump_run = self._jump_run + 1 if same else 1
+                self._jump_cand = shift(fit)
+                if self._jump_run < BG_MATCH_JUMP_FRAMES:
+                    why = f"直前のフレームから {shift(fit) - shift(self._good_fit):+.1f} 階調も変わる"
+                    fit = None
+                else:                                  # 同じくらいの値が何フレームも続いた -> 照明が本当に変わった
+                    self._jump_run, self._jump_cand = 0, None
+            else:
+                self._jump_run, self._jump_cand = 0, None
+        if fit is None:
+            self.bg_rejected += 1
+            if self.bg_rejected <= 3:
+                print(f"  ※ 背景の明るさ合わせ: このフレームの当てはめは不自然 ({why}。気泡が画面の大半?) なので、"
+                      + ("直前のフレームの値を使います" if self._good_fit else "合わせません"))
+            fit = self._good_fit or (1.0, 0.0)
+        else:
+            self._good_fit = fit
+        self.bg_fits.append(fit)
+        self.last_bg_fit = fit
+        return fit
+
+    def background_for(self, raw_bgr, bg_bgr):
+        """このフレーム用に明るさを合わせた背景画像 (bg_match が None なら背景画像そのまま)"""
+        if self.bg_match is None:
+            return bg_bgr
+        return apply_background(bg_bgr, *self.background_fit(raw_bgr, bg_bgr), raw_bgr.shape)
+
+    def bg_fit_summary(self):
+        """qc_report 用: 使った (a, b) の範囲と、信用しなかったフレームの数"""
+        if not self.bg_fits:
+            return None
+        a, b = np.array(self.bg_fits).T
+        return {"frames": len(self.bg_fits), "b_min": round(float(b.min()), 2), "b_max": round(float(b.max()), 2),
+                "a_min": round(float(a.min()), 4), "a_max": round(float(a.max()), 4), "rejected": int(self.bg_rejected)}
+
+    def prob_raw(self, raw_bgr, bg_bgr, prior=None, bg_ready=False):
+        """元画像 (BGR) + 背景画像 (BGR) (+ 事前マスク (2, H, W)) -> 確率 (3, H, W)。
+        bg_ready = True なら bg_bgr はもう明るさを合わせた背景 (background_for の結果) としてそのまま使う"""
+        if self.bg_match is not None and not bg_ready:
+            bg_bgr = self.background_for(raw_bgr, bg_bgr)
         planes = make_planes(raw_bgr, bg_bgr, self.preproc)
         self.last_planes = {k: planes[k] for k in PLANES[self.mode]}     # U-Net が実際に見た画像 (確認用)
         H, W = planes["B"].shape
@@ -1023,7 +1113,7 @@ class RawDetector:
     def prob_frame(self, f, gray, prior=None):
         """TAU の多パス用: フレーム番号 f の確率 (gray は表示用の二値化画像。U-Net の入力は元画像から作る)"""
         raw, bg = self.raw_of(f)
-        return self.prob_raw(raw, bg, prior)
+        return self.prob_raw(raw, bg, prior, bg_ready=True)     # raw_of は明るさを合わせた背景を返す
 
 
 # ======================================================================
@@ -3129,8 +3219,13 @@ def run_detection_phase(cache_dir: str):
 
     for img_path in image_files:
         filename = os.path.basename(img_path)
+        bg_frame = bg_img           # このフレームの背景 (bg_match があれば明るさを合わせる。U-Net・確認画像・オーバーレイ共通)
+        if detector.bg_match is not None:
+            raw0 = cv2.imread(img_path)
+            if raw0 is not None:
+                bg_frame = detector.background_for(raw0, bg_img)
         img, processed_img, thresh_val, bright_val, median_val = preprocess_image(
-            img_path, bg_img, filename=filename, show_ui=(is_first and use_ui),
+            img_path, bg_frame, filename=filename, show_ui=(is_first and use_ui),
             current_thresh_val=thresh_val, current_bright_val=bright_val, current_median_val=median_val,
         )
         if img is None:
@@ -3151,7 +3246,7 @@ def run_detection_phase(cache_dir: str):
             roi_bool = make_roi_mask(h, w, roi_rect if ENABLE_ROI else None).astype(bool)
 
         gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
-        prob = detector.prob_raw(img, bg_img)
+        prob = detector.prob_raw(img, bg_frame, bg_ready=True)
         n_res0, n_ring0, n_nest0 = inst_stats.get("rescued", 0), inst_stats.get("ring", 0), inst_stats.get("nested", 0)
         inst = unet_instances(prob, stats=inst_stats)
         n_res, n_ring = inst_stats.get("rescued", 0) - n_res0, inst_stats.get("ring", 0) - n_ring0
@@ -3199,6 +3294,8 @@ def run_detection_phase(cache_dir: str):
     DETECTION_STATS["input"] = {"mode": detector.mode, "preproc": list(detector.preproc)}
     if detector.bg_match is not None:
         DETECTION_STATS["input"]["bg_match"] = detector.bg_match
+        DETECTION_STATS["input"]["bg_fit"] = detector.bg_fit_summary()
+        print(f"  背景の明るさ合わせ ({detector.bg_match!r}): {DETECTION_STATS['input']['bg_fit']}")
     if UNET_INSTANCE_MODE == "hybrid":
         DETECTION_STATS["rescued"] = inst_stats.get("rescued", 0)
         print(f"\n  hybrid: 壁の切れ目から背景に漏れていた気泡を {inst_stats.get('rescued', 0)} 個 取り戻しました")
@@ -3624,10 +3721,22 @@ def main_tau():
     image_size = (h, w)
     roi_bool = make_roi_mask(h, w, roi_rect if ENABLE_ROI else None).astype(bool)
     names = [os.path.basename(p) for p in files]
-    detector.raw_of = lambda f: (cv2.imread(files[f]), bg_img)   # U-Net の入力は元画像 + 背景から作る
+    fits = {}                   # フレーム番号 -> 背景の明るさ合わせの (a, b) (bg_match のとき。1回だけ当てはめる)
+
+    def bg_of(f, raw=None):
+        if detector.bg_match is None:
+            return bg_img
+        if f not in fits:
+            fits[f] = detector.background_fit(cv2.imread(files[f]) if raw is None else raw, bg_img)
+        return apply_background(bg_img, *fits[f], image_size)
+
+    def raw_of(f):              # U-Net の入力は元画像 + (明るさを合わせた) 背景から作る
+        raw = cv2.imread(files[f])
+        return raw, bg_of(f, raw)
+    detector.raw_of = raw_of
 
     def gray_of(f):
-        _, proc, _, _, _ = preprocess_image(files[f], bg_img, show_ui=False, current_thresh_val=tv,
+        _, proc, _, _, _ = preprocess_image(files[f], bg_of(f), show_ui=False, current_thresh_val=tv,
                                                current_bright_val=bv, current_median_val=mv)
         if proc.shape[:2] != image_size:
             raise ValueError(f"{names[f]}: 画像サイズ {proc.shape[:2]} が最初の画像 {image_size} と違います")
@@ -3652,7 +3761,8 @@ def main_tau():
 
     # パスごとの CSV と比較
     pp = {"preprocess": {"noise_cut": tv, "brightness": bv, "median": mv}}
-    tau_params = {"UNET_CKPT": UNET_CKPT, "input": {"mode": detector.mode, "preproc": list(detector.preproc), "bg_match": detector.bg_match}, "uses_prior": detector.uses_prior, "PRIOR_PASSES": PRIOR_PASSES,
+    tau_params = {"UNET_CKPT": UNET_CKPT, "input": {"mode": detector.mode, "preproc": list(detector.preproc), "bg_match": detector.bg_match,
+                            "bg_fit": detector.bg_fit_summary()}, "uses_prior": detector.uses_prior, "PRIOR_PASSES": PRIOR_PASSES,
                   "PRIOR_FROM": PRIOR_FROM, "PRIOR_MIN_HITS": PRIOR_MIN_HITS, "prior_edge_px": detector.edge_px,
                   "passes_run": len(results)}
     Q = load_qc_module() if SAVE_PASS_RESULTS else None

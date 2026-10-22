@@ -151,7 +151,8 @@ IGNORE_LABEL = 255
 ANN_NAME = '_annotations.coco.json'
 OLD_SPLIT = {'train': 'old', 'val': 'old_val', 'test': 'old_test'}   # OLD_BIN_SRC の split -> DST の中の名前
 OLD_PREFIX = 'old_'                                                 # OLD_BIN_SRC の画像の名前の頭 (SRC と重ならないように)
-DATASET_LAYOUT = 3            # DST の作り方の版 (変わったら REBUILD_DATASET = False でも作り直す)
+DATASET_LAYOUT = 'steel-3'    # DST の作り方の版 (変わったら REBUILD_DATASET = False でも作り直す)。raw/ の 3 と分けて、
+                              # 同じ DST を指しても raw/1_raw_train.py が明るさを合わせた画像を使い回さないようにする
 SUBDIRS = ('bin', 'diff', 'dark', 'bright', 'masks', 'instances')
 
 # ======================================================================
@@ -181,50 +182,85 @@ def bin_diff(raw_bgr, bg_bgr, preproc):
 
 
 BG_MATCH_MODES = (None, 'offset', 'gain')
+BG_MATCH_MAX = 15.0            # これより大きく明るさを直す当てはめは信用しない (気泡の中は -40。照明の変化は実測 +4.9)
+BG_MATCH_JUMP = 5.0            # 検出 (2_steel_track.py) で、直前に信用したフレームからこれより大きく変わる当てはめは信用しない
+                               # (照明はゆっくり変わる。気泡が画面の半分を超えると液体でなく気泡の明るさに合わせてしまうため)。
+                               # 同じくらいの値に BG_MATCH_JUMP_FRAMES フレーム続けて変わったら、本当に照明が変わったとみなして受け入れる
+BG_MATCH_JUMP_FRAMES = 5
+
+
+def fit_background(raw_bgr, bg_bgr, mode='offset', max_shift=BG_MATCH_MAX):
+    """背景画像の明るさを元画像に合わせる式 元画像 ≈ a × 背景 + b を求める (グレーで)。戻り値 (a, b)、信用できなければ None。
+    撮影中に照明が少し変わる対策。鉄の流路の実測 (images/44 と 45) では元画像が全体に +4.9 階調明るく、
+    そのままだと DB (明るくなった分) が液体の 92% の画素で 0 でなくなった (×4 で約 20)。
+      'offset': a = 1。b は (元画像 - 背景) のヒストグラムの山 (いちばん多い値 = 液体) から始め、山のばらつき σ を山の近く
+                (±15 階調) だけで求め、|差 - b| ≤ max(3σ, 3) の画素の平均で 3回 求め直す。
+                気泡がいくら暗くても、液体の画素が一番多い値である限り正しい (中央値から始めると、画面の 45% が暗い気泡で
+                b が -13 になった。レビューで確認)
+      'gain'  : 'offset' で選んだ液体の画素で a, b を最小二乗。背景の模様が弱いと a が小さく出る (回帰の希釈) ので、
+                a が 0.5〜2 の外なら 'offset' の値にする (a = 1)
+    直す量 (背景の明るさの中央値での a × g + b - g) が max_shift を超えたら None (液体より気泡の画素が多いフレームなど)"""
+    if mode is None:
+        return 1.0, 0.0
+    if mode not in BG_MATCH_MODES:
+        raise ValueError(f'BG_MATCH は {BG_MATCH_MODES} のどれか: {mode!r}')
+    if bg_bgr.shape != raw_bgr.shape:
+        bg_bgr = cv2.resize(bg_bgr, (raw_bgr.shape[1], raw_bgr.shape[0]))
+    r = cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2GRAY).astype(np.float64)
+    g = cv2.cvtColor(bg_bgr, cv2.COLOR_BGR2GRAY).astype(np.float64)
+    step = max(1, int(np.sqrt(r.size / 200000)))          # 20万〜80万画素に間引いて当てはめる (結果はほぼ同じで速い)
+    r, g = r[::step, ::step].ravel(), g[::step, ::step].ravel()
+    d = r - g
+    h = np.bincount(np.clip(np.rint(d).astype(np.int64) + 255, 0, 510), minlength=511).astype(np.float64)
+    h = np.convolve(h, np.ones(5) / 5, 'same')
+    b = float(np.argmax(h) - 255)                          # いちばん多い差 = 液体
+    near = np.abs(d - b) < 15
+    if near.sum() < 100:
+        return None
+    tol = max(3.0 * 1.4826 * float(np.median(np.abs(d[near] - b))), 3.0)
+    for _ in range(3):
+        keep = np.abs(d - b) <= tol                        # 液体の画素 (気泡・輪郭は外れる)
+        b = float(np.mean(d[keep]))
+    a = 1.0
+    if mode == 'gain':
+        ka, kb = a, b
+        for _ in range(3):
+            keep = np.abs(r - (ka * g + kb)) <= tol
+            if keep.sum() < 100:
+                break
+            A = np.stack([g[keep], np.ones(int(keep.sum()))], 1)
+            ka, kb = (float(v) for v in np.linalg.lstsq(A, r[keep], rcond=None)[0])
+        if 0.5 <= ka <= 2.0 and np.isfinite(kb):
+            a, b = ka, kb
+    if not np.isfinite(b) or abs((a - 1.0) * float(np.median(g)) + b) > max_shift:
+        return None
+    return a, b
+
+
+def apply_background(bg_bgr, a, b, shape=None):
+    """背景画像 (BGR) に a × 背景 + b をかける (shape = 元画像の (H, W) に大きさを合わせてから)"""
+    if shape is not None and bg_bgr.shape[:2] != tuple(shape[:2]):
+        bg_bgr = cv2.resize(bg_bgr, (shape[1], shape[0]))
+    if a == 1.0 and b == 0.0:
+        return bg_bgr
+    return np.clip(np.rint(bg_bgr.astype(np.float64) * a + b), 0, 255).astype(np.uint8)
 
 
 def match_background(raw_bgr, bg_bgr, mode='offset'):
-    """背景画像の明るさを元画像に合わせる (撮影中に照明が少し明るく/暗くなったときの対策)。
-    鉄の流路の実測 (images/44 と 45): 元画像が背景より全体に +4.9 階調明るく、そのままだと DB (明るくなった分) が
-    液体の 92% の画素で 0 でなくなった (×4 で約 20)。気泡の中 (-40) に比べれば小さいが、学習・検出の入力が動画ごとにずれる。
-      'offset': 元画像 ≈ 背景 + b。b = (元画像 - 背景) の中央値から、大きくずれる画素 (気泡) を除いて平均し直したもの。
-                気泡が画面の半分未満なら液体の値になる。おすすめ (実測では 'gain' とばらつきがほぼ同じ: 3.29 vs 3.22)
-      'gain'  : 元画像 ≈ a × 背景 + b (同じく気泡を除いた最小二乗)。背景の模様が弱いと a が小さめに出る (回帰の希釈) ので、
-                模様のはっきりした背景 (鉄の溝など) でだけ使う
-    戻り値: (合わせた背景画像 uint8 BGR, (a, b))。mode が None なら そのまま (1.0, 0.0)"""
-    if bg_bgr.shape != raw_bgr.shape:
-        bg_bgr = cv2.resize(bg_bgr, (raw_bgr.shape[1], raw_bgr.shape[0]))
-    if mode is None:
-        return bg_bgr, (1.0, 0.0)
-    if mode not in BG_MATCH_MODES:
-        raise ValueError(f'BG_MATCH は {BG_MATCH_MODES} のどれか: {mode!r}')
-    r = cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2GRAY).astype(np.float64)
-    g = cv2.cvtColor(bg_bgr, cv2.COLOR_BGR2GRAY).astype(np.float64)
-    step = max(1, int(np.sqrt(r.size / 200000)))          # 20万画素くらいに間引いて当てはめる (結果はほぼ同じで速い)
-    r, g = r[::step, ::step].ravel(), g[::step, ::step].ravel()
-    a, b = 1.0, float(np.median(r - g))
-    for _ in range(3):
-        res = r - (a * g + b)
-        mad = 1.4826 * float(np.median(np.abs(res - np.median(res))))
-        keep = np.abs(res) <= max(3.0 * mad, 3.0)          # 気泡・輪郭の画素を除く (最低 3 階調の幅は残す)
-        if keep.sum() < 100:
-            break
-        if mode == 'offset':
-            b = float(np.mean((r - g)[keep]))
-        else:
-            A = np.stack([g[keep], np.ones(int(keep.sum()))], 1)
-            a, b = (float(v) for v in np.linalg.lstsq(A, r[keep], rcond=None)[0])
-    if not 0.5 <= a <= 2.0 or not np.isfinite(b):
-        return bg_bgr, (1.0, 0.0)
-    out = np.clip(np.rint(bg_bgr.astype(np.float64) * a + b), 0, 255).astype(np.uint8)
-    return out, (a, b)
+    """fit_background + apply_background。戻り値 (合わせた背景画像 uint8 BGR, (a, b), 当てはめが使えたか)。
+    当てはめが信用できなければ背景はそのまま ((1.0, 0.0), False)。mode が None なら そのまま ((1.0, 0.0), True)"""
+    fit = fit_background(raw_bgr, bg_bgr, mode)
+    ok = fit is not None
+    a, b = fit if ok else (1.0, 0.0)
+    return apply_background(bg_bgr, a, b, raw_bgr.shape), (a, b), ok
 
 
 def make_planes(raw_bgr, bg_bgr, preproc, bg_match=None):
     """元画像 + 背景画像 -> {'B', 'D', 'DK', 'DB'} (どれも uint8 (H, W))
-    DK / DB: 背景より暗くなった分 / 明るくなった分 (×Brightness)。気液の界面 (メニスカス) は暗く、
-    大きい気泡の中の液膜のむら (乾いた所) は明るい -> B と D (絶対値) では区別できないが、DK と DB なら分かれる。
-    鉄の流路では気泡の中 (気体) が液体より約 40 階調暗い -> B では気泡が「白く塗りつぶした円」、DK でも中が白くなる。
+    DK / DB: 背景より暗くなった分 / 明るくなった分 (×Brightness)。
+    鉄の流路の実測 (images/44, 気泡 1個): 気泡の中 (気体) は液体より約 40 階調暗い -> B では「白く塗りつぶした円」、DK でも中が白い。
+    輪郭 (メニスカス) の明暗は向きで変わる: 光の来る側 (画像の上) は明るく (DB)、反対側は暗く (DK)、その外に約 10 px の影 (DK)。
+    (透明な流路では界面はいつも暗く、液膜のむらが明るかった。raw/ の説明はそちらの話)
     bg_match ('offset' / 'gain'): 先に背景画像の明るさを元画像に合わせる (match_background)。None なら raw/ と同じ"""
     if bg_match is not None:
         bg_bgr = match_background(raw_bgr, bg_bgr, bg_match)[0]
@@ -962,7 +998,13 @@ def build_dataset(src, dst, old_src=None):
         if raw.shape != bg_cache[bgp].shape:
             raise SystemExit(f'{sdir.name}/{name}: 画像の大きさ {raw.shape[:2]} が背景画像 {bg_cache[bgp].shape[:2]} と違います。'
                              'Roboflow で Resize を付けて書き出していませんか? (Resize 無しで書き出し直す / 背景画像を確認)')
-        pl = make_planes(raw, bg_cache[bgp], PREPROC, BG_MATCH)
+        bg_m, _, ok = match_background(raw, bg_cache[bgp], BG_MATCH)
+        if not ok:
+            stats['bg_rejected'] += 1
+            if stats['bg_rejected'] <= 5:
+                print(f'    ※ {sdir.name}/{name}: 背景の明るさ合わせの当てはめが不自然 (直す量が {BG_MATCH_MAX} 階調を超える) なので'
+                      '合わせません (気泡が画面の大半? 背景画像が別の日?)')
+        pl = make_planes(raw, bg_m, PREPROC)
         H, W = pl['B'].shape
         if (pl['B'] > 0).mean() > 0.3:
             stats['bright_frames'] += 1
@@ -1455,6 +1497,9 @@ def test_check(best_path, root, out, dev):
         report['columns' if split == 'test' else split] = dict(cols)
     (out / 'test_report.json').write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding='utf-8')
     print('  (2_steel_track.py と同じ計算: 画像の大きさが各モデルの学習画像と違えば、その大きさにして推論)')
+    if BG_MATCH:
+        print(f'  ※ 開始モデルも、このデータセットの画像 (背景の明るさ合わせ {BG_MATCH!r}) で評価しています。'
+              '記録の無い開始モデル (best.pt) を 2_steel_track.py で使うと明るさを合わせないので、少し違う結果になります')
     print(f'\n  オーバーレイ -> {out}/' + ', '.join(f'{s}_preview' for s, _, _ in sets)
           + '  (背景は D。now = 開始モデル, new = 新しいモデル' + (', new_prior = 事前マスクあり' if USE_PRIOR else '') + ')')
 
