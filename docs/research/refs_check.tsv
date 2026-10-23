@@ -8,6 +8,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1002/cjce.5450710502	OK	ali	1993	Adiabatic two-phase flow in narrow channels between two flat plates	The Canadian Journal of Chemical Engineering	1_adiabatic_gap,3_pressure_drop,check
 10.1002/cjce.5450810309	OK	laari	2003	Experimental Determination of Bubble Coalescence and Break‐up Rates in a Bubble Column Reactor	The Canadian Journal of Chemical Engineering	8_iate_coalescence,check
 10.1002/cyto.a.23863	OK	caicedo	2019	Evaluation of Deep Learning Strategies for Nucleus Segmentation in Fluorescence Images	Cytometry Part A	5_ai_image,check
+10.1002/htj.10110	OK	yi	2003	A theoretical study of evaporative heat transfer in high‐velocity two‐phase flow of air–water in a small vertical tube	Heat Transfer—Asian Research	11_ideas2
 10.1007/978-0-387-21656-0	OK	de gennes	2004	Capillarity and Wetting Phenomena		0_estimates,6_measurement,check
 10.1007/978-1-4419-7985-8	OK	ishii	2011	Thermo-Fluid Dynamics of Two-Phase Flow		8_iate_coalescence,check
 10.1007/978-1-4614-7190-5	OK	alam	2014	Flow Boiling in Microgap Channels	SpringerBriefs in Applied Sciences and Technology	2_boiling_gap,check
@@ -49,7 +50,8 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/0017-9310(94)90064-7	OK	wilmarth	1994	Two-phase flow regimes in narrow rectangular vertical and horizontal channels	International Journal of Heat and Mass Transfer	1_adiabatic_gap,7_closest_novelty,check
 10.1016/0017-9310(94)90224-0	OK	tokuhiro	1994	Natural convection heat transfer from a vertical plate—I. Enhancement with gas injection	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/0017-9310(96)00006-3	OK	kenning	1996	Pool boiling heat transfer on a thin plate: features revealed by liquid crystal thermography	International Journal of Heat and Mass Transfer	2_boiling_gap,check
-10.1016/0098-1354(92)80021-z	OK	wright	1992	Solutions of inverse problems in population balances—I. Aggregation kinetics	Computers & Chemical Engineering	10_ideas,check
+10.1016/0098-1354(92)80021-z	OK	wright	1992	Solutions of inverse problems in population balances—I. Aggregation kinetics	Computers & Chemical Engineering	10_ideas,11_ideas2,check
+10.1016/0098-1354(94)00062-s	OK	sathyagal	1995	Solution of inverse problems in population balances-II. Particle break-up	Computers & Chemical Engineering	11_ideas2
 10.1016/0255-2701(89)90007-x	OK	drahos	1989	Diagnostics of gas—liquid flow patterns in chemical engineering systems	Chemical Engineering and Processing: Process Intensification	6_measurement,check
 10.1016/0301-9322(75)90015-4	OK	jones	1975	The interrelation between void fraction fluctuations and flow patterns in two-phase flow	International Journal of Multiphase Flow	1_adiabatic_gap,check
 10.1016/0301-9322(81)90003-3	OK	sato	1981	Momentum and heat transfer in two-phase bubble flow—I. Theory	International Journal of Multiphase Flow	4_heat_transfer,check
@@ -66,6 +68,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.aitf.2026.100028	OK	zhang	2026	Multi-modality fusion: Illuminating the complexity of two-phase flow	AI Thermal Fluids	5_ai_image,check
 10.1016/j.anucene.2025.112039	OK	park	2026	Non-intrusive flow regime detection in narrow rectangular channels using gauge pressure based pseudo acoustic analysis	Annals of Nuclear Energy	7_closest_novelty,check
 10.1016/j.applthermaleng.2007.04.004	OK	fernandez-seara	2007	A general review of the Wilson plot method and its modifications to determine convection coefficients in heat exchange d	Applied Thermal Engineering	6_measurement,check
+10.1016/j.applthermaleng.2010.05.024	OK	wang	2011	Investigation of boiling and bubble confinement in a high aspect ratio micro-channel	Applied Thermal Engineering	11_ideas2
 10.1016/j.applthermaleng.2016.07.020	OK	mancin	2016	Flow boiling heat transfer, dewetting-rewetting, and dryout visualization of HFOs in an asymmetrically heated rectangula	Applied Thermal Engineering	10_ideas,2_boiling_gap,check
 10.1016/j.applthermaleng.2016.08.063	OK	karayiannis	2017	Flow boiling in microchannels: Fundamentals and applications	Applied Thermal Engineering	7_closest_novelty,check
 10.1016/j.applthermaleng.2018.06.029	OK	dong	2018	Heat transfer correlation for two-component two-phase slug flow in horizontal pipes	Applied Thermal Engineering	4_heat_transfer,check
@@ -85,6 +88,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ces.2013.05.026	OK	zimmerman	2013	Evaporation dynamics of microbubbles	Chemical Engineering Science	10_ideas,check
 10.1016/j.ces.2013.05.027	OK	kitagawa	2013	Natural convection heat transfer from a vertical heated plate in water with microbubble injection	Chemical Engineering Science	4_heat_transfer,check
 10.1016/j.ces.2014.12.007	OK	bandara	2015	Slug flow heat transfer without phase change in microchannels: A review	Chemical Engineering Science	4_heat_transfer,check
+10.1016/j.ces.2016.07.024	OK	ziegenhein	2016	Particle tracking using micro bubbles in bubbly flows	Chemical Engineering Science	11_ideas2
 10.1016/j.ces.2019.04.004	OK	fu	2019	BubGAN: Bubble generative adversarial networks for synthesizing realistic bubbly flow images	Chemical Engineering Science	5_ai_image,check
 10.1016/j.ces.2019.115467	OK	haas	2020	BubCNN: Bubble detection using Faster RCNN and shape regression network	Chemical Engineering Science	5_ai_image,check
 10.1016/j.ces.2020.116163	OK	cerqueira	2021	Development of a deep learning-based image processing technique for bubble pattern recognition and shape reconstruction 	Chemical Engineering Science	5_ai_image,check
@@ -98,36 +102,43 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.colsurfa.2006.04.028	OK	denkov	2006	Foam–wall friction: Effect of air volume fraction for tangentially immobile bubble surface	Colloids and Surfaces A: Physicochemical and Engineering Aspects	3_pressure_drop,check
 10.1016/j.csite.2024.104016	OK	feng	2024	Flow pattern-based heat transfer analysis of microchannel flow boiling: An experimental investigation	Case Studies in Thermal Engineering	7_closest_novelty,check
 10.1016/j.csite.2024.104331	OK	lee	2024	Multimodal machine learning for predicting heat transfer characteristics in micro-pin fin heat sinks	Case Studies in Thermal Engineering	2_boiling_gap,check
+10.1016/j.desal.2014.07.014	OK	shahid	2014	A study of the bubble column evaporator method for thermal desalination	Desalination	11_ideas2
 10.1016/j.egyai.2023.100309	OK	suh	2024	VISION-iT: A Framework for Digitizing Bubbles and Droplets	Energy and AI	5_ai_image,check
 10.1016/j.energy.2025.138752	OK	shi	2025	Hybrid symbolic regression for data-driven discovery: Governing dimensionless numbers in supercritical heat transfer	Energy	5_ai_image,check
 10.1016/j.eswa.2023.120265	OK	al-hindawi	2023	A framework for generalizing critical heat flux detection models using unsupervised image-to-image translation	Expert Systems with Applications	5_ai_image,check
 10.1016/j.expthermflusci.2004.05.001	OK	abdelall	2005	Pressure drop caused by abrupt flow area changes in small channels	Experimental Thermal and Fluid Science	6_measurement,check
 10.1016/j.expthermflusci.2005.03.010	OK	ide	2005	Experimental research on the correlations of holdup and frictional pressure drop in air–water two-phase flow in a capill	Experimental Thermal and Fluid Science	10_ideas,1_adiabatic_gap,3_pressure_drop,7_closest_novelty,check
 10.1016/j.expthermflusci.2005.10.001	OK	kandlikar	2006	Nucleation characteristics and stability considerations during flow boiling in microchannels	Experimental Thermal and Fluid Science	2_boiling_gap,check
+10.1016/j.expthermflusci.2009.12.003	OK	kaji	2010	Heat transfer and fluid dynamics of air–water two-phase flow in micro-channels	Experimental Thermal and Fluid Science	11_ideas2
 10.1016/j.expthermflusci.2010.01.006	OK	arcanjo	2010	Evaluation of flow patterns and elongated bubble characteristics during the flow boiling of halocarbon refrigerants in a	Experimental Thermal and Fluid Science	4_heat_transfer,check
-10.1016/j.expthermflusci.2010.06.011	OK	barber	2010	Bubble confinement in flow boiling of FC-72 in a “rectangular” microchannel of high aspect ratio	Experimental Thermal and Fluid Science	7_closest_novelty,check
+10.1016/j.expthermflusci.2010.06.011	OK	barber	2010	Bubble confinement in flow boiling of FC-72 in a “rectangular” microchannel of high aspect ratio	Experimental Thermal and Fluid Science	11_ideas2,7_closest_novelty,check
+10.1016/j.expthermflusci.2010.08.001	OK	kabov	2011	Evaporation and flow dynamics of thin, shear-driven liquid films in microgap channels	Experimental Thermal and Fluid Science	11_ideas2
 10.1016/j.expthermflusci.2010.08.004	OK	ong	2011	Macro-to-microchannel transition in two-phase flow: Part 1 – Two-phase flow patterns and film thickness measurements	Experimental Thermal and Fluid Science	1_adiabatic_gap,check
 10.1016/j.expthermflusci.2011.02.006	OK	cardoso	2011	FC72 and FC87 nucleate boiling inside a narrow horizontal space	Experimental Thermal and Fluid Science	2_boiling_gap,7_closest_novelty,check
 10.1016/j.expthermflusci.2014.01.017	OK	li	2014	Flow pattern map and time–frequency spectrum characteristics of nitrogen–water two-phase flow in small vertical upward n	Experimental Thermal and Fluid Science	6_measurement,check
 10.1016/j.expthermflusci.2018.07.017	OK	richenderfer	2018	Investigation of subcooled flow boiling and CHF using high-resolution diagnostics	Experimental Thermal and Fluid Science	4_heat_transfer,check
 10.1016/j.expthermflusci.2019.01.022	OK	ronshin	2019	Experimental characterization of two-phase flow patterns in a slit microchannel	Experimental Thermal and Fluid Science	3_pressure_drop,check
+10.1016/j.expthermflusci.2020.110063	OK	eder	2020	Experimental analysis of the humidification of air in bubble columns for thermal water treatment systems	Experimental Thermal and Fluid Science	11_ideas2
 10.1016/j.flowmeasinst.2011.06.001	OK	ito	2011	Micro wire-mesh sensor for two-phase flow measurement in a rectangular narrow channel	Flow Measurement and Instrumentation	1_adiabatic_gap,check
 10.1016/j.icheatmasstransfer.2026.110611	OK	sun	2026	Deep learning-enhanced investigation of R134a/R245fa flow boiling in microchannels	International Communications in Heat and Mass Transfer	5_ai_image,check
 10.1016/j.ijheatfluidflow.2003.11.016	OK	passos	2004	Confined boiling of FC72 and FC87 on a downward facing heating copper disk	International Journal of Heat and Fluid Flow	2_boiling_gap,check
 10.1016/j.ijheatfluidflow.2006.06.004	OK	tadrist	2007	Review on two-phase flow instabilities in narrow spaces	International Journal of Heat and Fluid Flow	2_boiling_gap,check
 10.1016/j.ijheatfluidflow.2009.02.019	OK	han	2009	Measurement of the liquid film thickness in micro tube slug flow	International Journal of Heat and Fluid Flow	4_heat_transfer,check
+10.1016/j.ijheatfluidflow.2009.03.013	OK	bogojevic	2009	Two-phase flow instabilities in a silicon microchannels heat sink	International Journal of Heat and Fluid Flow	11_ideas2
 10.1016/j.ijheatfluidflow.2009.10.005	OK	consolini	2010	A heat transfer model for evaporation of coalescing bubbles in micro-channel flow	International Journal of Heat and Fluid Flow	4_heat_transfer,check
 10.1016/j.ijheatfluidflow.2012.04.007	OK	shen	2012	One-dimensional interfacial area transport of vertical upward bubbly flow in narrow rectangular channel	International Journal of Heat and Fluid Flow	1_adiabatic_gap,7_closest_novelty,8_iate_coalescence,check
 10.1016/j.ijheatfluidflow.2013.06.010	OK	shen	2013	One-group interfacial area transport equation and its sink and source terms in narrow rectangular channel	International Journal of Heat and Fluid Flow	8_iate_coalescence,check
 10.1016/j.ijheatfluidflow.2013.12.001	OK	mehta	2014	Measurement of local heat transfer coefficient during gas–liquid Taylor bubble train flow by infra-red thermography	International Journal of Heat and Fluid Flow	4_heat_transfer,check
 10.1016/j.ijheatfluidflow.2017.11.002	OK	rassame	2018	Drift-flux correlation for gas-liquid two-phase flow in a horizontal pipe	International Journal of Heat and Fluid Flow	1_adiabatic_gap,check
 10.1016/j.ijheatmasstransfer.2003.07.033	OK	nishio	2004	Visualization of boiling structures in high heat–flux pool-boiling	International Journal of Heat and Mass Transfer	10_ideas,6_measurement,check
+10.1016/j.ijheatmasstransfer.2003.09.031	OK	steinke	2004	Control and effect of dissolved air in water during flow boiling in microchannels	International Journal of Heat and Mass Transfer	11_ideas2
 10.1016/j.ijheatmasstransfer.2004.01.006	OK	thome	2004	Heat transfer model for evaporation in microchannels. Part I: presentation of the model	International Journal of Heat and Mass Transfer	4_heat_transfer,7_closest_novelty,check
 10.1016/j.ijheatmasstransfer.2004.01.007	OK	dupont	2004	Heat transfer model for evaporation in microchannels. Part II: comparison with the database	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/j.ijheatmasstransfer.2004.04.016	OK	maranzana	2004	Mini- and micro-channels: influence of axial conduction in the walls	International Journal of Heat and Mass Transfer	6_measurement,check
 10.1016/j.ijheatmasstransfer.2004.10.030	OK	kohl	2005	An experimental investigation of microchannel flow with internal pressure measurements	International Journal of Heat and Mass Transfer	6_measurement,check
 10.1016/j.ijheatmasstransfer.2004.12.012	OK	wojtan	2005	Investigation of flow boiling in horizontal tubes: Part I—A new diabatic two-phase flow pattern map	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/j.ijheatmasstransfer.2004.12.013	OK	wojtan	2005	Investigation of flow boiling in horizontal tubes: Part II—Development of a new heat transfer model for stratified-wavy,	International Journal of Heat and Mass Transfer	4_heat_transfer,check
+10.1016/j.ijheatmasstransfer.2006.04.010	OK	kenning	2006	Confined growth of a vapour bubble in a capillary tube at initially uniform superheat: Experiments and modelling	International Journal of Heat and Mass Transfer	11_ideas2
 10.1016/j.ijheatmasstransfer.2008.11.020	OK	utaka	2009	Configuration of the micro-layer and characteristics of heat transfer in a narrow gap mini/micro-channel boiling system	International Journal of Heat and Mass Transfer	2_boiling_gap,4_heat_transfer,6_measurement,check
 10.1016/j.ijheatmasstransfer.2009.02.001	OK	geisler	2009	Confinement effects on nucleate boiling and critical heat flux in buoyancy-driven microchannels	International Journal of Heat and Mass Transfer	2_boiling_gap,7_closest_novelty,check
 10.1016/j.ijheatmasstransfer.2009.09.011	OK	zhang	2010	Correlations of two-phase frictional pressure drop and void fraction in mini-channel	International Journal of Heat and Mass Transfer	3_pressure_drop,5_ai_image,check
@@ -136,6 +147,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijheatmasstransfer.2010.03.007	OK	walsh	2010	Heat transfer model for gas–liquid slug flows under constant flux	International Journal of Heat and Mass Transfer	4_heat_transfer,7_closest_novelty,check
 10.1016/j.ijheatmasstransfer.2010.04.016	OK	betz	2010	Can segmented flow enhance heat transfer in microchannel heat sinks?	International Journal of Heat and Mass Transfer	10_ideas,4_heat_transfer,7_closest_novelty,check
 10.1016/j.ijheatmasstransfer.2010.05.041	OK	gerardi	2010	Study of bubble growth in water pool boiling through synchronized, infrared thermometry and high-speed video	International Journal of Heat and Mass Transfer	4_heat_transfer,check
+10.1016/j.ijheatmasstransfer.2010.07.035	OK	choi	2010	Adiabatic two-phase flow in rectangular microchannels with different aspect ratios: Part II – bubble behaviors and press	International Journal of Heat and Mass Transfer	11_ideas2
 10.1016/j.ijheatmasstransfer.2011.01.010	OK	ozer	2011	The effect of sliding bubbles on nucleate boiling of a subcooled liquid flowing in a narrow channel	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/j.ijheatmasstransfer.2011.05.029	OK	howard	2011	Prandtl and capillary effects on heat transfer performance within laminar liquid–gas slug flows	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/j.ijheatmasstransfer.2011.09.024	OK	harirchian	2012	Flow regime-based modeling of heat transfer and pressure drop in microchannel flow boiling	International Journal of Heat and Mass Transfer	2_boiling_gap,3_pressure_drop,4_heat_transfer,5_ai_image,7_closest_novelty,check
@@ -145,6 +157,8 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijheatmasstransfer.2012.11.045	OK	kim	2013	Universal approach to predicting two-phase frictional pressure drop for mini/micro-channel saturated flow boiling	International Journal of Heat and Mass Transfer	3_pressure_drop,check
 10.1016/j.ijheatmasstransfer.2013.04.014	OK	kim	2013	Universal approach to predicting saturated flow boiling heat transfer in mini/micro-channels – Part II. Two-phase heat t	International Journal of Heat and Mass Transfer	2_boiling_gap,check
 10.1016/j.ijheatmasstransfer.2013.08.049	OK	lee	2013	Flow instability during subcooled boiling for a downward flow at low pressure in a vertical narrow rectangular channel	International Journal of Heat and Mass Transfer	2_boiling_gap,7_closest_novelty,check
+10.1016/j.ijheatmasstransfer.2013.10.024	OK	tuo	2014	Visualization and measurement of periodic reverse flow and boiling fluctuations in a microchannel evaporator of an air-c	International Journal of Heat and Mass Transfer	11_ideas2
+10.1016/j.ijheatmasstransfer.2014.02.014	OK	jung	2014	An experimental method to simultaneously measure the dynamics and heat transfer associated with a single bubble during n	International Journal of Heat and Mass Transfer	11_ideas2
 10.1016/j.ijheatmasstransfer.2014.09.029	OK	albahloul	2015	Observations of bubble shape and confinement in diabatic two-phase flow in a minichannel	International Journal of Heat and Mass Transfer	10_ideas,7_closest_novelty,check
 10.1016/j.ijheatmasstransfer.2015.01.013	OK	zhang	2015	Characteristics of a liquid microlayer formed by a confined vapor bubble in micro gap boiling between two parallel plate	International Journal of Heat and Mass Transfer	2_boiling_gap,4_heat_transfer,check
 10.1016/j.ijheatmasstransfer.2015.06.073	OK	kharangate	2015	Flow boiling and critical heat flux in horizontal channel with one-sided and double-sided heating	International Journal of Heat and Mass Transfer	7_closest_novelty,check
@@ -184,7 +198,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijmultiphaseflow.2004.05.002	OK	chung	2004	The effect of channel diameter on adiabatic two-phase flow characteristics in microchannels	International Journal of Multiphase Flow	1_adiabatic_gap,3_pressure_drop,5_ai_image,check
 10.1016/j.ijmultiphaseflow.2005.01.002	OK	kim	2005	Visualization of boiling phenomena in inclined rectangular gap	International Journal of Multiphase Flow	2_boiling_gap,7_closest_novelty,check
 10.1016/j.ijmultiphaseflow.2006.01.002	OK	kim	2006	A general heat transfer correlation for non-boiling gas–liquid flow with different flow patterns in horizontal pipes	International Journal of Multiphase Flow	4_heat_transfer,check
-10.1016/j.ijmultiphaseflow.2006.02.016	OK	revellin	2006	Characterization of diabatic two-phase flows in microchannels: Flow parameter results for R-134a in a 0.5mm channel	International Journal of Multiphase Flow	4_heat_transfer,check
+10.1016/j.ijmultiphaseflow.2006.02.016	OK	revellin	2006	Characterization of diabatic two-phase flows in microchannels: Flow parameter results for R-134a in a 0.5mm channel	International Journal of Multiphase Flow	11_ideas2,4_heat_transfer,check
 10.1016/j.ijmultiphaseflow.2006.08.008	OK	murai	2007	Skin friction reduction by large air bubbles in a horizontal channel flow	International Journal of Multiphase Flow	1_adiabatic_gap,check
 10.1016/j.ijmultiphaseflow.2007.07.006	OK	revellin	2008	Elongated bubbles in microchannels. Part II: Experimental study and modeling of bubble collisions	International Journal of Multiphase Flow	1_adiabatic_gap,7_closest_novelty,check
 10.1016/j.ijmultiphaseflow.2007.07.007	OK	agostini	2008	Elongated bubbles in microchannels. Part I: Experimental study and modeling of elongated bubble velocity	International Journal of Multiphase Flow	1_adiabatic_gap,4_heat_transfer,7_closest_novelty,check
@@ -193,6 +207,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijmultiphaseflow.2008.08.003	OK	sun	2009	Evaluation analysis of prediction methods for two-phase flow pressure drop in mini-channels	International Journal of Multiphase Flow	3_pressure_drop,check
 10.1016/j.ijmultiphaseflow.2009.06.005	OK	harirchian	2009	The critical role of channel cross-sectional area in microchannel flow boiling heat transfer	International Journal of Multiphase Flow	2_boiling_gap,4_heat_transfer,7_closest_novelty,check
 10.1016/j.ijmultiphaseflow.2009.06.007	OK	walsh	2009	Pressure drop in two phase slug/bubble flows in mini scale capillaries	International Journal of Multiphase Flow	3_pressure_drop,check
+10.1016/j.ijmultiphaseflow.2010.12.007	OK	van ommen	2011	Time-series analysis of pressure fluctuations in gas–solid fluidized beds – A review	International Journal of Multiphase Flow	11_ideas2
 10.1016/j.ijmultiphaseflow.2011.11.012	OK	kim	2012	Measurement of two-phase flow and heat transfer parameters using infrared thermometry	International Journal of Multiphase Flow	4_heat_transfer,check
 10.1016/j.ijmultiphaseflow.2014.05.015	OK	gangloff	2014	A model of two-phase resin and void flow during composites processing	International Journal of Multiphase Flow	1_adiabatic_gap,check
 10.1016/j.ijmultiphaseflow.2015.03.006	OK	youn	2015	The effect of initial flow velocity on the liquid film thickness in micro tube accelerated slug flow	International Journal of Multiphase Flow	4_heat_transfer,check
@@ -207,6 +222,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijmultiphaseflow.2018.10.017	OK	villegas	2019	Image processing for the experimental investigation of dense dispersed flows: Application to bubbly flows	International Journal of Multiphase Flow	5_ai_image,check
 10.1016/j.ijmultiphaseflow.2019.103194	OK	poletaev	2020	Bubble patterns recognition using neural networks: Application to the analysis of a two-phase bubbly jet	International Journal of Multiphase Flow	5_ai_image,check
 10.1016/j.ijmultiphaseflow.2020.103446	OK	jagirdar	2020	Quasi-steady and transient study of heat transfer during sub-cooled flow boiling in a small aspect ratio microchannel	International Journal of Multiphase Flow	2_boiling_gap,check
+10.1016/j.ijmultiphaseflow.2022.104149	OK	buscher	2022	Digital image analysis of gas-liquid flow in a cross-corrugated plate heat exchanger channel: A feature-based approach o	International Journal of Multiphase Flow	11_ideas2
 10.1016/j.ijmultiphaseflow.2022.104169	OK	hessenkemper	2022	Bubble identification from images with machine learning methods	International Journal of Multiphase Flow	5_ai_image,check
 10.1016/j.ijmultiphaseflow.2022.104336	OK	seong	2023	Automated bubble analysis of high-speed subcooled flow boiling images using U-net transfer learning and global optical f	International Journal of Multiphase Flow	5_ai_image,7_closest_novelty,check
 10.1016/j.ijmultiphaseflow.2024.104871	OK	passoni	2024	Integrating machine learning and image processing for void fraction estimation in two-phase flow through corrugated chan	International Journal of Multiphase Flow	6_measurement,check
@@ -266,7 +282,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2012.233	OK	bouche	2012	Homogeneous swarm of high-Reynolds-number bubbles rising within a thin gap. Part 1. Bubble dynamics	Journal of Fluid Mechanics	1_adiabatic_gap,5_ai_image,7_closest_novelty,check
 10.1017/jfm.2012.289	OK	roig	2012	Dynamics of a high-Reynolds-number bubble rising within a thin gap	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/jfm.2014.100	OK	thompson	2014	Multiple finger propagation modes in Hele-Shaw channels of variable depth	Journal of Fluid Mechanics	10_ideas,check
-10.1017/jfm.2014.544	OK	bouche	2014	Homogeneous swarm of high-Reynolds-number bubbles rising within a thin gap. Part 2. Liquid dynamics	Journal of Fluid Mechanics	1_adiabatic_gap,check
+10.1017/jfm.2014.544	OK	bouche	2014	Homogeneous swarm of high-Reynolds-number bubbles rising within a thin gap. Part 2. Liquid dynamics	Journal of Fluid Mechanics	11_ideas2,1_adiabatic_gap,check
 10.1017/jfm.2015.355	OK	filella	2015	Oscillatory motion and wake of a bubble rising in a thin-gap cell	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/jfm.2016.131	OK	franco-gomez	2016	Sensitivity of Saffman–Taylor fingers to channel-depth perturbations	Journal of Fluid Mechanics	10_ideas,check
 10.1017/jfm.2016.357	OK	zhu	2016	A pancake droplet translating in a Hele-Shaw cell: lubrication film and flow field	Journal of Fluid Mechanics	1_adiabatic_gap,3_pressure_drop,check
@@ -296,6 +312,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1021/acs.iecr.5b01368	OK	chakraborty	2015	Inverse Problems in Population Balances. Determination of Aggregation Kernel by Weighted Residuals	Industrial & Engineering Chemistry Research	10_ideas,check
 10.1021/ie200610k	OK	leung	2012	Effect of Flow Characteristics on Taylor Flow Heat Transfer	Industrial & Engineering Chemistry Research	4_heat_transfer,check
 10.1021/ie50498a055	OK	danckwerts	1951	Significance of Liquid-Film Coefficients in Gas Absorption	Industrial & Engineering Chemistry	4_heat_transfer,check
+10.1021/jp901801k	OK	francis	2009	Application of a Bubble Column for Evaporative Cooling and a Simple Procedure for Determining the Latent Heat of Vaporiz	The Journal of Physical Chemistry B	11_ideas2
 10.1029/2004wr003837	OK	chen	2006	Two‐phase flow in rough‐walled fractures: Experiments and a flow structure model	Water Resources Research	0_estimates,10_ideas,check
 10.1029/93wr01529	OK	fourar	1993	Two‐phase flow in smooth and rough fractures: Measurement and correlation by porous‐medium and pipe flow models	Water Resources Research	0_estimates,check
 10.1029/95wr00171	OK	persoff	1995	Two‐Phase Flow Visualization and Relative Permeability Measurement in Natural Rough‐Walled Rock Fractures	Water Resources Research	0_estimates,check
@@ -320,10 +337,11 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1039/b815002h	OK	vanapalli	2009	Hydrodynamic resistance of single confined moving drops in rectangular microchannels	Lab Chip	10_ideas,1_adiabatic_gap,3_pressure_drop,7_closest_novelty,check
 10.1039/b903276b	OK	marmottant	2009	Microfluidics with foams	Soft Matter	3_pressure_drop,check
 10.1039/b918933e	OK	chan	2010	Dynamic interactions between deformable drops in the Hele–Shaw geometry	Soft Matter	8_iate_coalescence,check
-10.1039/c0lc00478b	OK	molla	2011	Pressure drop of slug flow in microchannels with increasing void fraction: experiment and modeling	Lab on a Chip	10_ideas,check
+10.1039/c0lc00478b	OK	molla	2011	Pressure drop of slug flow in microchannels with increasing void fraction: experiment and modeling	Lab on a Chip	10_ideas,11_ideas2,check
 10.1039/c0sm01535k	OK	eri	2011	Viscous drag friction acting on a fluid drop confined in between two plates	Soft Matter	3_pressure_drop,check
 10.1039/c1lc20534j	OK	jakiela	2011	Speed of flow of individual droplets in microfluidic channels as a function of the capillary number, volume of droplets 	Lab on a Chip	1_adiabatic_gap,3_pressure_drop,check
-10.1039/c4ra15163a	OK	musterd	2015	Calculating the volume of elongated bubbles and droplets in microchannels from a top view image	RSC Advances	6_measurement,check
+10.1039/c3lc00013c	OK	fisher	2013	Equilibrium gas–oil ratio measurements using a microfluidic technique	Lab on a Chip	11_ideas2
+10.1039/c4ra15163a	OK	musterd	2015	Calculating the volume of elongated bubbles and droplets in microchannels from a top view image	RSC Advances	11_ideas2,6_measurement,check
 10.1039/c7sm01478c	OK	franco-gomez	2017	Bubble propagation on a rail: a concept for sorting bubbles by size	Soft Matter	10_ideas,check
 10.1063/1.1149232	OK	shedd	1998	Automated optical liquid film thickness measurement method	Review of Scientific Instruments	6_measurement,check
 10.1063/1.1289396	OK	aussillous	2000	Quick deposition of a fluid on the wall of a tube	Physics of Fluids	0_estimates,3_pressure_drop,6_measurement,check
@@ -357,8 +375,9 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1080/01457630903500833	OK	ghajar	2010	Importance of Non-Boiling Two-Phase Flow Heat Transfer in Pipes for Industrial Applications	Heat Transfer Engineering	4_heat_transfer,7_closest_novelty,check
 10.1080/014576399271691	OK	dongwoo kim, afshin j. ghajar, rona	1999	Comparison of 20 Two-Phase Heat Transfer Correlations with Seven Sets of Experimental Data, Including Flow Pattern and T	Heat Transfer Engineering	4_heat_transfer,check
 10.1080/01621459.1927.10502953	OK	wilson	1927	Probable Inference, the Law of Succession, and Statistical Inference	Journal of the American Statistical Association	5_ai_image,check
-10.1088/0957-0233/16/10/009	OK	ryu	2005	Use of bubble image velocimetry for measurement of plunging wave impinging on structure and associated greenwater	Measurement Science and Technology	10_ideas,check
+10.1088/0957-0233/16/10/009	OK	ryu	2005	Use of bubble image velocimetry for measurement of plunging wave impinging on structure and associated greenwater	Measurement Science and Technology	10_ideas,11_ideas2,check
 10.1088/0957-0233/6/6/013	OK	keane	1995	Super-resolution particle imaging velocimetry	Measurement Science and Technology	5_ai_image,check
+10.1088/0960-1317/16/1/019	OK	chio	2006	Transient pressure drops of gas bubbles passing through liquid-filled microchannel contractions: an experimental study	Journal of Micromechanics and Microengineering	11_ideas2
 10.1088/1361-6501/ab1db8	OK	sciacchitano	2019	Uncertainty quantification in particle image velocimetry	Measurement Science and Technology	5_ai_image,7_closest_novelty,check
 10.1088/1742-6596/2605/1/012024	OK	ito	2023	Measurements of gas-liquid two-phase flow dynamics using high-speed neutron imaging	Journal of Physics: Conference Series	6_measurement,check
 10.1093/oxfordjournals.aje.a112510	OK	rogan	1978	ESTIMATING PREVALENCE FROM THE RESULTS OF A SCREENING TEST	American Journal of Epidemiology	8_iate_coalescence,check
@@ -397,6 +416,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1115/1.1842784	OK	basu	2005	Wall Heat Flux Partitioning During Subcooled Flow Boiling: Part 1—Model Development	Journal of Heat Transfer	4_heat_transfer,check
 10.1115/1.1842785	OK	basu	2005	Wall Heat Flux Partitioning During Subcooled Flow Boiling: Part II—Model Validation	Journal of Heat Transfer	4_heat_transfer,check
 10.1115/1.2063088	OK	durst	2005	The Development Lengths of Laminar Pipe and Channel Flows	Journal of Fluids Engineering	6_measurement,check
+10.1115/1.2351905	OK	chen	2006	Effects of Dissolved Air on Subcooled Flow Boiling of a Dielectric Coolant in a Microchannel Heat Sink	Journal of Electronic Packaging	11_ideas2
 10.1115/1.2819517	OK	wilmarth	1997	Interfacial Area Concentration and Void Fraction of Two-Phase Flow in Narrow Rectangular Vertical Channels	Journal of Fluids Engineering	8_iate_coalescence,check
 10.1115/1.2822686	OK	sudo	1996	Study on Critical Heat Flux in Rectangular Channels Heated From One or Both Sides at Pressures Ranging From 0.1 to 14 MP	Journal of Heat Transfer	2_boiling_gap,check
 10.1115/1.2824026	OK	moriyama	1996	Thickness of the Liquid Film Formed by a Growing Bubble in a Narrow Gap Between Two Horizontal Plates	Journal of Heat Transfer	2_boiling_gap,4_heat_transfer,7_closest_novelty,check
@@ -409,6 +429,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1115/1.3250576	OK	monde	1988	Characteristic of Heat Transfer Enhancement Due to Bubbles Passing Through a Narrow Vertical Channel	Journal of Heat Transfer	4_heat_transfer,check
 10.1115/1.3450337	OK	magrini	1975	On the Influence of the Thickness and Thermal Properties of Heating Walls on the Heat Transfer Coefficients in Nucleate 	Journal of Heat Transfer	2_boiling_gap,check
 10.1115/1.3580136	OK	mikic	1969	A New Correlation of Pool-Boiling Data Including the Effect of Heating Surface Characteristics	Journal of Heat Transfer	4_heat_transfer,check
+10.1115/1.3580198	OK	snyder	1969	Mass-Transfer Model in Subcooled Nucleate Boiling	Journal of Heat Transfer	11_ideas2
 10.1115/1.3684310	OK	beck	1962	Thermocouple Temperature Disturbances in Low Conductivity Materials	Journal of Heat Transfer	6_measurement,check
 10.1115/1.4002807	OK	muzychka	2011	Heat Transfer Enhancement Using Laminar Gas-Liquid Segmented Plug Flows	Journal of Heat Transfer	10_ideas,4_heat_transfer,check
 10.1115/1.4034317	OK	han	2016	Flow Boiling in Microgaps for Thermal Management of High Heat Flux Microsystems	Journal of Electronic Packaging	2_boiling_gap,7_closest_novelty,check
@@ -417,9 +438,10 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1115/1.4043483	OK	robinson	2019	Orientation Effects in Two-Phase Microgap Flow	Journal of Electronic Packaging	2_boiling_gap,check
 10.1115/1.4046116	OK	kim	2020	Bubble Behavior in Pool Boiling Heat Transfer between Two Plates with a Narrow Gap	Journal of Heat Transfer	2_boiling_gap,check
 10.1115/1.4051602	OK	karim	2021	Two-Dimensional Flow Boiling Characteristics With Wettability Surface in Microgap Heat Sink and Heat Transfer Prediction	Journal of Heat Transfer	2_boiling_gap,check
-10.1115/fedsm-icnmm2010-30882	OK	molla	2010	Pressure Drop of Accelerating Slug Flow in Microchannels: Modeling and Experiment	ASME 2010 8th International Conference on Nanochannels, Microchannels, and Minichannels: Parts A and B	10_ideas,check
+10.1115/fedsm-icnmm2010-30882	OK	molla	2010	Pressure Drop of Accelerating Slug Flow in Microchannels: Modeling and Experiment	ASME 2010 8th International Conference on Nanochannels, Microchannels, and Minichannels: Parts A and B	10_ideas,11_ideas2,check
 10.1115/ht2012-58031	OK	ozer	2012	Highly Subcooled Flow Boiling: A Model for Estimating Heat Transfer Behind Sliding Bubbles in a Narrow Channel	Volume 2: Heat Transfer Enhancement for Practical Applications; Fire and Combustion; Multi-Phase Systems; Heat Transfer in Electronic Equipment; Low Temperature Heat Transfer; Computational Heat Transfer	4_heat_transfer,check
 10.1115/ht2013-17070	OK	albahloul	2013	Comparing the Enhancement of Heat Transfer Caused by Sliding Gas Bubbles and by Sliding Vapor Bubbles in Subcooled Flow 	Volume 2: Heat Transfer Enhancement for Practical Applications; Heat and Mass Transfer in Fire and Combustion; Heat Transfer in Multiphase Systems; Heat and Mass Transfer in Biotechnology	4_heat_transfer,check
+10.1115/icmm2003-1068	OK	kaji	2003	Analogy Between Heat Transfer and Fluid Friction of Gas-Liquid Two-Phase Flow in Minichannel	1st International Conference on Microchannels and Minichannels	11_ideas2
 10.1115/icmm2003-1084	OK	shuai	2003	Heat Transfer and Pressure Drop for Flow Boiling of Water in Narrow Vertical Rectangular Channels	1st International Conference on Microchannels and Minichannels	2_boiling_gap,check
 10.1115/icmm2004-2369	OK	dupont	2004	Evaporation in Microchannels: Influence of the Channel Diameter on Heat Transfer	ASME 2nd International Conference on Microchannels and Minichannels	4_heat_transfer,check
 10.1115/icmm2004-2383	OK	yang	2004	Flow Boiling Heat Transfer and Flow Pattern in Rectangular Channel of Mini-Gap	ASME 2nd International Conference on Microchannels and Minichannels	4_heat_transfer,check
@@ -431,7 +453,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1115/imece2012-86669	OK	alam	2012	Experimental Study and High Speed Visualization of Flow Boiling Characteristics in Silicon Microgap Heat Sink	Volume 7: Fluids and Heat Transfer, Parts A, B, C, and D	4_heat_transfer,check
 10.1115/imece2018-86589	OK	shah	2018	General Correlation for Heat Transfer During Two-Component Gas-Liquid Flow in Horizontal Pipes	Volume 8A: Heat Transfer and Thermal Engineering	4_heat_transfer,check
 10.1115/interpack2009-89238	OK	sheehan	2009	Thermal Imaging of Two-Phase Coooled Microgap Channel Wall	ASME 2009 InterPACK Conference, Volume 2	10_ideas,2_boiling_gap,4_heat_transfer,check
-10.1115/interpack2009-89318	OK	zaitsev	2009	Microgap Cooling Technique Based on Evaporation of Thin Liquid Films	ASME 2009 InterPACK Conference, Volume 2	2_boiling_gap,check
+10.1115/interpack2009-89318	OK	zaitsev	2009	Microgap Cooling Technique Based on Evaporation of Thin Liquid Films	ASME 2009 InterPACK Conference, Volume 2	11_ideas2,2_boiling_gap,check
 10.1134/s1810232826010169	OK	gasanov	2026	Experimental Investigation into Influence of Channel Gap Size on Heat Transfer during Boiling of Subcooled Water Flow	Journal of Engineering Thermophysics	2_boiling_gap,7_closest_novelty,check
 10.1140/epje/i2004-10154-5	OK	cantat	2005	Dissipative flows of 2D foams	The European Physical Journal E	3_pressure_drop,check
 10.1140/epje/i2007-10298-8	OK	graner	2008	Discrete rearranging disordered patterns, part I: Robust statistical tools in two or three dimensions	The European Physical Journal E	5_ai_image,check
@@ -456,12 +478,15 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1364/ao.12.000555	OK	hale	1973	Optical Constants of Water in the 200-nm to 200-μm Wavelength Region	Applied Optics	6_measurement,check
 10.1364/ao.25.000431	OK	twomey	1986	Reflectance and albedo differences between wet and dry surfaces	Applied Optics	6_measurement,check
 10.1364/ao.27.001278	OK	lekner	1988	Why some things are darker when wet	Applied Optics	10_ideas,6_measurement,check
-10.1515/tp-2026-0081	OK	dunlap	2026	Open datasets and machine learning for two-phase heat transfer: a review following a spatial-temporal taxonomy	Transport Phenomena	5_ai_image,check
+10.14279/depositonce-17868	OK	buscher	2023	Supplementary measurement values and processed images to: Visualization, measurement, and modelling of adiabatic gas-liq		11_ideas2
+10.1515/tp-2026-0081	OK	dunlap	2026	Open datasets and machine learning for two-phase heat transfer: a review following a spatial-temporal taxonomy	Transport Phenomena	11_ideas2,5_ai_image,check
 10.1590/s1678-58782005000100004	OK	ghajar	2005	Non-boiling heat transfer in gas-liquid flow in pipes: a tutorial	Journal of the Brazilian Society of Mechanical Sciences and Engineering	4_heat_transfer,check
 10.1615/0-8493-9925-4.70	OK	mishima	2023	A STUDY OF AIR-WATER FLOW IN A NARROW RECTANGULAR DUCT USING AN IMAGE PROCESSING TECHNIQUE	Proceeding of Dynamics of Two-Phase Flows	6_measurement,check
+10.1615/ihtc5.430	OK	saha	1974	POINT OF NET VAPOR GENERATION AND VAPOR VOID FRACTION IN SUBCOOLED BOILING	Proceeding of International Heat Transfer Conference 5	11_ideas2
 10.1615/ihtc9.40	OK	kurul	1990	MULTIDIMENSIONAL EFFECTS IN FORCED CONVECTION SUBCOOLED BOILING	Proceeding of International Heat Transfer Conference 9	4_heat_transfer,check
 10.1615/multscientechn.2026063937	OK	kurimoto	2026	BREAKUP OF SINGLE PLANAR BUBBLES RISING THROUGH STAGNANT LIQUIDS	Multiphase Science and Technology	8_iate_coalescence,check
 10.2118/12129-pa	OK	hirasaki	1985	Mechanisms of Foam Flow in Porous Media: Apparent Viscosity in Smooth Capillaries	Society of Petroleum Engineers Journal	3_pressure_drop,check
+10.2118/170910-pa	OK	molla	2017	Microfluidic PVT--Saturation Pressure and Phase-Volume Measurement of Black Oils	SPE Reservoir Evaluation & Engineering	11_ideas2
 10.2139/ssrn.5914773	OK	kharangate	2025	Applying Computer Vision to Flow Boiling Analysis: Feature Extraction and Data-Driven Heat Transfer Coefficient Predicti		0_estimates,5_ai_image,check
 10.2139/ssrn.6505385	OK	kharangate	2026	Large-Scale Vision-Based Characterization of Flow Regimes and Interfacial Distributions for Heat Transfer Prediction in 		0_estimates,check
 10.2139/ssrn.6753968	OK	liu	2026	Void Fraction of Subcooled Flow Boiling within Horizontal Narrow Channel Measured by Capacitance Sensor		2_boiling_gap,6_measurement,7_closest_novelty,check
@@ -483,10 +508,18 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.3390/fluids11090217	OK	zehara	2026	Bubble Hydrodynamics in Rectangular Columns: Effects of Confinement and Co-Current/Counter-Current Liquid Flow	Fluids	1_adiabatic_gap,check
 10.3390/fluids6040150	OK	vasilev	2021	Gas–Liquid Two-Phase Flow and Heat Transfer without Phase Change in Microfluidic Heat Exchanger	Fluids	10_ideas,check
 10.3390/s24113363	OK	schepperle	2024	Computer-Vision- and Deep-Learning-Based Determination of Flow Regimes, Void Fraction, and Resistance Sensor Data in Mic	Sensors	5_ai_image,check
+10.36253/substantia-823	OK	ninham	2021	A Review and Update of Bubble Column Evaporator Processes	Substantia	11_ideas2
 10.3795/ksme-b.2006.30.11.1035	OK	huh	2006	Two-phase Pressure Drop in a Horizontal Rectangular Microchannel	Transactions of the Korean Society of Mechanical Engineers B	0_estimates,check
 10.3811/pmfr.2.117	OK	shinmoto	2007	Critical Heat Flux in Cold Plates of Narrow Channels with Structures for Additional Liquid Supply	Progress in Multiphase Flow Research	7_closest_novelty,check
+10.4028/www.scientific.net/ddf.312-315.548	OK	wang	2011	Confined Bubble and Heat Transfer during Flow Boiling in a High Aspect Ratio Mini-Channel	Defect and Diffusion Forum	11_ideas2
+10.5004/dwt.2009.917	OK	francis	2009	Thermal desalination using a non-boiling bubble column	Desalination and Water Treatment	11_ideas2
+10.5061/dryad.kwh70rzm3	OK	pierson	2026	Data from: Acoustic signatures of two-phase flows in a microchannel heat sink		11_ideas2
 10.5098/hmt.v3.1.3003	OK	zhang	2012	CHARACTERISTICS OF MICROLAYER FORMATION AND HEAT TRANSFER IN MINI/MICROCHANNEL BOILING SYSTEMS: A REVIEW	Frontiers in Heat and Mass Transfer	2_boiling_gap,check
+10.5281/zenodo.22235801	OK	fahim	2026	Multimodal Flow-Boiling Dataset for BubbleID-Flow		11_ideas2
+10.5281/zenodo.22264377	OK	pandey	2026	BoilingBench-CV Dataset		11_ideas2
+10.5281/zenodo.7985771	OK	buscher	2023	Visualization of adiabatic gas-liquid flow in a cross-corrugated plate heat exchanger channel: Part 1 - Original photogr		11_ideas2
 10.5772/22394	OK	shikazono	2011	Liquid Film Thickness in Micro-Scale Two-Phase Flow	Two Phase Flow, Phase Change and Numerical Modeling	6_measurement,check
 10.5772/37721	OK	ito	2012	Measurement of Two-Phase Flow Structure in a Narrow Rectangular Channel	Flow Measurement	6_measurement,check
 10.59161/jcgm100-2008e	OK		2008	Evaluation of measurement data — Guide to the expression of uncertainty in measurement		6_measurement,check
+10.6028/nist.tn.2279	OK	burgess jr.	2024	Self-diffusion and binary-diffusion coefficients in gases		11_ideas2
 10.7538/yzk.2013.47.05.0740	FAIL					3_pressure_drop,check

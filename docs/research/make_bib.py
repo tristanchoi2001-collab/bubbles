@@ -47,6 +47,29 @@ def norm_doi(d):
     return d.lower() if d.startswith("10.") else ""
 
 
+def fetch_datacite(doi):
+    """Crossref에 없는 DOI(데이터셋: Zenodo, Dryad 등)를 무료 DataCite API로 대조해 Crossref 꼴로 바꾼다."""
+    url = "https://api.datacite.org/dois/" + urllib.parse.quote(doi, safe="/()")
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=40) as r:
+            a = json.load(r)["data"]["attributes"]
+    except Exception:
+        return None
+    authors = []
+    for c in a.get("creators") or []:
+        if c.get("familyName"):
+            authors.append({"family": c["familyName"], "given": c.get("givenName", "")})
+        elif c.get("name"):
+            authors.append({"name": c["name"]})
+    pub = a.get("publisher")
+    if isinstance(pub, dict):
+        pub = pub.get("name")
+    return {"DOI": doi, "title": [(a.get("titles") or [{}])[0].get("title", "")], "author": authors,
+            "issued": {"date-parts": [[a.get("publicationYear")]]}, "publisher": pub or "",
+            "type": "dataset", "_source": "datacite"}
+
+
 def fetch(doi, cache):
     if doi in cache:
         return cache[doi]
@@ -60,7 +83,7 @@ def fetch(doi, cache):
             break
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                msg = {"_error": 404}
+                msg = fetch_datacite(doi) or {"_error": 404}
                 break
             time.sleep(2 + 3 * attempt)
         except Exception:
@@ -94,7 +117,7 @@ def tex(s):
 
 TYPE = {"journal-article": "article", "proceedings-article": "inproceedings", "book": "book",
         "monograph": "book", "edited-book": "book", "book-chapter": "incollection",
-        "report": "techreport", "dissertation": "phdthesis", "posted-content": "misc"}
+        "report": "techreport", "dissertation": "phdthesis", "posted-content": "misc", "dataset": "misc"}
 
 
 def make_key(m, used):
@@ -136,6 +159,8 @@ def bib_entry(m, key, note):
             f.append((k_bib, tex(v)))
     if typ in ("book", "incollection", "techreport") and m.get("publisher"):
         f.append(("publisher", tex(m["publisher"])))
+    if m.get("_source") == "datacite":
+        f.append(("howpublished", tex("Dataset, " + (m.get("publisher") or "DataCite"))))
     if year_of(m):
         f.append(("year", str(year_of(m))))
     f.append(("doi", m.get("DOI", "")))

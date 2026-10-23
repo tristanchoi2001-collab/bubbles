@@ -1,1 +1,45 @@
 doi	first_author	year	short_title	level	note
+10.36253/substantia-823	Ninham	2021	A review and update of bubble column evaporator processes	C+F	I29. 1~3 mm 자유 상승 기포는 수십 분의 1초 안에 수증기 포화(3.3절, fupress 공개 PDF). Fick 확산만이면 수 초
+10.1021/jp901801k	Francis	2009	Bubble column for evaporative cooling and latent heat of salt solutions	C	I29. 22 °C 입구 공기에서 기포탑 물이 약 8 °C까지 냉각(검색 요약 기준)
+10.5004/dwt.2009.917	Francis	2009	Thermal desalination using a non-boiling bubble column	C	I29. 끓는점 아래 기포탑 증발(검색 요약 기준)
+10.1016/j.desal.2014.07.014	Shahid	2014	A study of the bubble column evaporator method for thermal desalination	C	I29 배경
+10.1016/j.expthermflusci.2020.110063	Eder	2020	Experimental analysis of the humidification of air in bubble columns	C+F	I29. 가습기 출구 공기를 수온에서 포화로 가정, 가습량은 수온에 지수적으로 증가(Europe PMC PMC7116115 전문)
+10.1115/1.3580198	Snyder	1969	Mass-transfer model in subcooled nucleate boiling	C+A	I29·I30. 기포 아래 막 증발 + 위쪽 응결(열관)이 서브쿨 흐름 비등 열의 상당 부분~거의 전부(초록)
+10.1016/j.expthermflusci.2010.08.001	Kabov	2011	Evaporation and flow dynamics of thin, shear-driven liquid films in microgap channels	C	I29. 기체가 미는 막의 증발(검색 요약 기준)
+10.1115/interpack2009-89318	Zaitsev	2009	Microgap cooling technique based on evaporation of thin liquid films	C+A	I29. 물, 납작 채널 H 1.2~2.0 mm, 기체 전단 막, CHF > 400 W/cm²(초록)
+10.1115/icmm2003-1068	Kaji	2003	Analogy between heat transfer and fluid friction of gas-liquid flow in minichannel	C+A	I29. 2.01 mm 관 수직 상향 가열 공기-물, h·ΔP·기공률 동시 측정(초록). 습도 변화의 엔탈피 기여를 다룸(Scholar 스니펫, 원문 미확인)
+10.1016/j.expthermflusci.2009.12.003	Kaji	2010	Heat transfer and fluid dynamics of air-water two-phase flow in micro-channels	C	I29 배경. 내용 미확인
+10.1002/htj.10110	Yi	2003	Theoretical study of evaporative heat transfer in high-velocity air-water flow in a small vertical tube	C+A	I29. 환상류 얇은 막 표면의 강제 대류 증발이 강화 기구(이론, 초록)
+10.1016/j.ijheatmasstransfer.2003.09.031	Steinke	2004	Control and effect of dissolved air in water during flow boiling in microchannels	C	I29 위험(탈기). 용존 산소 8 ppm 물은 벽 90.5 °C에서 기포, 5.4·1.8 ppm은 100 °C까지 없음(검색 요약 기준)
+10.1115/1.2351905	Chen	2006	Effects of dissolved air on subcooled flow boiling of a dielectric coolant in a microchannel heat sink	C	I29 위험(탈기). 용존 공기로 첫 기포 벽 온도 크게 낮아짐(검색 요약 기준)
+-	Das	2021	Air injection in a pseudo boiling system (RIT MS thesis)	U	I29. 공기 쪽 증발(잠열)을 줄이려고 벌크 온도를 낮춤(초록). https://repository.rit.edu/theses/10870
+10.1115/fedsm-icnmm2010-30882	Molla	2010	Pressure drop of accelerating slug flow in microchannels: modeling and experiment	C+A	I13. 1 m 직사각 미세관, 압력 강하 최대 2000 kPa로 기포 팽창(기공률 30→90%), 매립 막 압력 센서 + 영상, 압력 구배 선형(초록)
+10.1039/c0lc00478b	Molla	2011	Pressure drop of slug flow in microchannels with increasing void fraction	C	I13. 위의 학술지판
+10.2118/170910-pa	Molla	2017	Microfluidic PVT: saturation pressure and phase-volume measurement of black oils	C+A	I13. 1 m 모세관에서 압력을 낮추며 기체·액체 길이를 영상으로 자동 측정해 상 부피비(초록)
+10.1039/c3lc00013c	Fisher	2013	Equilibrium gas-oil ratio measurements using a microfluidic technique	C	I13 배경
+10.1088/0960-1317/16/1/019	Chio	2006	Transient pressure drops of gas bubbles passing through liquid-filled microchannel contractions	C	I14. 단일 기포 과도 압력 + 고속 영상(검색 요약 기준)
+10.1016/j.ijheatmasstransfer.2010.07.035	Choi	2010	Adiabatic two-phase flow in rectangular microchannels Part II: single bubble pressure drop	C	I14. 단일 기포 압력 강하를 영상 거동에서 추정(검색 요약 기준)
+10.1016/j.ijmultiphaseflow.2010.12.007	van Ommen	2011	Time-series analysis of pressure fluctuations in gas-solid fluidized beds: a review	C	I14·N1 배경
+10.1016/j.ijheatmasstransfer.2013.10.024	Tuo	2014	Periodic reverse flow and boiling fluctuations in a microchannel evaporator	C	N1. 압력 변동 주기와 동기 고속 영상(Scholar 스니펫)
+10.1016/j.ijheatfluidflow.2009.03.013	Bogojevic	2009	Two-phase flow instabilities in a silicon microchannels heat sink	C	N1. 압력 변동 + 고속 영상(Scholar 스니펫)
+10.1016/j.ces.2016.07.024	Ziegenhein	2016	Particle tracking using micro bubbles in bubbly flows	C	I15. 자연 미세 기포를 PTV 추적 입자로, PMMA 입자 PIV와 비교(검색 요약 기준)
+10.1088/0957-0233/16/10/009	Ryu	2005	Use of bubble image velocimetry for plunging wave and greenwater	C	I15. 기포를 추적 입자로 쓰는 BIV(검색 요약 기준)
+10.1017/jfm.2014.544	Bouche	2014	Homogeneous swarm of bubbles rising within a thin gap. Part 2. Liquid dynamics	C+A	I15. 얇은 갭에서 벽 마찰로 후류가 강하게 약해짐(초록)
+10.1016/0098-1354(92)80021-z	Wright	1992	Solutions of inverse problems in population balances I: aggregation kinetics	C	I19 방법
+10.1016/0098-1354(94)00062-s	Sathyagal	1995	Solution of inverse problems in population balances II: particle break-up	C	I19 방법
+10.1515/tp-2026-0081	Dunlap	2026	Open datasets and machine learning for two-phase heat transfer: a review	C+F	I25 (lit_5 #43, arXiv 2605.23037v2). 공개 자료 표는 비등·응축 위주, 영상 지표→ΔP 연구 없음
+10.5281/zenodo.22235801	Fahim	2026	Multimodal flow-boiling dataset for BubbleID-Flow	D+A	I25. DataCite 대조. FC-72, 2.5×5 mm 유로, 3000 fps 영상 + 주석 130장 + 열 자료 + AE, CC BY
+10.5281/zenodo.22264377	Pandey	2026	BoilingBench-CV dataset	D+A	I25. DataCite 대조. 풀 비등 분할 벤치마크, 추적 ID·합체/분열 정답 없음을 명시, CC BY
+10.5281/zenodo.7985771	Buscher	2023	Visualization of adiabatic gas-liquid flow in a cross-corrugated PHE channel, Part 1	D+A	I25. DataCite 대조. 단열 공기-물 원본 사진 + 운전 조건·양식 CSV, CC BY. Part 2~4: 10.5281/zenodo.7986374, .7986384, .8067163
+10.14279/depositonce-17868	Buscher	2023	Supplementary measurement values and processed images (cross-corrugated PHE channel)	D+A	I25. DataCite 대조. ΔP·유량·기공률·불확도 + 화상 처리 결과, CC BY → 가장 가까운 "영상 + ΔP" 공개 자료
+10.1016/j.ijmultiphaseflow.2022.104149	Buscher	2022	Digital image analysis of gas-liquid flow in a cross-corrugated PHE channel	C	I25. 위 자료의 논문
+10.5061/dryad.kwh70rzm3	Pierson	2026	Data from: Acoustic signatures of two-phase flows in a microchannel heat sink	D+A	I25. DataCite 대조. 동기 AE·마이크 + 열유체 + 영상, 비등, CC0
+10.1039/c4ra15163a	Musterd	2015	Calculating the volume of elongated bubbles and droplets from a top view image	C+A	I26·N3 (lit_6 #2는 C+F). 가장자리 (4−π) 항
+10.1016/j.expthermflusci.2010.06.011	Barber	2010	Bubble confinement in flow boiling of FC-72 in a high aspect ratio microchannel	C	I30 (lit_7 B34)
+10.1016/j.applthermaleng.2010.05.024	Wang	2011	Investigation of boiling and bubble confinement in a high aspect ratio micro-channel	C	I30
+10.4028/www.scientific.net/ddf.312-315.548	Wang	2011	Confined bubble and heat transfer during flow boiling in a high aspect ratio mini-channel	C+A	I30. Dh 1.454 mm, 종횡비 10, FC-72, 단일 기포 반지름 선형→지수 성장, 열유속과 함께 빨라짐(초록)
+10.1016/j.ijheatmasstransfer.2006.04.010	Kenning	2006	Confined growth of a vapour bubble in a capillary tube at initially uniform superheat	C	I30
+10.1016/j.ijheatmasstransfer.2014.02.014	Jung	2014	Simultaneous measurement of single-bubble dynamics and heat transfer in nucleate boiling	C	I30 배경
+10.1016/j.ijmultiphaseflow.2006.02.016	Revellin	2006	Characterization of diabatic two-phase flows in microchannels: R-134a in a 0.5 mm channel	C	I30 (lit_4 #25)
+10.1615/ihtc5.430	Saha	1974	Point of net vapor generation and vapor void fraction in subcooled boiling	C	I30. 열역학 건도 vs 실제 증기 생성
+10.6028/nist.tn.2279	Burgess	2024	Self-diffusion and binary-diffusion coefficients in gases (NIST TN 2279)	C+F	I29·N4. 권장값 H2O–N2 0.254 cm²/s(298 K). H2O–He 없음, OH–He 0.871 / OH–Air 0.253 cm²/s(비 3.4). nvlpubs.nist.gov 공개 PDF

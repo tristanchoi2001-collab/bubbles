@@ -1,0 +1,178 @@
+doi	first_author	year	short_title	level	note
+-	Kumagai	2008	Effects of channel gap and channel attitude on flow pattern of air-water two-phase flow in rectangular millimeter-scale channels	U	T1. JaLC DOI 10.11395/jjsem.8.s152 (doi.org RA 조회로 확인, Crossref 미등록). J. JSEM 8(Special Issue):152-157. J-STAGE 원문 1~5쪽 읽음. 수평 폭 50 mm, 갭 0.5/1/2/5/10 mm, 공기-물
+10.1299/kikaib.61.4412	Fujita	1995	Gas-liquid flows in narrow flat channels: influences of liquid properties	C+F	T2. Trans JSME B 61(592):4412-4419. 수평 폭 10 mm, 갭 0.2/0.5/0.7/1.2/2.0 mm, 1~2쪽 원문
+10.1016/b978-0-444-81811-9.50044-5	Fujita	1995	Gas-liquid flows in flat channels with small channel clearance	C	T3. Multiphase Flow 1995 (Elsevier) pp.441-451
+10.1016/s0301-9322(00)00050-1	Lee	2001	Pressure drop correlations for two-phase flow within horizontal rectangular channels with small heights	C	T4, lit_1 A7. Crossref 첫 저자 표기 'Ju Lee Han'
+10.1299/kikaib.58.408	Sadatomi	1992	Effects of gap width and orientation on two-phase flow in a narrow passage between two flat plates (Japanese)	C+F	T5, lit_1 A5
+10.1002/cjce.5450710502	Ali	1993	Adiabatic two-phase flow in narrow channels between two flat plates	C	T5, lit_1 A6
+10.1016/0017-9310(94)90064-7	Wilmarth	1994	Two-phase flow regimes in narrow rectangular vertical and horizontal channels	C	T6, lit_1 A4
+10.1115/fedsm2003-45372	Ide	2003	Effect of surface tension on void fraction and frictional pressure drop of air-liquid flow in a horizontal flat narrow rectangular channel	C+A	T7. 10.0 x 1.0 mm, 계면활성제 0~100 ppm
+10.1115/icmm2004-2358	Ide	2004	Correlations of the holdup and the frictional pressure drop in air-water flow in a flat capillary rectangular channel	C+A	T8. 9.9 x 1.1 mm
+10.1016/j.expthermflusci.2005.03.010	Ide	2005	Correlations of holdup and frictional pressure drop in air-water flow in a capillary rectangular channel	C+A	T8, lit_1 A15 / lit_7 A19
+10.3811/jjmf.24.611	Ide	2011	Holdup and flow patterns of horizontal gas-liquid two-phase flow in flat rectangular microchannels	C+F	T9. Crossref 제목 공란. 1.0 x 0.1, 1.0 x 0.2 mm, J-STAGE 원문 일부
+10.1016/s0029-5493(99)00078-3	Ekberg	1999	Gas-liquid two-phase flow in narrow horizontal annuli	C	T10. 갭 1.0 mm(계산). INIS 기록 검색 요약 기준
+10.1016/j.ijmultiphaseflow.2015.11.006	Chinnov	2016	Two-phase flow patterns in short horizontal rectangular microchannels	C+A	T11, lit_7 A17
+10.1007/s10404-023-02633-8	Ronshin	2023	Experimental study of two-phase flow regimes in slit microchannels	C	T12. 높이 0.05~1 mm, 폭 10~40 mm (검색 요약)
+10.1051/matecconf/20167201023	Ron'shin	2016	Investigation of two-phase flow in short horizontal mini channel height of 1 mm	C	T13. MATEC 72:01023. 사이트 봇 차단 403, 내용은 검색 요약
+10.1051/matecconf/20179201013	Ronshin	2016	Two-phase flow in a short horizontal microchannel 50 um high, 20 mm wide	C	T13 관련. MATEC 92:01013
+10.1007/s12217-019-09747-1	Ronshin	2019	Adiabatic gas-liquid flow regimes and pressure drop in slit microchannel	C	T14, lit_3 K15
+10.1134/s1810232821040093	Ronshin	2021	Influence of liquid properties on gas-liquid flow regimes and pressure drop in a flat microchannel	C	T15
+10.1063/5.0001279	Dementyev	2020	Determination of void fraction of two-phase flow in slit microchannel	C	T16. AIP Conf Proc 2212:020015
+10.1016/j.expthermflusci.2019.01.022	Ronshin	2019	Experimental characterization of two-phase flow patterns in a slit microchannel	C+A	T17, lit_3 K16
+10.1016/j.expthermflusci.2024.111153	Dementyev	2024	Adiabatic two-phase flow patterns in a slit microchannel with 1:800 aspect ratio	C	T18 (검색 요약)
+10.1615/interfacphenomheattransfer.2023047135	Dementyev	2023	Two-phase gas-liquid flow patterns in extremely small gap microchannel (10 um x 10 mm)	C+A	T18 관련
+10.1051/e3sconf/202345904005	Dementyev	2023	Two-phase flow patterns in large aspect ratio microchannel with T-mixer	C+A	T18 관련. 10 um x 10 mm
+10.1134/s0869864315030014	Chinnov	2015	Regimes of two-phase flow in micro- and minichannels (review)	C	T19
+10.1134/s0018151x14040075	Chinnov	2014	Two-phase flow in a horizontal rectangular microchannel	C	T19 관련
+10.1134/s1063785018040089	Ronshin	2018	Effect of fluid properties on two-phase regimes of flow in a wide rectangular microchannel	C	T19 관련
+10.1016/j.pnucene.2020.103601	Zhang	2021	Steam-water flow regimes and transitions in narrow rectangular horizontal channels	C+A	T20, lit_7 A22
+10.1016/j.cherd.2022.04.010	Liu	2022	Length, liquid film thickness and pressure drop of slug flow in horizontal narrow rectangular channel	C+A	T21, lit_7 A18
+10.1016/j.cherd.2022.10.039	Liu	2023	One-dimensional bubbly flow interfacial area transport in horizontal narrow rectangular channel	C	T22, lit_1 F3
+10.1016/0301-9322(91)90003-l	Wambsganss	1991	Two-phase flow patterns and transitions in a small horizontal rectangular channel	C+A	T23, lit_1 A8
+10.1016/0894-1777(92)90055-a	Wambsganss	1992	Frictional pressure gradients in two-phase flow in a small horizontal rectangular channel	C+A	T23, lit_1 A8
+10.1016/j.ijheatmasstransfer.2014.09.029	Albahloul	2015	Bubble shape and confinement in diabatic two-phase flow in a minichannel	C+A	T24, 보고서 2-1
+10.3811/jjmf.27.168	Fukasawa	2013	Effect of small rectangular channel height on bubble moving velocity through sudden contraction	C+A	T25. J-STAGE 초록
+10.1299/kikaib.61.201	Ohta	1995	Experiments on bubble behavior in a horizontal narrow divergent passage	C+F	T26. 원문 1쪽
+10.1016/j.ijmultiphaseflow.2006.08.008	Murai	2007	Skin friction reduction by large air bubbles in a horizontal channel flow	C	T27, lit_1 F8
+10.1016/j.ijheatmasstransfer.2019.118643	Buscher	2019	Flow pattern transitions in a cross-corrugated plate heat exchanger channel	C	T28. 공개 데이터 D1
+10.1016/j.expthermflusci.2021.110380	Buscher	2021	Two-phase pressure drop and void fraction in a cross-corrugated plate heat exchanger channel	C+A	T28. S2 초록. 공개 데이터 D1
+10.1016/j.ijmultiphaseflow.2022.104149	Buscher	2022	Digital image analysis of gas-liquid flow in a cross-corrugated plate heat exchanger channel	C	T28. 공개 데이터 D1
+10.1016/0301-9322(93)90027-r	Mishima	1993	Some characteristics of gas-liquid flow in narrow rectangular ducts	C+A	T29, lit_1 A1
+10.1016/s0301-9322(98)00057-3	Xu	1999	Gas-liquid two-phase flow regimes in rectangular channels with mini/micro gaps	C+A	T30, lit_1 A2
+10.1016/s0142-727x(99)00002-8	Xu	1999	Gas-liquid two-phase flow regimes in rectangular channels with mini gaps	C	T30, lit_1 A3
+10.1016/s0029-5493(00)00306-x	Hibiki	2001	Flow regime transition criteria in vertical narrow rectangular channels	C+A	T31, lit_1 A10
+10.1016/j.ijmultiphaseflow.2003.11.006	Satitchaicharoen	2004	Two-phase flow pattern maps in mini-gap channels	C	T32, lit_1 A11
+10.1016/0301-9322(82)90068-4	Sadatomi	1982	Two-phase flow in vertical noncircular channels	C+F	T33, lit_1 A9
+10.1016/j.pnucene.2022.104332	He	2022	Bubbly to slug transition of air-water upflow in vertical rectangular channels with different sizes	C	T34. 갭 4/6/8 mm (검색 요약)
+10.1016/j.pnucene.2022.104377	He	2022	Frictional pressure drop of air-water upflow in vertical rectangular channels with different sizes	C+A	T35, lit_7 A23
+10.1016/j.ijheatfluidflow.2012.04.007	Shen	2012	1D interfacial area transport of bubbly flow in narrow rectangular channel	C	T36, lit_8 A5
+10.1016/j.nucengdes.2022.111725	Zhang	2022	Bubble size distribution for bubbly-to-slug transition flow in narrow rectangular channel	C	T37. 제목 수준
+10.1063/5.0083749	Prakash	2022	Bubble size analysis in a two-phase countercurrent flow in the narrow rectangular column	C+A	T38
+10.5772/37721	Ito	2012	Measurement of two-phase flow structure in a narrow rectangular channel	C	T39, lit_6 #3 (내용은 lit_6 기준)
+-	Matsumura	1987	Characteristics of bubble flow in a vertical narrow rectangular channel (Kagoshima Univ. report 29:37-45)	U	T40. hdl 10232/11421, DOI 없음
+10.1016/j.ijheatmasstransfer.2024.125270	Rassame	2024	Drift-flux model for dispersed flows in rectangular channels	C+A	T41, lit_1 C3
+10.1016/j.ijthermalsci.2024.109086	Shen	2024	Full-flow-range drift-flux model in vertical narrow rectangular channels	C+A	T41, lit_1 C4
+10.1016/j.ijheatmasstransfer.2024.126207	Khunsrimek	2024	Two-group drift-flux model for dispersed flow in rectangular channel	C+A	T41, lit_1 C5
+10.1029/93wr01529	Fourar	1993	Two-phase flow in smooth and rough fractures: porous-medium and pipe flow models	C	T42, refs_0
+10.1016/0301-9322(95)00005-i	Fourar	1995	Experimental study of air-water two-phase flow through a fracture (narrow channel)	C	T43, lit_1 A17
+10.1029/95wr00171	Persoff	1995	Two-phase flow visualization and relative permeability in rough-walled rock fractures	C	T44, refs_0
+10.1029/2004wr003837	Chen	2006	Two-phase flow in rough-walled fractures: experiments and a flow structure model	C	T45, refs_0
+10.2172/896520	Diomampo	2001	Relative permeability through fractures (Stanford SGP-TR-170)	C+F	T46. OSTI 원문(osti.gov/servlets/purl/896520). 부록 B 표는 스캔본
+10.1134/s1810232826010169	Gasanov	2026	Influence of channel gap size on heat transfer during boiling of subcooled water flow	C+A	B1, lit_2 #1
+10.1016/j.ijheatmasstransfer.2022.123567	Zhu	2023	Flow boiling characteristics in minigap channels over a wide heat flux range	C+A	B2, lit_7 A8
+10.1016/j.ijheatmasstransfer.2012.07.080	Alam	2012	Optimum dimension range of microgap heat sinks	C+A	B3, lit_7 A2
+10.1016/j.ijmultiphaseflow.2012.02.007	Alam	2012	Local flow boiling heat transfer and pressure drop in microgap channel	C	B4
+10.1016/j.ijheatmasstransfer.2012.11.020	Alam	2013	Flow boiling in microgap vs microchannel heat sink and hotspot mitigation	C	B5
+10.1007/978-1-4614-7190-5	Alam	2014	Flow Boiling in Microgap Channels: Experiment, Visualization and Analysis (book)	C+A	B6, lit_2 #37. Crossref 연도 2014(장별 DOI는 2013)
+10.1115/icmm2004-2383	Yang	2004	Flow boiling heat transfer and flow pattern in rectangular channel of mini-gap	C+A	B7, lit_4 #10. 갭 2/1/0.5/0.2 mm
+10.1016/s0301-9322(01)00054-4	Lee	2001	Heat transfer correlation for boiling flows in small rectangular horizontal channels with low aspect ratios	C+A	B8, lit_2 #40
+-	Lee	2001	미세 수평 사각 유로 내에서의 비등 유동 압력강하 (KSME Trans B 25(9):1219-1226)	U	B8, lit_7 A5 (KISTI DOI)
+10.1115/imece2008-66928	Koizumi	2008	Flow behavior and flow boiling heat transfer in thin-rectangular mini-channels	C+A	B9. 물, 높이 0.4~0.6 mm, 폭 10 mm
+10.1115/icone16-48123	Oshikawa	2008	Boiling heat transfer in narrow and flat space	C+A	B10, lit_2 #8
+10.1115/icnmm2009-82113	Koizumi	2009	Boiling heat transfer in narrow channel and horizontal-narrow-flat space	C+A	B10, lit_2 #9
+10.3389/fmech.2017.00016	Shinmoto	2017	Boiling of immiscible liquids flowing in narrow rectangular heated channels	C+F	B11, lit_7 A1. 자료 공개 문구 없음
+10.1016/j.ijheatmasstransfer.2024.125471	Omisanya	2024	Enhanced flow boiling heat transfer in narrow gap with different widths	C+A	B12, lit_7 A20
+10.1016/0017-9310(92)90190-4	Willingham	1992	Channel height effects on forced-convection boiling and CHF	C	B13, lit_7 A16
+10.1115/1.4043483	Robinson	2019	Orientation effects in two-phase microgap flow	C+A	B14, lit_2 #13
+10.1080/01457630802656678	Bar-Cohen	2009	Modeling and prediction of two-phase microgap channel heat transfer characteristics	C	B15. 문헌 자료 모음
+10.1016/j.ijmultiphaseflow.2009.06.005	Harirchian	2009	Critical role of channel cross-sectional area in microchannel flow boiling	C+A	B16, lit_2 #41
+10.1016/j.ijheatmasstransfer.2010.02.039	Harirchian	2010	Comprehensive flow regime map for microchannel flow boiling	C+A	B16, lit_2 #42
+10.1016/j.ijheatmasstransfer.2011.09.024	Harirchian	2012	Flow regime-based modeling of heat transfer and pressure drop in microchannel flow boiling	C+A	B16, lit_2 #43
+10.1016/j.ijheatmasstransfer.2015.06.073	Kharangate	2015	Flow boiling and CHF in horizontal channel with one-sided and double-sided heating	C	B17, lit_7 A21
+10.1134/s086986432206018x	Ronshin	2023	Investigation of dielectric liquid FC-72 boiling in a slit microchannel	C	B18
+10.1615/ihtc17.150-60	Ronshin	2023	Flow boiling of FC-72 in a flat microchannel	C	B19
+10.1088/1742-6596/1677/1/012151	Ronshin	2020	Heat transfer in two-phase flow regimes in rectangular microchannel	C+A	B20. 공개 논문
+10.1615/ihtc15.fbl.009930	Kawanami	2014	Flow boiling heat transfer and flow behaviors in microgap channel	C	B21. 제목 수준
+10.1205/026387601750282553	Kenning	2001	Saturated flow boiling of water in a narrow channel: local phenomena	C	B22
+10.1299/kikaib.52.835	Monde	1986	Boiling heat transfer in a narrow vertical rectangular channel	C	B23. 제목 수준
+10.1299/kikaib.54.3214	Monde	1988	HT enhancement due to bubbles passing through a narrow vertical rectangular channel	C+F	B24, lit_4
+10.1016/j.ijheatmasstransfer.2013.08.049	Lee	2013	Flow instability during subcooled boiling for downward flow in a vertical narrow rectangular channel	C+A	B25, lit_7 A15
+10.1016/j.ijheatmasstransfer.2024.126025	Yan	2024	Gap size influence on boiling crisis in narrow rectangular channels	C	B26. IJHMT 233:126025
+10.1115/1.2822686	Sudo	1996	CHF in rectangular channels heated from one or both sides, 0.1-14 MPa	C+A	B27, lit_2 #47
+10.3390/en12173368	Klugmann	2019	Flow boiling in minigap in the reversed two-phase thermosiphon loop	C+A	B28, lit_7 A14
+10.2139/ssrn.6753968	Liu	2026	Void fraction of subcooled flow boiling within horizontal narrow channel (capacitance)	C+A	B29, lit_7 A25 (프리프린트)
+10.1299/jsme1958.20.638	Katto	1977	Nucleate and transition boiling in a narrow space between two horizontal parallel disk-surfaces	C+F	B30, lit_2 #15
+10.1016/j.expthermflusci.2011.02.006	Cardoso	2011	FC72 and FC87 nucleate boiling inside a narrow horizontal space	C+F	B31, lit_7 A13
+10.1007/s00231-007-0325-9	Stutz	2009	Nucleate and transition boiling in narrow horizontal spaces	C+F	B32, lit_2 #22. Heat Mass Transfer 45(7):929-935(2009 권호). Crossref published 2007(온라인 선공개)
+10.1016/0017-9310(88)90004-x	Fujita	1988	Nucleate boiling HT and CHF in narrow space between rectangular surfaces	C+A	B33, lit_7 A12
+10.1299/jsmeb1988.31.3_513	Fujita	1988	Heat transfer in nucleate boiling within a vertical narrow space	C+F	B33, lit_2 #19
+10.1016/0017-9310(69)90153-7	Ishibashi	1969	Saturated boiling heat transfer in narrow spaces	C	B34, lit_2 #16
+10.1016/j.ijmultiphaseflow.2005.01.002	Kim	2005	Visualization of boiling phenomena in inclined rectangular gap	C+A	B35, lit_7 A11
+10.1299/kikaib.45.1723	Kumagai	1979	Boiling heat transfer in a thin gap with a cooled plate approaching the heating surface (1st report)	C	B36. 제목 수준
+10.1299/jsmeted.2014._A125-1_	Koizumi	2014	Heat transfer during boiling in a quasi-two-dimensional space by visualizing flow structure and liquid film	C	B37. 제목 수준(2쪽 초록)
+10.1017/jfm.2022.1008	Booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	C+F	M1, lit_3 P1. 자료 공개 문구 없음(페이지 확인)
+-	Booth	2024	The motion of bubbles in Hele-Shaw cells (DPhil thesis, Univ. Oxford)	U	M2, lit_3 P4. 원문 읽음(ORA), DOI 없음
+10.1103/physrevfluids.9.123603	Wu	2024	Motion and deformation of a bubble in a Hele-Shaw cell	C	M3
+10.1017/jfm.2025.322	Booth	2025	Bubble racing in a Hele-Shaw cell	C+A	M4. JFM 1010:A19, 보충 영상
+10.1098/rspa.2024.0613	Booth	2025	The motion of a bubble in a non-uniform Hele-Shaw flow	C+A	M5. 코드 공개 D4
+10.1017/jfm.2025.10951	Booth	2025	The motion of a surfactant-laden bubble in a channel or a Hele-Shaw cell	C+A	M6, lit_3 P3
+10.1098/rsos.252426	Booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	C+A	M7, lit_3 P17
+10.1103/physrevfluids.4.113602	Reichert	2019	Predicting droplet velocity in a Hele-Shaw cell	C+F	M8, lit_3 P8 / 보고서 2-1
+10.1017/jfm.2018.457	Reichert	2018	Topography of the lubrication film under a pancake droplet in a Hele-Shaw cell	C+A	M9, lit_3 P9
+10.1017/jfm.2025.167	Baue	2025	Droplet velocity in both limits of low and high soluble surfactants in a Hele-Shaw cell	C+A	M10, lit_3 P10
+10.1063/1.866566	Kopf-Sill	1988	Bubble motion in a Hele-Shaw cell	C+A	M11, lit_3 P13
+10.1063/1.868059	Park	1994	The influence of surfactant on the bubble motion in Hele-Shaw cells	C+A	M12, lit_3 P11
+10.1063/1.869113	Maruvada	1996	Retarded motion of bubbles in Hele-Shaw cells	C+A	M12, lit_3 P12
+10.1093/qjmam/12.3.265	Taylor	1959	A note on the motion of bubbles in a Hele-Shaw cell and porous medium	C	M13, lit_3 P14
+10.1017/s0022112084000367	Park	1984	Two-phase displacement in Hele Shaw cells: theory	C+A	M13, lit_3 P5
+10.1063/1.865831	Tanveer	1986	The effect of surface tension on the shape of a Hele-Shaw cell bubble	C+A	M13
+10.1063/1.866106	Tanveer	1987	Stability of bubbles in a Hele-Shaw cell	C+A	M13
+10.1063/1.866930	Tanveer	1988	Effect of nonzero viscosity ratio on the stability of fingers and bubbles in a Hele-Shaw cell	C+A	M13
+10.1063/1.857492	Saffman	1989	Prediction of bubble velocity in a Hele-Shaw cell: thin film and contact angle effects	C+A	M13
+10.1017/jfm.2018.240	Keiser	2018	Dynamics of non-wetting drops confined in a Hele-Shaw cell	C+A	M14
+10.1017/jfm.2022.618	Keeler	2022	The interaction of multiple bubbles in a Hele-Shaw channel	C	M15. JFM 946. 자료 공개 문구 확인: figshare 10.6084/m9.figshare.17277401 (D41)
+10.1017/jfm.2020.844	Gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	C+A	M16
+10.1103/physrevfluids.9.093605	Lawless	2024	Stable bubble formations in a depth-perturbed Hele-Shaw channel	C+A	M16
+10.1007/s10665-021-10146-y	Thompson	2021	Bifurcations of drops and bubbles propagating in variable-depth Hele-Shaw channels	C	M16. 그림 재현 자료 D3
+10.1017/s0022112008003455	de Lozar	2008	The steady propagation of an air finger into a rectangular tube	C+F	M17, lit_3
+10.1007/bf01047407	Eck	1978	On bubble motion in a Hele-Shaw cell, a possibility to study two-phase flows under reduced gravity	C	M19. 제목 수준
+10.1017/s002211208600109x	Maxworthy	1986	Bubble formation, motion and interaction in a Hele-Shaw cell	C+A	M20
+10.1103/physrevlett.79.1265	Kelley	1997	Path instabilities of rising air bubbles in a Hele-Shaw cell	C	M21. 제목 수준
+10.1143/jpsj.75.124401	Kawaguchi	2006	Buoyancy-driven path instabilities of bubble rising in simple and polymer solutions of Hele-Shaw cell	C	M22
+10.1143/jpsj.78.114604	Kozuka	2009	Path instabilities of bubble rising in polymer solutions of Hele-Shaw cell	C	M22
+10.1016/j.ces.2022.117647	Xiang	2022	Single bubble rising near vertical wall in Hele-Shaw cell	C	M24. 제목 수준
+10.3811/pmfr.4.117	Shikata	2009	Effects of two-dimensional-column thickness on single-bubble rise characteristics	C+F	M25. Crossref 제목 공란. 원문 1쪽(두께 12/3/1 mm)
+10.1017/jfm.2022.492	Ruiz-Rus	2022	Coalescence of bubbles in a high Reynolds number confined swarm	C+F	M26, lit_8
+10.1103/physreve.73.011505	Cantat	2006	Experimental evidence of flow destabilization in a two-dimensional bidisperse foam	C+A	M27, lit_1 G5
+10.1021/acs.iecr.3c01121	Yin	2023	Data-driven bubble tracking DMD method for bubble rising in a Hele-Shaw cell	C	M28. 제목 수준
+-	Buscher	2023	D1 Visualization of adiabatic gas-liquid flow in a cross-corrugated plate HX channel (original photographs, 4 parts) + measurement values	D+F	CC-BY 4.0. ΔP·기공률·영상 기포 직경 CSV. DataCite DOI 10.5281/zenodo.7985771 (+ .7986374, .7986384, .8067163) / 10.14279/depositonce-17868; https://zenodo.org/records/7985771 ; https://depositonce.tu-berlin.de/handle/11303/19071
+-	Khandelwal	2024	D2 Flow visualization of narrow rectangular channel: annular, rolling-wispy, wispy flow	D+F	CC-BY 4.0, 270 MB. DataCite DOI 10.5281/zenodo.13372128; https://zenodo.org/records/13372128
+-	Thompson	2021	D3 Data to support Bifurcations of drops and bubbles in variable-depth Hele-Shaw channels	D	CC-BY 4.0. DataCite DOI 10.48420/14675763; https://figshare.manchester.ac.uk/articles/dataset/14675763
+-	Booth	2025	D4 The motion of a bubble in a non-uniform Hele-Shaw cell code	D	CC-BY 4.0, 코드. DataCite DOI 10.6084/m9.figshare.28595367; https://rs.figshare.com/articles/dataset/28595367
+-	Liao	2023	D5 Supporting data: quantitative visualization of two-phase flow in a fractured porous medium (WRR)	D+F	CC-BY 4.0, 9.9 GB. DataCite DOI 10.5281/zenodo.8188007; https://zenodo.org/records/8188007
+-	Wang	2017	D6 Two phase flow through rough fractures (simulation)	D	CC-BY 4.0. DataCite DOI 10.6084/m9.figshare.5650126; https://figshare.com/articles/5650126
+-	Hessenkemper	2022	D7 Dataset for Bubble identification from images with machine learning methods	D+F	CC-BY 4.0, 554 MB. DataCite DOI 10.14278/rodare.1472 (판 1473, 1487); https://rodare.hzdr.de/record/1473
+-	Ma	2023	D8 Dataset for Fate of bubble clusters rising in a quiescent liquid (tracking ground truth)	D+F	CC-BY 4.0, 1.09 GB. DataCite DOI 10.14278/rodare.2314 (판 2315); https://rodare.hzdr.de/record/2315
+-	Hessenkemper	2024	D9 3D detection and tracking of deformable bubbles in swarms (synthetic)	D+F	CC-BY 4.0. DataCite DOI 10.14278/rodare.2808 (판 2809); https://rodare.hzdr.de/record/2809
+-	Hessenkemper	2025	D10 Lagrangian tracking: clustering and turbulence on rise velocity of bubble swarms	D	CC-BY 4.0. DataCite DOI 10.14278/rodare.4115; https://rodare.hzdr.de/record/4116
+-	Fu	2018	D11 Million-Bubble Dataset (BubGAN)	D	CC-BY 4.0. DataCite DOI 10.17632/mxnzxzc6v7; https://data.mendeley.com/datasets/mxnzxzc6v7
+-	Durve	2024	D12 DropTrack droplet identification and tracking dataset	D	라이선스 미표시. DataCite DOI 10.48557/pqpsn3; https://dataverse.iit.it/citation?persistentId=doi:10.48557/PQPSN3
+-	Choi	2022	D13 DeepBubbleVelocimetry model weights	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.20404052; https://zenodo.org/records/20404053
+-	Yang	2026	D14 Experimental bubble shape classification dataset	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.21915814; https://zenodo.org/records/21915815
+-	Ying	2026	D15 PlumeDEBuG cropped bubble images and masks	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.18793953; https://zenodo.org/records/21076241
+-	Siska	2026	D16 kLarity shadowgraphy images and segmentation model	D+F	GPL-3.0+. DataCite DOI 10.5281/zenodo.19582132; https://zenodo.org/records/22119137
+-	Frank	2026	D17 Bubbly backward-facing step flow: MRV, LDV, shadowgraphy	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.23103582; https://zenodo.org/records/23103583
+-	IPE CAS	2025	D18 3DBubbles	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.15636832; https://zenodo.org/records/15636832
+-	Iacobello	2023	D19 bubble trajectories dataset	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.8208530; https://zenodo.org/records/8208531
+-	Fabian	2026	D20 Multi-source dataset of gas-liquid bubble flows (restricted)	D	접근 제한. DataCite DOI 10.5281/zenodo.19599735; https://zenodo.org/records/19599736
+-	Fahim	2026	D21 Multimodal flow-boiling dataset for BubbleID-Flow (FC-72, 2.5 x 5 mm, bottom heated)	D+F	CC-BY 4.0, 6.1 GB. DataCite DOI 10.5281/zenodo.22235801; https://zenodo.org/records/22235802
+-	Dunlap	2025	D22 Data from BubbleID (Dryad) + OSF annotations/weights	D+F	CC0 1.0. DataCite DOI 10.5061/dryad.ksn02v7gx; https://datadryad.org/dataset/doi:10.5061/dryad.ksn02v7gx ; https://osf.io/3nwyx
+-	Pandey	2026	D23 BoilingBench-CV dataset	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.22264377; https://zenodo.org/records/22264378
+-	Hu	2026	D24 BoilingBench-Multimodal Lite	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.22131858; https://zenodo.org/records/22131859
+-	Zhang	2025	D25 Data: generalizable physical descriptors of pool boiling from unsupervised learning of images	D	CC0 1.0, 19 GB. DataCite DOI 10.5061/dryad.kh18932mw; https://datadryad.org/dataset/doi:10.5061/dryad.kh18932mw
+-	Pandey	2024	D26 Pool boiling dataset: synchronized acoustic, optical, thermal	D	CC0 1.0. DataCite DOI 10.7910/DVN/6GLGC6; https://dataverse.harvard.edu/citation?persistentId=doi:10.7910/DVN/6GLGC6
+-	Prince	2026	D27 Subcooled pool boiling dataset: optical, acoustic, thermal, pressure	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.22235674; https://zenodo.org/records/22235675
+-	Vydyula	2026	D28 HFE-7100 pool boiling: synchronized heater temperature and phase distribution (ITO sapphire)	D	CC0 1.0. DataCite DOI 10.7910/DVN/LKAQFW; https://dataverse.harvard.edu/citation?persistentId=doi:10.7910/DVN/LKAQFW
+-	Zabulis	2023	D29 Ground truth annotations + measurement results for boiling bubbles in microgravity	D+F	CC-BY 4.0. DataCite DOI 10.5281/zenodo.7553796 ; 10.5281/zenodo.7609604; https://zenodo.org/records/7553797 ; https://zenodo.org/records/7609605
+-	Sielaff	2021	D30 Multiscale Boiling (ISS) videos and reference pictures	D	CC-BY 4.0. DataCite DOI 10.48328/tudatalib-618 ; 10.48328/tudatalib-1059; https://tudatalib.ulb.tu-darmstadt.de/handle/tudatalib/2912
+-	Zhou	2024	D31 Subcooled flow boiling AI model and dataset + detection/tracking results	D	CC-BY 4.0(데이터). DataCite DOI 10.17632/p5zskggvwx ; 10.17632/sg46yyrsmv; https://data.mendeley.com/datasets/p5zskggvwx ; https://github.com/zhouzhouwen/The-Robust-Development-of-a-TH-Analysis-Method-for-Bubbles-Using-AI
+-	Mudawar	2024	D32 NASA PSI Flow Boiling and Condensation Experiment, flow boiling module	D	사이트 접속 막힘(502), 라이선스 미확인. DataCite DOI 10.60555/s3td-y977; https://psi.nasa.gov/physci/repo/data/investigations/PSI-4
+-	Pierson	2026	D33 Acoustic signatures of two-phase flows in a microchannel heat sink	D	CC0 1.0. DataCite DOI 10.5061/dryad.kwh70rzm3; https://datadryad.org/dataset/doi:10.5061/dryad.kwh70rzm3
+-	Korniliou	2017	D34 IR wall temperature mapping, flow boiling in PDMS microchannel with pressure sensors	D	CC-BY 4.0. DataCite DOI 10.7488/ds/1587; https://datashare.ed.ac.uk/handle/10283/2226
+-	Hassan	2025	D35 BubbleML 2.0 (simulation boiling)	W	CC-BY 4.0, 49 GB. DataCite DOI (DOI 없음, Kaggle); https://www.kaggle.com/datasets/shakeelhassanuci/bubbleml-2-0
+-	Hu	2023	D36 Boiling image datasets CHF vs pre-CHF	D	CC-BY 4.0. DataCite DOI 10.17632/g53k5w6ptb ; 10.17632/5kjnphrbsz; https://data.mendeley.com/datasets/g53k5w6ptb
+-	Manikonda	2025	D37 Vertical two-phase flow regimes in an annulus image dataset (TAMU)	D	CC-BY 4.0. DataCite DOI 10.17632/nxncbzzz38; https://data.mendeley.com/datasets/nxncbzzz38
+-	Araujo	2024	D38 UNICAMP REDU air-water slug flow databases (examples)	D	CC-BY-NC 4.0. DataCite DOI 10.25824/redu/qhg1fs ; 10.25824/redu/ofxdrz ; 10.25824/redu/lvyzej; https://redu.unicamp.br
+-	Liu	2021	D39 Raw images: bubble aspect ratio under bubble swarm condition (HZDR)	D	CC-BY 4.0. DataCite DOI 10.14278/rodare.827; https://rodare.hzdr.de/record/827
+-	Weber	2023	D40 2D fluid bed bubble segmentation and bed height tracking (NETL)	D	라이선스 미표시. DataCite DOI 10.18141/1967315; https://www.osti.gov/servlets/purl/1967315
+-	Keeler	2021	D41 Interactions JFM (.tex data for all figures of Keeler et al. 2022)	D	MIT, 3.7 MB. DataCite DOI 10.6084/m9.figshare.17277401; https://figshare.com/articles/dataset/Interactions_JFM/17277401
