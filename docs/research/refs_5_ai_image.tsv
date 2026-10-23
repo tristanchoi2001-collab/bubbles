@@ -1,0 +1,40 @@
+doi	first_author	year	short_title	level	note
+10.1016/j.ijmultiphaseflow.2024.104928	Huang	2024	ML boiling prediction: autonomous vision of flow visualization data to performance parameter modeling (IJMF 179)	C+A	ML-extracted void fraction + wetting front area used to improve HTC correlation; microgravity flow boiling. Closest precedent for image stats -> measured h
+10.1016/j.ijheatmasstransfer.2023.124656	Chang	2023	BubbleMask: autonomous visualization of digital flow bubbles for predicting CHF (IJHMT 217)	C+A	30,000 images, 155,000 bubbles, 10 features -> CHF via Interfacial Lift-off Model
+10.1109/itherm55375.2024.10709607	Huang	2024	Modeling flow boiling utilizing ML vision data (ITherm 2024)	C+A	conference companion of Huang 2024 IJMF; rectangular channel single-sided heating
+10.1016/j.ijmultiphaseflow.2022.104336	Seong	2023	Automated bubble analysis of subcooled flow boiling: U-Net transfer learning + global optical flow (IJMF 159)	C	content from search summary: ~10 training images, >90% accuracy/precision vs 100 GT images
+10.1038/s41598-021-88334-0	Kim	2021	Deep learning-based universal bubble detection and mask extraction (Sci Rep 11:8940)	C+F	Mask R-CNN (BubMask); AP50 98%; >92% detected at alpha<=1%, >87% at 2%
+10.1016/j.ijmultiphaseflow.2022.104169	Hessenkemper	2022	Bubble identification from images with ML methods (IJMF 155)	C+F	read arXiv 2202.03107 version; synthetic-image test: gas fraction error ~12% (SD+UNet) at lowest alpha; not acceptable above 5%
+10.1016/j.ces.2019.115467	Haas	2020	BubCNN: Faster RCNN + shape regression (CES 216)	C+A	
+10.1016/j.ces.2020.116163	Cerqueira	2021	DL bubble pattern recognition and shape reconstruction in dense bubbly flows (CES 230)	C+A	
+10.1016/j.ijmultiphaseflow.2016.04.011	Fu	2016	Robust image processing for bubbly flow in a narrow rectangular channel (IJMF 84)	C	prompt said "Fu & Liu 2018 IJMF"; Crossref says 2016. Not deep learning
+10.1016/j.ces.2019.04.004	Fu	2019	BubGAN: synthetic bubbly flow images (CES 204)	C+F	read arXiv 1809.02266
+10.1016/j.ijheatmasstransfer.2018.04.156	Hobold	2018	ML classification of boiling regimes from low-speed visualization (IJHMT 125)	C+A	>93% accuracy
+10.1016/j.ijheatmasstransfer.2018.12.170	Hobold	2019	Visualization-based nucleate boiling heat flux quantification using ML (IJHMT 134)	C+A	error as low as 7%
+10.1038/s41598-021-85150-4	Suh	2021	Deep learning predicts boiling heat transfer (Sci Rep 11:5622)	C+F	HyPR: VGG16 + Mask R-CNN bubble stats; mean error 6%
+10.1016/j.applthermaleng.2021.116849	Rassoulinejad-Mousavi	2021	DL strategies for CHF detection in pool boiling (ATE 190)	C+A	transfer learning; 94.79% with 1% of DS2
+10.1016/j.ijheatmasstransfer.2021.122501	Rokoni	2022	Physical descriptors from reduced-order analysis of bubble dynamics (IJHMT 186)	C	abstract not obtained
+10.1016/j.applthermaleng.2019.114357	Ravichandran	2019	Online IR boiling analysis with ANN (ATE 163)	C+A	ANN measures growth time, period, NSD from IR; R>=0.95
+10.1016/j.eswa.2023.120265	Al-Hindawi	2023	Generalizing CHF detection with unsupervised image-to-image translation (ESWA 227)	C+A	
+10.1016/j.ijmultiphaseflow.2023.104589	Soibam	2023	DL segmentation of bubble dynamics in subcooled boiling (IJMF 169)	C	
+10.1016/j.egyai.2023.100309	Suh	2024	VISION-iT: framework for digitizing bubbles and droplets (Energy and AI 15)	C	
+10.1063/5.0207546	Dunlap	2024	BubbleID: DL framework for bubble interface dynamics (J Appl Phys 136)	C	
+10.1016/j.ijmultiphaseflow.2023.104402	Malakhov	2023	DL segmentation: bubble dynamics and heat transfer at various pressures (IJMF 162)	C	Dunlap review lists authors as Serdyukov et al.; Crossref first author Malakhov
+10.1016/j.ijheatmasstransfer.2025.127894	Zhang	2026	Generalizable physical descriptors of pool boiling from unsupervised learning of images (IJHMT 255)	C	
+10.1016/j.egyai.2025.100668	Na	2026	Bubble segmentation and heat flux estimation in nucleate boiling (Energy and AI 23)	C	
+10.1515/tp-2026-0081	Dunlap	2026	Open datasets and ML for two-phase heat transfer: review (Transport Phenomena 1(3))	C+F	read arXiv 2605.23037v2; no image-stat -> pressure drop study listed
+10.1016/j.aitf.2026.100028	Zhang	2026	Multi-modality fusion: two-phase flow (AI Thermal Fluids 5)	C	Scholar snippet: void fraction and wetting front area improve HTC correlations
+10.1016/j.aitf.2026.100043	Fu	2026	Bubble2Heat: optical to thermal inference in pool boiling (AI Thermal Fluids 7)	C	arXiv 2505.00823
+10.1016/j.ijheatmasstransfer.2019.119211	Qiu	2020	ANN for mini/micro-channel flow boiling HTC (IJHMT 149)	C	Mudawar group
+10.1016/j.ijheatmasstransfer.2020.120351	Zhou	2020	ML for flow condensation HTC (IJHMT 162)	C	Mudawar group
+10.1016/j.ijheatmasstransfer.2021.121607	Qiu	2021	ML for flow boiling pressure drop in mini/micro-channels (IJHMT 178)	C	Mudawar group
+10.1016/j.applthermaleng.2022.118305	Bard	2022	ML prediction of flow boiling HTC in mini/micro-channels (ATE 210)	C	Kharangate group
+10.1088/1361-6501/ab1db8	Sciacchitano	2019	Uncertainty quantification in PIV (MST 30:092001)	C	review
+10.1088/1361-6501/aa6a03	Schneiders	2017	Track benchmarking method for UQ of PTV (MST 28:065302)	C	
+10.1007/s11263-020-01375-2	Luiten	2021	HOTA: higher order metric for MOT (IJCV 129(2):548-578)	C	Crossref published 2020 online
+10.1038/s41592-023-01879-y	Maska	2023	Cell Tracking Challenge: 10 years (Nat Methods 20:1010-1020)	C	
+10.1016/j.ijmultiphaseflow.2019.103194	Poletaev	2020	Bubble patterns recognition using neural networks: bubbly jet (IJMF 126)	C	
+10.1016/j.rse.2014.02.015	Olofsson	2014	Good practices for estimating area and assessing accuracy of land change (RSE 148)	C	cross-field analog: sample-based accuracy -> bias-corrected area + CI
+10.1016/j.rse.2012.10.031	Olofsson	2013	Stratified estimation of accuracy and area (RSE 129)	C	cross-field analog
+10.1002/cyto.a.23863	Caicedo	2019	DL strategies for nucleus segmentation (Cytometry A 95)	C	3-class (background/interior/boundary) U-Net precedent
+-	Maduabuchi	2024	MSEG-VCUQ: segmentation + UQ for HSV phase-detection boiling data	U	arXiv 2411.07463v5 (2026); not in Crossref. Read full text: dry area <2%, contact line density <8% vs 5-expert GT; perimeter PRE 13.8%->6.6% with dilation

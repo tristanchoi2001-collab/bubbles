@@ -1,0 +1,32 @@
+doi	first_author	year	short_title	level	note
+10.1016/0301-9322(93)90027-R	Mishima	1993	Some characteristics of gas-liquid flow in narrow rectangular ducts	C	IJMF 19(1):115-124. 중성자 투과 기공률, 1.07/2.45/5.0 mm(2차 인용). 초록 미공개
+10.1615/0-8493-9925-4.70	Mishima	1988	A study of air-water flow in a narrow rectangular duct using an image processing technique	C	Proc. Dynamics of Two-Phase Flows 141-160 (학회 1988-07 Ohtsu; Crossref 출판연도 2023). 내용은 검색 요약
+10.13182/NT95-A35111	Hibiki	1995	High-frame-rate neutron radiography in a metallic rectangular duct	C	Nucl Technol 110(3):422-435
+10.1016/S0029-5493(98)00196-4	Mishima	1998	Development of high-frame-rate neutron radiography and quantitative measurement method	C	NED 184(2-3):183-201
+10.1016/j.ijmultiphaseflow.2024.104871	Passoni	2024	U-Net + 3D reconstruction void fraction, corrugated channels	C+F	IJMF 177:104871. OA(CC BY). 면적비 vs 부피 재구성 평균 차 약 80%
+10.3389/fenrg.2021.636813	Chu	2021	Void fraction in narrow channel by FCN	C+F	Front Energy Res 9:636813. 30x1.5 mm, 상관식과 ±11%
+10.1039/C4RA15163A	Musterd	2015	Volume of elongated bubbles from a top view image	C+F	RSC Adv 5(21):16042-16049. 라이덴 저장소 공개본
+10.5772/37721	Ito	2012	Two-phase flow structure in a narrow rectangular channel (film sensor)	C+F	InTech Flow Measurement 장. 1.5 mm 갭, 액막 150 um면 기공률 80%
+10.3390/en14113180	Masiukiewicz	2021	Stereology method in a narrow rectangular channel	C+A	Energies 14(11):3180. 50x1200x5 mm
+10.1016/j.ijmultiphaseflow.2016.04.011	Fu	2016	Robust image processing for bubbly flow in narrow rectangular channel	C	IJMF 84:217-228
+10.1017/S0022112084000367	Park	1984	Two-phase displacement in Hele Shaw cells: theory	C+A	JFM 139:291-308
+10.1063/1.1289396	Aussillous	2000	Quick deposition of a fluid on the wall of a tube	C+A	Phys Fluids 12(10):2367-2371
+10.1017/jfm.2018.457	Reichert	2018	Topography of lubrication film under a pancake droplet	C+A	JFM 850:708-732. RICM
+10.1007/978-0-387-21656-0	de Gennes	2004	Capillarity and Wetting Phenomena	C	Springer 책. 퍼들 두께 식(교과서)
+10.1007/BF00189056	Hurlburt	1996	Optical measurement of liquid film thickness (TIR ring)	C	Exp Fluids 21(5):357-362
+10.1063/1.1149232	Shedd	1998	Automated optical liquid film thickness measurement	C+A	Rev Sci Instrum 69(12):4205-4213
+10.1364/AO.27.001278	Lekner	1988	Why some things are darker when wet	C+A	Appl Opt 27(7):1278-1280
+10.1364/AO.25.000431	Twomey	1986	Reflectance and albedo differences between wet and dry surfaces	C+A	Appl Opt 25(3):431-437
+10.1103/PhysRevB.9.5056	Johnson	1974	Optical constants of transition metals (Fe n,k)	C+F	PRB 9(12):5056-5070. 데이터는 refractiveindex.info 표 사용
+10.1016/j.ijheatmasstransfer.2003.07.033	Nishio	2004	Visualization of boiling structures (total reflection)	C	IJHMT 47(21):4559-4568
+10.1016/j.ijheatmasstransfer.2008.11.020	Utaka	2009	Micro-layer in narrow gap boiling (laser extinction)	C	IJHMT 52(9-10):2205-2214
+10.1016/j.ijheatmasstransfer.2004.04.016	Maranzana	2004	Mini- and micro-channels: axial conduction in the walls	C	IJHMT 47(17-18):3993-4004
+10.1016/S0894-1777(96)00170-7	Golobic	1997	Heater-side factors on saturated pool boiling CHF	C	ETFS 15(1):43-51
+10.1016/j.expthermflusci.2004.05.001	Abdelall	2005	Pressure drop caused by abrupt flow area changes in small channels	C	ETFS 29(4):425-434
+10.1016/j.ijmultiphaseflow.2007.09.004	Chalfi	2008	Pressure drop by flow area changes in capillaries, low flow	C	IJMF 34(1):2-12 (지시서의 ETFS는 오기)
+10.1016/0301-9322(84)90007-7	Matsui	1984	Flow regime identification by differential pressure fluctuations	C	IJMF 10(6):711-719
+10.1016/0255-2701(89)90007-X	Drahos	1989	Diagnostics of gas-liquid flow patterns	C	Chem Eng Process 26(2):147-164
+-	Kline	1953	Describing uncertainties in single-sample experiments	U	Mech Eng 75(1):3-8 (Crossref에 DOI 없음, 서지는 2차 인용)
+10.1016/0894-1777(88)90043-X	Moffat	1988	Describing the uncertainties in experimental results	C	ETFS 1(1):3-17
+10.1016/S0301-9322(02)00037-X	Kawahara	2002	Flow pattern, void fraction and pressure drop in a microchannel	C	IJMF 28(9):1411-1435
+10.1016/j.ijmultiphaseflow.2018.05.007	Kingston	2018	High-frequency thermal-fluidic characterization Part 1	C+A	IJMF 106:179-188. 고속영상-압력-온도 동기
