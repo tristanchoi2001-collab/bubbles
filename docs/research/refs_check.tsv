@@ -301,6 +301,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1038/s41598-021-88334-0	OK	kim	2021	Deep learning-based automated and universal bubble detection and mask extraction in complex two-phase flows	Scientific Reports	5_ai_image,7_closest_novelty,check
 10.1038/s41598-022-05252-5	OK	ohashi	2022	Coalescence of two growing bubbles in a Hele–Shaw cell	Scientific Reports	8_iate_coalescence,check
 10.1038/s41598-022-16145-y	OK	choi	2022	Bubble velocimetry using the conventional and CNN-based optical flow algorithms	Scientific Reports	5_ai_image,check
+10.1038/s41598-026-35147-8	OK	sha	2026	Machine learning-based heat flux estimation from high-speed video during saturated pool boiling over vertical tube	Scientific Reports	0_estimates
 10.1038/s43588-022-00355-5	OK	bakarji	2022	Dimensionally consistent learning with Buckingham Pi	Nature Computational Science	5_ai_image,check
 10.1038/srep31395	OK	yahashi	2016	Scaling crossover in thin-film drag dynamics of fluid drops in the Hele-Shaw cell	Scientific Reports	3_pressure_drop,check
 10.1039/b513524a	OK	gervais	2006	Flow-induced deformation of shallow microfluidic channels	Lab on a Chip	6_measurement,check
@@ -463,6 +464,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.3390/en14164891	OK	piasecka	2021	Characteristics of Refrigerant Boiling Heat Transfer in Rectangular Mini-Channels during Various Flow Orientations	Energies	7_closest_novelty,check
 10.3390/fluids11090217	OK	zehara	2026	Bubble Hydrodynamics in Rectangular Columns: Effects of Confinement and Co-Current/Counter-Current Liquid Flow	Fluids	1_adiabatic_gap,check
 10.3390/s24113363	OK	schepperle	2024	Computer-Vision- and Deep-Learning-Based Determination of Flow Regimes, Void Fraction, and Resistance Sensor Data in Mic	Sensors	5_ai_image,check
+10.3795/ksme-b.2006.30.11.1035	OK	huh	2006	Two-phase Pressure Drop in a Horizontal Rectangular Microchannel	Transactions of the Korean Society of Mechanical Engineers B	0_estimates
 10.3811/pmfr.2.117	OK	shinmoto	2007	Critical Heat Flux in Cold Plates of Narrow Channels with Structures for Additional Liquid Supply	Progress in Multiphase Flow Research	7_closest_novelty,check
 10.5098/hmt.v3.1.3003	OK	zhang	2012	CHARACTERISTICS OF MICROLAYER FORMATION AND HEAT TRANSFER IN MINI/MICROCHANNEL BOILING SYSTEMS: A REVIEW	Frontiers in Heat and Mass Transfer	2_boiling_gap,check
 10.5772/22394	OK	shikazono	2011	Liquid Film Thickness in Micro-Scale Two-Phase Flow	Two Phase Flow, Phase Change and Numerical Modeling	6_measurement,check
