@@ -16,6 +16,6 @@
 ## 작업 상태
 | # | 작업 | 상태 | 결과 파일 |
 |---|---|---|---|
-| 1 | 주제별 조사 하위 에이전트 4개 (A 촬영·조명 / B 검출 / C 추적 / D+E 측정·검증·소프트웨어) | 진행 중 | `notes_A.md`, `notes_B.md`, `notes_C.md`, `notes_DE.md`, `refs_*.tsv` |
+| 1 | 주제별 조사 하위 에이전트 4개 (A 촬영·조명 / B 검출 / C 추적 / D+E 측정·검증·소프트웨어) | **중단(2026-10-23, 사용자 지시)**. notes_B.md만 쓰다 만 상태로 남음, 나머지 없음 | `notes_A.md`, `notes_B.md`, `notes_C.md`, `notes_DE.md`, `refs_*.tsv` |
 | 2 | `report.md` 종합 | 대기 | |
 | 3 | `refs.bib` (Crossref 대조분만) | 대기 | |
