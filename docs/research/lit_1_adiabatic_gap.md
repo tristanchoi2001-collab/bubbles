@@ -130,3 +130,140 @@
 | F6 | Ito, Prasser 외 (2011) | Micro wire-mesh sensor for two-phase flow measurement in a rectangular narrow channel | Flow Meas. Instrum. 22(5):377-382 | 10.1016/j.flowmeasinst.2011.06.001 | 좁은 직사각 유로용 미세 와이어메시 | 제목 수준 | 영상 외 독립 검증 수단 | C |
 | F7 | Bentley & Ruggles (1992) | Phase distribution measurements in narrow rectangular channels using image-processing techniques | ORNL/TM-12011 (보고서) | 10.2172/5349611 | 공기-물, 좁은 직사각 유로, 물에 잉크 | (OSTI 초록) 회색값을 보정 장치로 액층 두께로 바꿔 시공간 평균 액체 분율을 구함. 기체 유속 0의 압력 구배 예측과 잘 맞음 | 투영 영상에서 갭 방향 두께를 얻는 방법(주제 6) | C+A |
 | F8 | Murai, Fukuda, Oishi, Kodama & Yamamoto (2007) | Skin friction reduction by large air bubbles in a horizontal channel flow | Int. J. Multiphase Flow 33(2):147-163 | 10.1016/j.ijmultiphaseflow.2006.08.008 | 수평 채널 위 벽의 큰 기포, 벽 전단 응력계 | 경계층 두께 정도의 변형 기포가 지날 때 국소 벽 전단 응력이 크게 줆(리뷰 서술, 검색 요약 기준) | 수평 7 mm에서 위 덮개 밑 기포의 영향 | C |
+
+### 1-G. 새로움 판단용: 크기별 기포 속도·합체 자료 (2026-10-23 우선순위 변경 후 추가)
+
+| # | 저자(연도) | 제목 | 학술지 권(호):쪽 | DOI | 조건 | 핵심 결과(숫자) | 관련성 | 확인 수준 |
+|---|---|---|---|---|---|---|---|---|
+| G1 | Keeler, Gaillard, Lawless, Thompson, Juel 외 (2022) | The interaction of multiple bubbles in a Hele-Shaw channel | J. Fluid Mech. 946:A40 | 10.1017/jfm.2022.618 | 실험 + 깊이 평균 모델. 점성 액체로 미는 Hele-Shaw 채널(가운데 얕은 돌기), 기포 2개 | (arXiv 초록) 단일 기포의 전파 속도는 부피와 함께 단조 증가 → 크기가 다른 두 기포는 상호작용이 없으면 유한 시간 안에 합체하거나 멀어짐. 실제로는 불안정한 2기포 상태가 결과(합체/분리)를 정함 | "큰 기포가 더 빠르다 → 따라잡아 합체"라는 합체 기구의 직접 근거(점성 영역) | C+A (arXiv 2112.11053) |
+| G2 | Lawless, Keeler, Hazel & Juel (2024) | Stable bubble formations in a depth-perturbed Hele-Shaw channel | Phys. Rev. Fluids 9(9):093605 | 10.1103/physrevfluids.9.093605 | 같은 계열 실험 + 모델 | (arXiv 초록) 깊이가 고른 채널에서는 속도가 크기와 함께 단조 증가해, 기포 무리는 결국 크기 순으로 재배열되고 모두 떨어짐. 깊이 섭동이 있으면 안정한 대형이 생김 | 0.3·0.7 mm에서 크기별 속도 차가 기포 간격·합체를 정한다는 틀 | C+A (arXiv 2302.01038, 제목이 학술지판과 다름) |
+| G3 | Gaillard, Keeler, Le Lay, Lemoult 외 (2021) | The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel | J. Fluid Mech. 914:A34 | 10.1017/jfm.2020.844 | 실험 + 수치, 점성 액체로 미는 기포, 깊이 섭동 채널 | (arXiv 초록) 분열·응집·합체가 나타나고, 최종 상태는 속도가 커지는 순서로 늘어선 기포들. Scholar 조각: 기포 속도는 크기와 함께 체계적으로 증가 | 분열 후 크기별 속도 차로 분리되는 과정 | C+A (arXiv 2005.13959) |
+| G4 | Saffman & Tanveer (1989) | Prediction of bubble velocity in a Hele–Shaw cell: Thin film and contact angle effects | Phys. Fluids A 1(2):219-223 | 10.1063/1.857492 | 이론 | (초록 기준) 작은 Ca의 막 보정만으로는 Kopf-Sill & Homsy 실험의 느린 기포를 설명 못 함. 계면–판 접촉각이 위치마다 다르다고 두면 정성적으로 설명됨 | 철 바닥의 젖음성(부분 젖음)이 C0를 크게 낮출 수 있음 | C+A |
+| G5 | Cantat, Poloni & Delannay (2006) | Experimental evidence of flow destabilization in a two-dimensional bidisperse foam | Phys. Rev. E 73(1):011505 | 10.1103/physreve.73.011505 | 실험, Hele-Shaw 속 2차원 거품(foam) 흐름 | (HAL 초록) 평균보다 10배 이상 큰 기포는 크기에 따른 속도 문턱을 넘으면 평균 흐름보다 빨리 이동. 큰 기포끼리 끌려 흐름 방향 열을 이룸 | 기공률이 높은 0.3 mm 흐름에서 크기별 속도·뭉침 | C+A (HAL) |
+| G6 | Agostini, Revellin & Thome (2008) | Elongated bubbles in microchannels. Part I: Experimental study and modeling of elongated bubble velocity | Int. J. Multiphase Flow 34(6):590-601 | 10.1016/j.ijmultiphaseflow.2007.07.007 | 미세 원관 긴 기포(냉매) | 제목 수준(긴 기포 속도의 실험·모델) | 공학 조건에서 기포별 속도를 길이에 대해 잰 가장 가까운 예(원관) | C |
+| G7 | Revellin, Agostini & Thome (2008) | Elongated bubbles in microchannels. Part II: Experimental study and modeling of bubble collisions | Int. J. Multiphase Flow 34(6):602-613 | 10.1016/j.ijmultiphaseflow.2007.07.006 | 같은 장치 | 제목 수준(속도 차에 의한 기포 충돌의 실험·모델) | 크기별 속도 → 충돌(합체) 빈도 모델의 원관 선례 | C |
+| G8 | Sathe, Thaker, Strand & Joshi (2010) | Advanced PIV/LIF and shadowgraphy system to visualize flow structure in two-phase bubbly flows | Chem. Eng. Sci. 65(8):2431-2442 | 10.1016/j.ces.2009.11.014 | 좁은 직사각 기포탑, 기체 홀드업 약 5%, 기포 0.1~15 mm | 걸러낸 액체 속도장에서 기포마다 슬립 속도를 구해 단일 기포 상관식과 비교, 기포군과 단일 기포가 다름(검색 요약 기준) | 크기별 슬립 속도를 영상으로 잰 예(부력 구동, 평균 흐름 없음) | C |
+| G9 | Almani, Blel, Gadoin & Gentric (2021) | Investigation of single bubbles rising in Newtonian and non-Newtonian fluids inside a thin-gap bubble column intended for microalgae cultivation | Chem. Eng. Res. Des. 167:218-230 | 10.1016/j.cherd.2021.01.010 | 두께 4 mm 기포탑, d = 1.34~3.36 mm(d/e = 0.34~0.84), 물·전단 묽어짐 액체 | (S2 초록) 갇힘이 벽 마찰을 키움. d/e 0.34~0.84의 갇힌 항력 상관식 | 3·7 mm에서 갭보다 작은 기포(d < H)의 벽 마찰 | C+A |
+| G10 | Zehara, Si-Ahmed, Legrand & Salhi (2026) | Bubble Hydrodynamics in Rectangular Columns: Effects of Confinement and Co-Current/Counter-Current Liquid Flow | Fluids 11(9):217 | 10.3390/fluids11090217 | 직사각 기포탑, 갇힘비 λ = 3.7/11/18.5, 공류·향류 액체, 고속 영상 | (초록 기준) 갇힘이 기포 생성·성장·속도·모양을 크게 바꿈. 액체 흐름 방식은 약한 갇힘에서만 속도에 영향. 강한 갇힘에서 기존 지도가 균질류라 해도 비균질 구조가 생김 | 흐르는 액체 + 갇힘 + 크기별 속도를 함께 다룬 최신 예(기포탑 규모) | C+A |
+| G11 | Ren, Zhu, Zhang, Shi & Yan (2020) | Visualization Experiment of Bubble Coalescence in a Narrow Vertical Rectangular Channel | Front. Energy Res. 8:96 | 10.3389/fenrg.2020.00096 | 수직 과냉 비등, 700 × 40 × 2 mm, 0.4 MPa, 4300 fps | (원문) 합체를 접근·병합(약 0.5 ms)·조정(약 7~8.5 ms)·안정 4단계로 기술. 합체 빈도·효율은 재지 않음("정량 분석은 앞으로"). 쌍 안에서 큰 기포가 더 빨리 미끄러짐 | 좁은 갭 합체 자료가 정성 수준임을 보여 줌 | C+F (Frontiers 원문) |
+| G12 | Kim, Sun, Ishii, Beus & Lincoln (2003) | Interfacial area transport and evaluation of source and sink terms for confined air–water bubbly flow | Nucl. Eng. Des. 219(1):61-75 | 10.1016/s0029-5493(02)00289-3 | Purdue 갇힌 채널, 이중 탐침 | 제목 수준(계면 면적 수송의 합체·분열 원천항을 자료로 평가) | 합체·분열률의 간접(계면 면적 변화) 추정 선례 | C |
+| G13 | Cubaud & Ho (2004) | Transport of bubbles in square microchannels | Phys. Fluids 16(12):4575-4585 | 10.1063/1.1813871 | 정사각 미세 유로 200·525 µm, 유리·실리콘 | (초록 기준) 유동 지도, 기포 속도와 슬립비 측정, 부분 젖음 벽의 건조, 2상 압력 강하 식 | 0.3 mm급 미세 유로에서 기포 속도·슬립비를 잰 예 | C+A |
+| G14 | Vanapalli 외 (2009) | Hydrodynamic resistance of single confined moving drops in rectangular microchannels | Lab Chip 9(7):982-990 | 10.1039/b815002h | 미세 유로 액적 | 제목 수준 | 갇힌 액적 속도·저항의 크기 의존(미세 유로) | C |
+| G15 | Jakiela, Makulska, Korczyk & Garstecki (2011) | Speed of flow of individual droplets in microfluidic channels as a function of the capillary number, volume of droplets and contrast of viscosities | Lab Chip 11(21):3603 | 10.1039/c1lc20534j | 미세 유로 액적 | 제목 수준(액적 속도를 Ca·부피·점도비의 함수로) | 개별 속도를 크기에 대해 잰 미세 유로 선례 | C |
+| G16 | Sessoms 외 (2009) | Droplet motion in microfluidic networks: Hydrodynamic interactions and pressure-drop measurements | Phys. Rev. E 80(1):016317 | 10.1103/physreve.80.016317 | 미세 유로 액적 | 제목 수준 | 액적 수와 압력 강하 | C |
+| G17 | Lundin & McCready (2009) | Modeling of bubble coalescence in bubbly co-current flows restricted by confined geometry | Chem. Eng. Sci. 64(18):4060-4067 | 10.1016/j.ces.2009.06.020 | 모델 | 제목 수준 | 갇힌 기하의 합체 모델 | C |
+
+## 2. 핵심 질문에 대한 답
+
+### Q1. 유동 양식과 천이 — 갭별, 그리고 Lc 근처에서 바뀌는 것
+- **0.3 mm**: 수직 자료뿐이다. 기포류가 없고 cap-bubbly, slug-droplet, churn, annular-droplet이 나타난다. 벽에 붙은 액적을 기체가 민다[A2, C+A]. 기존 천이 모델은 0.3 mm 이하에서 검증되지 않았다[A2]. Hibiki & Mishima(2001)의 기준은 0.3~17 mm 자료와 비교했다[A10, C+A].
+- **0.6~1 mm**: 큰 채널과 같은 4양식(기포·슬러그·처언·환상)이다. 갭이 줄수록 천이가 낮은 기체 유량에서 일어난다[A2, C+A]. 1·2 mm 수평도 양식 지도가 있다(매끄러운 층상, plug, slug, 분산 기포, 파상 환상)[A4, C, 판 방향 미확인].
+- **방향 영향**: 0.78·1.47 mm에서는 수직판 사이 수평류(H-V)를 빼면 방향 영향이 작다. 판이 수평인 수평류(H-H, 우리 경우)는 수직 상향과 비슷했다[A5, C+F]. → 0.3/0.7/1 mm 수평 실험은 수직 문헌과 비교해도 된다. H-V에서만 층상-파상류가 생겼다[A5].
+- **3 mm**: 수평 3.18 mm(19.05 mm 폭)에서 원관·모세관·큰 직사각 채널 지도는 정성적으로만 맞았다[A8, C+A]. 수직 3 mm는 단일 기포 자료가 많다[E1, E2].
+- **7 mm**: 수직 7 × 50 mm에서는 원관 상관식(Smith 기공률, Chisholm–Laird)이 대체로 통했다[A9, C+F].
+- **갇힘 기준**: Ong & Thome(2011)은 Co ≈ 0.3~0.4 아래를 대규모, Co ≈ 1 이상을 막이 대칭인 미세 규모로 봤다(원관)[B1, C+A]. H 기준 Co는 9.1/3.9/2.7/0.9/0.39라서 0.3~1 mm는 확실히 갇힘, 3 mm는 대칭 문턱 근처, 7 mm는 대규모 경계다. D_h = 2H 기준이면 3 mm가 0.45, 7 mm가 0.19가 되어 분류가 한 단계씩 내려간다(직접 계산). 넓은 납작 유로에서 어느 길이를 써야 하는지 정한 문헌은 찾지 못했다. Rassame & Hibiki(2024)는 직사각 유로 Vgj의 길이로 D_h가 낫다고 했다(수직 분산류)[C3, C+A].
+- **수평에서 Lc를 지날 때 바뀌는 것**: 문헌으로 직접 확인한 것은 둘이다. (1) 기울인 Hele-Shaw에서 부력이 기포를 위 벽으로 밀어 위·아래 막이 비대칭이 되고 속도가 준다[D14, C+A]. (2) 2차원 덕트 속 큰 기포의 드리프트는 표면장력과 경사에 따라 정해진다[B9, C+A]. 큰 기포가 위 덮개 밑 "웅덩이"(두께 ≈ 2Lc ≈ 5 mm)가 되어 7 mm에서 바닥에 닿지 않는다는 점은 주 세션의 추정(`estimates_microgap.md` 2장)이고, 수평 납작 유로에서 이를 잰 문헌은 찾지 못했다.
+- **층상류**: 판이 수평인 0.78·1.47 mm에서는 층상류가 보고되지 않았다[A5]. 3·7 mm 수평(판 수평)의 층상류 자료는 찾지 못했다.
+
+### Q2. 기공률·드리프트 플럭스 (C0, Vgj)
+- 직사각 C0 = 1.35 − 0.35√(ρg/ρf)는 Ishii(1977)가 직사각 채널 자료로 정했다(원문 Eq. 68)[C1, C+F]. 검증 범위는 가로세로비 2.8~9.4의 비등수·R-11·질소–NaK다[C2, C+F].
+- Mishima 외(1993, 약 1~5 mm): 기공률로는 C0 ≈ 1.35, 슬러그 기포 속도로는 1.0~1.2다[A1, C+A]. **이전 메모의 "1.35 대 1.0~1.2" 충돌은 측정 대상이 달라서 생긴 것이다.** 2차 문헌의 1.1(Bhusan 2009)·1.2(Sowiński 2009)은 슬러그 속도 쪽 값으로 보인다[C12].
+- 최신 상관식: C∞ = 1.35(가로세로비 < 0.25)/1.20(> 0.33)[C3, C+A]. 갭·폭이 들어간 전 범위 식(1758점, 오차 13.1%)[C4, C+A]. 2군: 작은 기포 1.00, 큰 기포 1.45[C5, C+A].
+- 1 mm 갭(0.993 × 40 mm, 수직)에서 영상으로 잰 기공률·기체 속도는 Ishii의 직사각 C0로 잘 예측됐다[C7, C(검색 요약)].
+- 수평 유로는 부력이 흐름에 수직이라 Vgj = 0으로 둔다[C2, C+F; C6, C+A]. 수평 좁은 갭의 C0 자료는 찾지 못했다.
+- Hibiki(2019): "직사각 유로의 단열 기포류 C0 상관식은 없다"(2019년 기준)[C2, C+F]. 이후 C3·C4·C5가 나왔지만 모두 수직이다.
+- 0.3·0.7 mm: 드리프트 플럭스 자료는 찾지 못했다. 0.78 mm 기공률은 Martinelli χ 상관(Chisholm–Laird형, C = 20)으로 정리됐다[A5, C+F].
+
+### Q3. 갇힌(팬케이크) 기포의 속도 — 0.3·0.7 mm에서 가장 중요
+- **이론 상한**: 원형 팬케이크는 평균 속도의 2배(Taylor & Saffman)[D1, C; D12, C+F]. 점성 액적은 2/(1 + η_i/η_o)[D7, C+A].
+- **실제는 더 느리다**: 압력 구동 실험의 속도가 이론과 맞지 않았다[D4, C+A]. 막 보정만으로는 설명이 안 되고, 접촉각 변화로 정성적 설명이 된다[G4, C+A]. 작은 기포일수록 이론에서 벗어난다[D3, C+A]. 막의 3차원 압력 점프를 넣으면 액체보다 느린 기포가 나온다[D5, C+A]. DNS에서도 팬케이크 액적은 평균 유입 속도보다 느렸다[D9, C+A].
+- **정량 자료(가장 가까움)**: Reichert 외(2019)는 계면 활성제 없는 공기 기포(셀 14 µm, d/H ≈ 11~23, Ca = 0.5~5×10⁻³)의 이동도를 쟀다. 약 1.0~1.65이고 Ca와 크기가 클수록 커진다. 보정 소산이 둘레에, 기준 소산이 면적에 비례하기 때문이다[D12, C+F]. 계면 활성제 액적은 0.55~1.05로 훨씬 낮다[D12]. 계면 활성제 용해도에 따라 크기 의존의 부호가 바뀐다[D13, C+A].
+- **주 세션 모델과의 대조(직접 계산)**: C0 = 2/(1 + 0.1785·c·(H/d)·Ca^(−1/3)), c = 5.
+  - d/H = 11: Ca = 1×10⁻³에서 1.10, 3×10⁻³에서 1.28. Reichert 그림 값은 약 1.1, 1.3.
+  - d/H = 23: Ca = 1×10⁻³에서 1.44, 4×10⁻³에서 1.61. 그림 값은 약 1.45, 1.6.
+  - 그림 읽기 기준으로 ±0.05 안에서 맞는다. 단, Stokes 영역·깨끗한 계면·불소 기름이다. 물-공기 0.3 mm는 Re_H·H/d = 1.5~30이고, 물이 오염되면 더 느릴 것이다.
+- **크기에 따른 단조 증가**: 고른 깊이의 Hele-Shaw 채널에서 기포 속도는 크기와 함께 단조 증가한다(점성 영역, Juel 그룹)[G1, G2, G3, C+A]. 거품 속 큰 기포도 평균보다 빨리 간다[G5, C+A].
+- **갭보다 작은 기포(3·7 mm 수평)**: 위 벽으로 밀린 기포는 막이 비대칭이 되어 느려진다(부력 구동 실험)[D14, C+A]. 압력 구동 흐름에서 위 벽 밑 작은 기포의 C0를 잰 문헌은 찾지 못했다. 층류 속도 분포로 본 추정(C0 ≈ 6(y/H)(1 − y/H), y = d/2)은 주 세션의 계산이다.
+- **예상되는 C0(d/H) 곡선(문헌 + 직접 추론)**
+  - 0.3·0.7 mm: 거의 모든 기포가 팬케이크다. C0는 작은 팬케이크에서 1 근처(또는 1 미만)로 시작해 d/H·Ca와 함께 2를 향해 오른다[D3~D5, D9, D12]. 오염·부분 젖음이면 전체가 내려간다[D12, D13, G4]. Darcy–Bretherton 근사가 다섯 갭 중 가장 잘 맞는 곳이다(Re_H·H/d가 가장 작음).
+  - 1 mm: 같은 가지지만 관성이 크다(Re_H·H/d = 2~300). 관성 영역에서는 막이 항력에 덜 기여한다는 보고가 있다(부력 상승)[E3, C+A] → C0가 Stokes 모델보다 높을 수 있다(추론).
+  - 3 mm: 두 가지가 섞인다. d < 3 mm는 위 벽 근처 가지(C0 < 1 가능), d > 3 mm는 양쪽 벽에 닿는 팬케이크 가지.
+  - 7 mm: 대부분 위 벽 근처 가지. 큰 기포는 위 덮개 밑 웅덩이가 되어 밑으로 액체가 흐른다. 수평 긴 기포의 드리프트 이론[B9, B11]이 필요할 수 있다.
+- **이 곡선을 공학 조건에서 잰 연구**: 찾지 못했다(4장). 가장 가까운 것은 2군 C0(1.00/1.45, 수직, 탐침)[C5], 미세 유로 이동도[D12, D13, G13~G15], 점성 Hele-Shaw의 정성적 단조 증가[G1~G3]다.
+
+### Q4. 얇은 갭의 기포·기포군 (수직, 부력 구동)
+- 단일 기포 상승 속도: 3.1 mm 갭에서 V_b ∝ (h/d)^(1/6)√(gd)[E2, C+A]. 3 mm 갭에서 지그재그 → 직선 천이로 V_b가 계단식으로 늘고, 항력은 Morton 수와 갭/직경 비로 표현된다[E1, C+A]. 관성 영역에서는 Re = 0.5Ar이고 막이 항력에 크게 기여하지 않는다[E3, C+A]. 점성 → 관성 천이는 일률 균형 모델로 맞는다[E4, C+A]. 유한 폭 보정(큰 기포 폭 0.86W, Sauter 직경 → 갭의 3배)[E9, C+A]. 갭보다 작은 기포(d/e = 0.34~0.84)의 갇힌 항력 식[G9, C+A].
+- 기포군: 속도 요동·분산이 기공률에 거의 선형으로 는다[E5, C+A].
+- 합체·분열: 쌍 상호작용(후류 끌림, 와류)[E7, E8, C]과 점성 채널의 크기 순 분리·합체[G1~G3, C+A]가 있다. 좁은 직사각 유로에서는 비등 합체의 정성 기술[G11, C+F], 측벽이 합체 확률을 높인다는 보고[A14, C(검색 요약)], 계면 면적 수송의 원천항 평가[G12, C9, C10, C]뿐이다. **갭별 합체·분열 빈도를 직접 센 단열 자료는 찾지 못했다.**
+
+### Q5. 갭에 따른 압력 강하 실험 자료 (주제 3과 겹침, 조건만)
+- Mishima 외(1993, 약 1~5 mm, 수직): Chisholm–Laird로 맞지만 C가 갭이 줄면 21 → 0[A1, C+A].
+- Lee & Lee(2001, 수평, 폭 20 mm, 0.4~4 mm, 305점): C = f(질량 유속, 갭), ±10%[A7, C].
+- Sadatomi·Ali·Kawaji(1992/93, 0.78·1.47 mm, 6방향): Beattie–Whalley·분리류 모델이 가장 좋음[A5, C+F; A6, C].
+- Wambsganss 외(1991/92, 수평 3.18 mm): 기존 식 불일치 → 수정식[A8, C+A].
+- Sadatomi 외(1982, 수직 7 × 50 mm 등): Chisholm–Laird가 원관 수준으로 맞음[A9, C+F].
+- Ide & Fukano(2005), Ide 외(2007): 납작 모세관 직사각 유로의 holdup·마찰(원문 미확인)[A15, A16, C].
+- Lowry & Kawaji(1988): Crossref에서 찾지 못함(U, DOI 없음으로 추정).
+- → 0.3 mm 수평 판의 압력 강하 자료는 Lee & Lee(0.4 mm부터)가 가장 가깝다. 0.3·0.7 mm 자료는 그 자체로 기존 범위를 넓힌다.
+
+### Q6. 새로움
+- 4장 표 참고. 요약: "영상 추적으로 기포마다 잰 C0를 d/H의 연속 함수로, 갭 0.3~7 mm에 걸쳐 압력 구동 물-공기 흐름에서" 낸 연구는 찾지 못했다. "갇힌 기포 비율"이라는 영상 지표도 찾지 못했다(가장 가까운 것은 2군 분류[C5, F4, C9]). "갭별 합체·분열 빈도"의 직접 측정도 찾지 못했다.
+- 좁은 직사각 유로에서 영상으로 기포 크기 분포·계면 면적 농도를 낸 연구는 있다: Fu & Liu(2016, 영상 처리 기법)[F1, F2, C], Shen 외(2012, 1 mm 갭 7개 높이)[C7, C], Liu 외(2023, 수평)[F3, C], Chen 외(2024, 2상 PIV + 크기 분포)[F5, C], Bentley & Ruggles(1992, 잉크 흡광으로 액층 두께)[F7, C+A]. 이들은 계면 면적 수송·Sauter 직경이 주 출력이고, 크기별 속도(C0)는 주 출력이 아니다(초록·조각 기준).
+
+## 3. 아이디어와 시사점
+
+| # | 아이디어 | 새로움 | 필요한 데이터 | 실현성 | 위험 |
+|---|---|---|---|---|---|
+| 1 | **갭별 크기 분해 C0(d/H) 곡선** (0.3~7 mm, 압력 구동 물-공기) | 높음. 공학 조건의 연속 곡선은 못 찾음. 미세 유로(Stokes)와 부력 상승(관성) 사이의 빈칸 | 기포별 속도(추적), 투영 면적 → d, j_L·j_G(유량계), H 실측값, 수온(μ, σ), 화소당 mm | 높음. 파이프라인이 기포별 속도·크기를 이미 낸다 | 화소당 mm·j 오차, 물 오염(계면 활성제), 철 바닥 부분 젖음[G4], 입구 효과, 기포 간 상호작용(높은 기공률), 작은 기포 검출 편향 |
+| 2 | **한 계수 두 관측**: C0 곡선에서 맞춘 메니스커스 계수 c로 기포 압력 강하 항을 예측해 측정 ΔP와 비교 | 중~높음(주제 3과 함께 판단). Reichert(2019)는 미세 유로에서 일률 균형으로 속도를 예측했지만 압력 강하와 같은 계수로 묶지는 않음 | 1의 자료 + ΔP(탭 위치·입출구 보정) | 0.3·0.7 mm에서 가장 좋음(Darcy 근사가 가장 맞고 ΔP가 큼) | 관성 보정, 오염으로 c가 운전점마다 바뀔 수 있음 |
+| 3 | **갇힌 기포 비율 α_trap**(d > H인 기포의 기체 면적 비율)을 갭·유량 지도로 | 중간. 2군 분류[C5, C9, F4]와 개념이 겹치므로 반드시 인용·비교 | 1과 같음 | 높음 | 기준(d > H인지 d > 2H인지) 선택. 투영 면적 → 부피 보정(주제 6) |
+| 4 | **크기별 속도 차가 만드는 합체 빈도**: 쌍의 상대 속도(1의 곡선에서) × 접근 빈도 × 합체 효율 | 높음. 점성 채널의 쌍 실험[G1~G3]과 비등 정성 관찰[G11]만 있음 | 추적의 합체·분열 이벤트, 쌍별 상대 속도·간격 | 중간. 이벤트 판정 오류를 연결 감사로 재야 함 | 트래커의 가짜 합체·분열, 화면 밖 합체 |
+| 5 | **판이 수평인 0.3~7 mm 유동 양식 지도**(영상 지표 포함) | 중간. 0.3 mm 수평 판 지도는 못 찾음(Xu는 수직) | 영상 + 유량 | 높음 | 양식 판정의 주관성 → 지표(α_trap, 크기 분포)로 정량화 |
+
+- 관성의 위치: 0.3 mm(Re_H·H/d ≈ 1~30)는 미세 유로 Stokes 이론[D12]과 가장 가깝고, 3·7 mm는 관성 상승 기포 문헌[E1~E4]과 가깝다. 다섯 갭이 이 두 문헌군을 잇는 것이 논문의 줄기가 될 수 있다(직접 추론).
+- 물-공기에서 깨끗한 계면을 가정하기 어렵다. 같은 장치에서 계면 활성제를 조금 넣은 대조 조건(또는 물 교체 직후/장시간 후 비교)이 있으면 C0 해석의 위험이 크게 준다[D12, D13].
+
+## 4. 새로움 판단 기록
+
+### 4.1 한 것 / 안 한 것
+| 주제 | 이미 한 것 (누가, 조건, 결과) | 찾지 못한 것 |
+|---|---|---|
+| 팬케이크 기포 속도의 크기·Ca 의존 | Reichert 외 2019(공기 기포, 셀 14 µm, Stokes, 이동도 1.0~1.65)[D12]. 액적: Ling 2016 DNS[D9], Baué 2025[D13], Jakiela 2011·Vanapalli 2009(제목)[G14, G15]. 점성 Hele-Shaw 채널에서 크기와 함께 속도 단조 증가(Juel 그룹)[G1~G3]. 고전: Kopf-Sill & Homsy 1988, Maxworthy 1986, Saffman & Tanveer 1989[D3, D4, G4] | 물-공기, mm 갭, Re_H > 1, 압력 구동에서 C0(d/H) 연속 곡선 |
+| 크기별 드리프트 플럭스(공학 조건) | 2군 C∞ 1.00/1.45(직사각, 수직)[C5]. Purdue 갇힌 채널 2군 모델[C9, C10]. 슬러그 속도 C0 1.0~1.2 vs 기공률 C0 1.35[A1]. 원관 미세 유로 긴 기포 속도(제목)[G6] | 연속 크기 분해, 영상 추적 기반, 수평, 0.3~7 mm 갭 비교 |
+| 크기별 슬립 속도(부력 구동, 갇힘) | 3·3.1 mm 갭 단일 기포[E1, E2], 4 mm 갭 d/e 0.34~0.84[G9], 좁은 기포탑 기포군 슬립(0.1~15 mm)[G8], 갇힘비 3.7~18.5 + 액체 흐름[G10] | 평균 액체 흐름이 지배하는 채널 흐름(수평)에서의 같은 측정 |
+| 합체·분열 빈도 | 쌍 상호작용(얇은 갭 상승)[E7, E8], 점성 채널 2기포[G1], 비등 합체 단계(정성)[G11], 원관 미세 유로 충돌(제목)[G7], 원천항의 간접 평가[G12], 측벽 효과(검색 요약)[A14] | 갭별 단위 면적·시간당 합체·분열 빈도를 영상 추적으로 직접 센 단열 자료 |
+| 갇힌 기포 비율 | 2군 분류(모양·크기)[C5], 2군 계면 면적 농도 식(제목)[F4] | d > H 면적 비율이라는 영상 지표의 갭별 비교 |
+| 수평 좁은 갭 양식 | 1·2 mm[A4], 0.78·1.47 mm 6방향[A5, A6], 3.18 mm[A8], 0.4~4 mm 압력 강하[A7] | 0.3 mm 판 수평 양식 지도, 3·7 mm 판 수평의 층상류·웅덩이 기포 자료 |
+
+### 4.2 검색 기록 (2026-10-23)
+- Crossref(제목·키워드, rows 3~10): 시작 문헌 16편과 후보 약 70편 대조. 새로움용 키워드 검색은 다음과 같다(결과 상위 6~10건을 모두 확인).
+  - "bubble velocity as a function of bubble size narrow rectangular channel experiment" → 10건: 비등·흔들림 조건 영상 연구(Li 2014, Ren 2020, Yan 2018, Hong 2011, Lv 2023), Zhang & Hibiki 2026. 흐르는 액체에서 크기별 C0는 없음.
+  - "confined bubble velocity Hele-Shaw cell pressure-driven flow experiment bubble size" → 10건: Saffman & Tanveer 1989, Haudin 2016, Booth 2025(발표), PRF 2026(이론). 공학 조건 자료 없음.
+  - "bubble coalescence breakup frequency narrow rectangular channel adiabatic air-water experiment" → 10건: Ren 2020(비등, 정성), Zhang 2022(비등 미끄럼 기포 합체율), 나머지 CFD. 단열 빈도 자료 없음.
+  - "bubble coalescence Hele-Shaw cell experiment frequency bubbly flow confined" → 8건: Lundin 2009(모델), Ramadugu 2023(스펙트럼), 액적 합체 1건. 빈도 자료 없음.
+  - "bubble interaction coalescence two-dimensional bubbly flow thin gap statistics" → 6건: 모델 논문뿐.
+  - "drift-flux model narrow rectangular channel distribution parameter" → 10건: Bois 2025, Shen 2024, Khunsrimek 2024 등(모두 수직 또는 수치).
+  - "bubbly flow horizontal narrow rectangular channel void fraction drift flux" → 8건: Bois 2025, Jin 2014(흔들림), Liu 2023(수평 계면 면적). 수평 C0 자료 없음.
+- Google Scholar(WebFetch, 첫 페이지만, 5회)
+  - "Some characteristics of gas-liquid flow in narrow rectangular ducts" → 약 65건, 1쪽에 대상 없음.
+  - Mishima Hibiki Nishihara "narrow rectangular ducts" "distribution parameter" → 16건. C0 ≈ 1.35·슬러그 1.0~1.2 조각.
+  - "narrow rectangular channel" bubble velocity "bubble size" image processing distribution parameter(2010~) → 약 167건, 1쪽 10건이 모두 영상 계측(크기 분포·속도·수밀도)이고 크기별 C0는 조각에 없음.
+  - Hele-Shaw bubbles "bubble velocity" "bubble size" mean/imposed/pressure-driven flow mobility → 26건: Gaillard 2021, Cantat 2006, Huerre 2014(리뷰), Gangloff 2014(복합재 수지 속 공극, 미대조), 거품 흐름 연구들.
+  - narrow/mini/thin gap air-water "bubble velocity" bubble length/diameter "liquid velocity" → 35건: Almani 2021, Zehara 2026, Bouche 2012, Shikazono & Han 2011(미세관 기포/평균 속도비, 미대조), Zenit 2004(경사 채널 기포 현탁, 미대조).
+- WebSearch(standard, 9회): Wilmarth & Ishii 조건, Xu 1999 양식, Ide·Fukano(세부 못 찾음), Murai 2007, 수평 좁은 갭 계면 면적(대신 Shen 2012 세부), Ong & Thome 문턱값, Chung & Kawaji(일부), 좁은 직사각 2상 PIV(→ Sathe 2010), Agostini/Revellin(서지만).
+- 초록 출처: CityU·HKUST·HIT 연구 포털, HAL API, OSTI API, arXiv API, Semantic Scholar, EPFL infoscience(서지만), Frontiers(원문).
+- **한계**: Scholar는 첫 페이지만 봤다. ScienceDirect 등 출판사 페이지가 막혀 Elsevier 논문 상당수는 제목·검색 요약 수준이다. OpenAlex는 하루 예산 소진으로 못 썼다. 중국어(CNKI)·일본어 학회 논문집은 J-STAGE 일부만 봤다. → "찾지 못했다"는 "이 범위에서 찾지 못했다"는 뜻이다.
+
+## 5. 남은 의문과 사용자에게 확인할 것
+- 실험 조건(새로움 주장의 범위를 정함)
+  - 채널 방향(판이 수평인지), 폭 W, 길이, 입구 구조(공기 주입 방식: T자, 다공판, 바늘 등).
+  - 0.3·0.7 mm 갭의 실측값과 공차. 층류 ΔP ∝ 1/H²(같은 평균 속도), 같은 유량이면 1/H³이라 0.3 mm에서 10 µm 오차도 결과를 크게 바꾼다(직접 계산).
+  - 물의 종류(수돗물·증류수), 실험 중 물 교체 주기, 계면 활성제 유무 — C0 해석에 직접 영향[D12, D13].
+  - 철 바닥·덮개 재질과 젖음성(접촉각). 부분 젖음이면 접촉선 마찰로 C0가 크게 줄 수 있다[G4].
+  - 화소당 mm, 촬영 fps, j_L·j_G 범위, 압력 탭 위치.
+- 문헌 쪽 미확인(원문을 못 봄)
+  - Wilmarth & Ishii(1994)의 수평 채널 판 방향, Lee & Lee(2001)의 C 식, Ide & Fukano(2005)의 갭, Fourar & Bories(1995)의 개구 폭.
+  - Kew & Cornwell의 Co 문턱 0.5, Brauner & Moalem Maron의 기준식, Benjamin·Weber의 수평 드리프트 수치.
+  - Lowry & Kawaji(1988): Crossref에 없음.
+  - Agostini(2008)·Revellin(2008)의 크기별 속도·충돌 결과(제목만), Chen(2024)·Shen(2012)이 크기별 속도를 냈는지.
+  - 고베대 저장소의 Hashida(2019) 원고, Hibiki 2019 외 CityU 포털 초록은 읽었지만 원문 표·그림은 일부만 봤다.
