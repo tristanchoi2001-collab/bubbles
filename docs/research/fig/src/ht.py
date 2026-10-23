@@ -2,19 +2,19 @@ import math
 k=0.598; rho=998.2; cp=4182; mu=1.002e-3; aL=k/(rho*cp); Pr=mu*cp/k
 print(f"water 20C alpha={aL:.3e} Pr={Pr:.2f}")
 print("## 단상 층류 완전발달, 한쪽 벽 가열·반대쪽 단열 Nu_Dh=5.385")
-for H in (1e-3,3e-3,7e-3):
-    print(f"H={H*1e3:.0f} mm: h={5.385*k/(2*H):.0f} W/m2K")
+for H in (0.3e-3,0.7e-3,1e-3,3e-3,7e-3):
+    print(f"H={H*1e3:g} mm: h={5.385*k/(2*H):.0f} W/m2K")
 print("## 열 입구 길이 0.05 Re Pr Dh (m)")
-for H in (1e-3,3e-3,7e-3):
-    print(f"H={H*1e3:.0f}: "+", ".join(f"U={U}: {0.05*rho*U*2*H/mu*Pr*2*H:.2f}" for U in (0.05,0.1,0.2)))
+for H in (0.3e-3,0.7e-3,1e-3,3e-3,7e-3):
+    print(f"H={H*1e3:g}: "+", ".join(f"U={U}: {0.05*rho*U*2*H/mu*Pr*2*H:.2f}" for U in (0.05,0.1,0.2)))
 print("## Gnielinski (Dh=2H, 양쪽 가열 원관식 그대로, 참고)")
 for H in (3e-3,7e-3):
     for U in (0.5,1.0):
         Re=rho*U*2*H/mu
-        if Re<3000: print(f"H={H*1e3:.0f} U={U}: Re={Re:.0f} (전이)"); continue
+        if Re<3000: print(f"H={H*1e3:g} U={U}: Re={Re:.0f} (전이)"); continue
         f=(0.79*math.log(Re)-1.64)**-2
         Nu=(f/8)*(Re-1000)*Pr/(1+12.7*math.sqrt(f/8)*(Pr**(2/3)-1))
-        print(f"H={H*1e3:.0f} U={U}: Re={Re:.0f} Nu={Nu:.0f} h={Nu*k/(2*H):.0f}")
+        print(f"H={H*1e3:g} U={U}: Re={Re:.0f} Nu={Nu:.0f} h={Nu*k/(2*H):.0f}")
 print("## 표면 갱신 상한 h=2k/sqrt(pi alpha t_c), t_c=1/f")
 for f in (2,5,10,20,50):
     print(f"f={f} Hz: h={2*k/math.sqrt(math.pi*aL/f):.0f} W/m2K, 침투 sqrt(pi a t)={math.sqrt(math.pi*aL/f)*1e3:.2f} mm")
@@ -41,12 +41,12 @@ print("## 1D 외삽: dT between TCs = q dz/k (dz=5 mm)")
 for name,kk in (('탄소강',50),('스테인리스',14.9),('구리',401)):
     print(name, ", ".join(f"q={q/1e3:.0f}kW/m2: {q*5e-3/kk:.2f} K" for q in (1e4,5e4,1e5)))
 print("## 투영 → 부피 기공률 비 (팬케이크: 1 - 0.429 H/d - 2delta/H; 구: 2d/(3H))")
-for H in (1e-3,3e-3):
+for H in (0.3e-3,0.7e-3,1e-3,3e-3):
     for dH in (1.5,3,10,30):
-        print(f"H={H*1e3:.0f} d/H={dH}: pancake ratio={1-0.429/dH-2*10e-6/H:.2f}")
+        print(f"H={H*1e3:g} d/H={dH}: pancake ratio={1-0.429/dH-2*10e-6/H:.2f}")
 for H in (3e-3,7e-3):
     for d in (1e-3,2e-3,3e-3):
-        if d<=H: print(f"H={H*1e3:.0f} sphere d={d*1e3:.0f} mm: ratio={2*d/(3*H):.2f}")
+        if d<=H: print(f"H={H*1e3:g} sphere d={d*1e3:.0f} mm: ratio={2*d/(3*H):.2f}")
 print("puddle in 7 mm, e=4.5-5.5 mm: ratio ~", round(4.5/7*0.95,2),"-",round(5.5/7*0.95,2))
 print("## 압력: 입출구 손실 K rho U^2/2 (K=1), 1도 기울기 중력 rho g L sin(1deg), L=0.1 m")
 for U in (0.05,0.1,0.2,0.5,1.0):
