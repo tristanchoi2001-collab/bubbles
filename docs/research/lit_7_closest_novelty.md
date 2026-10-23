@@ -92,6 +92,7 @@ Co = Lc/H, Lc = √(σ/(gΔρ)). 물 20 °C Lc = 2.73 mm, 100 °C 2.50 mm(`estim
 | B8 | Sessoms et al. (2009) Droplet motion in microfluidic networks: hydrodynamic interactions and pressure-drop measurements | PRE 80:016317 | 10.1103/physreve.80.016317 | 액적 흐름으로 액적이 찬 채널의 초과 저항을 재는 방법 | 10 | C+A |
 | B9 | Cantat (2013) Liquid meniscus friction on a wet plate: bubbles, lamellae, and foams | Phys Fluids 25(3):031303 | 10.1063/1.4793544 | 메니스커스 마찰 리뷰. 굳은 계면은 Ca^(1/3)과 Ca^(2/3)의 합. 폼이 젖은 벽을 미끄러질 때 응력 예측 | 2, 10 | C+A |
 | B10 | Raufaste, Foulon, Dollet (2009) Dissipation in quasi-two-dimensional flowing foams | Phys Fluids 21(5):053102 | 10.1063/1.3142502 | Hele-Shaw 폼 소산. 기존 모델은 과소 예측, 불일치 ξ = 1.4(R_P/A)^(−0.5) | 2, 10 | C+A |
+| B10b | Osei-Bonsu, Shokri, Grassia (2016) Fundamental investigation of foam flow in a liquid-filled Hele-Shaw cell | J Colloid Interface Sci 462:288-296 | 10.1016/j.jcis.2015.10.017 | 액체로 찬 Hele-Shaw에서 폼의 겉보기 점도가 폼 품질·주입 속도·셀 투과도에 따라 변하고, 같은 품질이면 기포가 작을수록 크다(검색 요약) → "계면 길이가 많을수록 ΔP가 크다"는 폼 쪽 증거 | 2, 10 | C |
 | B11 | Raufaste, Rose, Santucci, Dollet (2025) Friction-induced bubble edge curvature in flowing two-dimensional confined foams | PRF 10(2):023301 | 10.1103/physrevfluids.10.023301 | **영상의 기포 가장자리 곡률을 판 마찰과 연결**, 모델이 정량 일치(HAL 초록) | 10 | C+A |
 | B12 | Booth, Wu, Griffiths, Howell, Nunes, Stone (2025) Bubble racing in a Hele-Shaw cell | JFM 1010:A19 | 10.1017/jfm.2025.322 | 배경 흐름에서 큰 팬케이크 기포가 작은 기포를 추월. Bretherton 매개변수 임계값 위에서는 충돌하지 않음 | 4, 6, 12 | C+A |
 | B13 | Wu, Booth, Griffiths, Howell, Nunes, Stone (2024) Motion and deformation of a bubble in a Hele-Shaw cell | PRF 9(12):123603 | 10.1103/physrevfluids.9.123603 | 저 Re에서 이론과 속도 측정 일치, 문헌 속도 자료가 이론 척도로 모임(검색 요약) | 6, 10 | C |
@@ -196,7 +197,7 @@ Co = Lc/H, Lc = √(σ/(gΔρ)). 물 20 °C Lc = 2.73 mm, 100 °C 2.50 mm(`estim
 | # | 가설 | 가장 가까운 선행 연구 | 차이 | Huang류와의 차이 | 새로움 | 범위 효과 | 근거(검색어·결과 수) |
 |---|---|---|---|---|---|---|---|
 | H1 | 갇힘 틀 + "갇힌 기체 면적 비율" 지표 | Alam 2012(A2), Harirchian & Garimella 2009·2010(B31), Kew & Cornwell 1997(B32), Bonjour 1998(A24)·Cardoso 2011(A13)의 Bond 수 지도, Albahloul 2015(A6, d ≥ 1.5H이면 가로지름) | 선례는 채널 단위 분류(Co, Bo)나 정성 영상. 운전점마다 연속 지표를 재서 갭 사이 변수로 쓴 예와, 수평에서 2Lc 경계를 쓴 예는 못 찾음 | Huang류는 한 장치 회귀 특징. 우리 지표는 기하로 미리 정해짐 | 틀: **낮음**, 지표: **중** | Co 9.1→0.39로 강한 갇힘~자유를 한 장치에서 덮음(1-2표) → 틀의 설득력이 크게 오름. 0.3·0.7 mm에서는 거의 모든 기포가 팬케이크라 지표 ≈ 투영 기공률(정보는 1~7 mm에서 나옴) | WebSearch "fraction of confined bubbles measured by image processing narrow gap…" 10건 중 해당 0. Scholar "gap height … image processing … void fraction … pressure drop … heat transfer"(2015~) 13건 중 해당 0 |
-| H2 | ΔP 메니스커스 항 = c·σCa^(2/3)·Γ/H | Fuerstman 2007(B5), Vanapalli 2009(B6), Cantat 2004·2013(B9), Raufaste 2009(B10), Kreutzer 2005(B17), Liu A 2022(A18), Ide & Fukano 2005(A19, Ca 포함 상관식) | 개념(기포 수·메니스커스 길이 × 마찰)은 미세유체·폼에 있음. 영상으로 잰 Γ로 기체-액체 mm 갭 흐름의 ΔP 증가분을 나눈 예는 못 찾음 | Huang류는 ΔP를 다루지 않음(초록) | **중~높음** | 0.3·0.7 mm에서 항이 크고(∝ 1/H) Re가 낮아 Hele-Shaw 가정에 가장 가까움. 7 mm는 항이 0인 대조군 → 검증력이 커짐 | Scholar `"pressure drop" bubbles "Hele-Shaw" "Bretherton" "perimeter" gas-liquid channel` 16건, 기체-액체 다기포 둘레 공식 0 |
+| H2 | ΔP 메니스커스 항 = c·σCa^(2/3)·Γ/H | Fuerstman 2007(B5), Vanapalli 2009(B6), Cantat 2004·2013(B9), Raufaste 2009(B10), Osei-Bonsu 2016(B10b, 작은 기포일수록 폼 겉보기 점도 큼), Kreutzer 2005(B17), Liu A 2022(A18), Ide & Fukano 2005(A19, Ca 포함 상관식) | 개념(기포 수·메니스커스 길이 × 마찰)은 미세유체·폼에 있음. 영상으로 잰 Γ로 기체-액체 mm 갭 흐름의 ΔP 증가분을 나눈 예는 못 찾음 | Huang류는 ΔP를 다루지 않음(초록) | **중~높음** | 0.3·0.7 mm에서 항이 크고(∝ 1/H) Re가 낮아 Hele-Shaw 가정에 가장 가까움. 7 mm는 항이 0인 대조군 → 검증력이 커짐 | Scholar `"pressure drop" bubbles "Hele-Shaw" "Bretherton" "perimeter" gas-liquid channel` 16건, 기체-액체 다기포 둘레 공식 0 |
 | H3 | 가열면을 덮는 기포/액막 비율 → h | Albahloul 2014·2015(A6~A7, 위 벽 가열), Hollingsworth 2009, Kharangate 2015(A21, 위/아래 가열), Shinmoto 2017(A1), Cardoso 2011(A13), Huang 2024(B1, 젖음 전선 면적), MSEG-VCUQ(B37) | 아래 가열에서 접촉 비율이 갭에 따라 1 → 일부 → 0으로 바뀌는 축을 정량화한 예는 못 찾음 | Huang류는 젖은 면적을 직접 봄(미세중력). 우리는 위에서 보므로 접촉을 기하로 추정 → 차이는 "중력이 정하는 접촉"과 "갭 일반화" | **중** | 0.3·0.7·1 mm는 φ_c ≈ α_p(모두 접촉), 3 mm 일부, 7 mm 0 → 축의 양 끝이 생김 | WebSearch "heated wall contact area fraction bubbles image horizontal channel bottom heated…" 10건 중 해당 0 |
 | H4 | 합체·분열 빈도, 크기별 드리프트 플럭스 | Booth 2025(B12), Huisman 2012(B19), Revellin 2008(B27), Cheng 2023(B21), Shen 2012(B22), Sun 2004(B23), Shen 2024(B26, 채널 평균) | 다수 기포 흐름에서 추적으로 크기별 사건 빈도를 센 예는 못 찾음 | Huang류에 사건 통계 없음(초록) | **중**(12로 구체화하면 중~높음) | 0.3·0.7 mm는 팬케이크 추월 합체(B12 영역), 7 mm는 3차원 기포 → 기구가 바뀌는 것을 한 장치에서 봄 | WebSearch "bubble coalescence frequency measured by bubble tracking … thin gap Hele-Shaw…" 9건 중 빈도 측정 0 |
 | H5 | 성능 지도(h vs 펌프 동력) | Alam 2012(A2), Zhu 2023(A8), Willingham 1992(A16), Betz & Attinger 2010(B40) | 갭 최적화 자체는 흔함 | 무관 | **낮음** | 0.3 mm의 큰 ΔP(층류 6.7~133 kPa/m)로 대비는 커지지만, 펌프 동력이 열유속의 약 1% 이하라 결정적이지 않다(메인 추정) | A2·A8 초록 |
@@ -226,6 +227,7 @@ Co = Lc/H, Lc = √(σ/(gΔρ)). 물 20 °C Lc = 2.73 mm, 100 °C 2.50 mm(`estim
 | G7 "비등이 아닌 공기 주입 + 영상" | 기준점에 없는 것 | 이미 있다 | Albahloul 2014·2015(A6~A7): 공기 주입, 평면 영상, 열전달 모델. 단 갭 1개, 위 벽 가열, ΔP 없음 |
 | N4(= 12) | 조사 중 | 중~높음(위험 큼) | 사건 직접 계수 검증 0건(Scholar 14건) |
 | 1장 "한 가지 형상" | 단정 | 미확인 | Huang 2024 초록에 형상 정보가 없다. 본문(Purdue PDF 503, escholarship 403)을 못 읽었다 |
+| 장치·측정 구성(G1·G2의 "ΔP와 영상을 함께 잼") | 우리 자산 | 장치 구성만으로는 새롭지 않다 | Shinmoto 2017(A1)이 수평·아래 금속 블록 가열·매립 열전대·가열 구간 ΔP·위 유리 너머 고속 촬영을 갭 3개에서 이미 했다. 새로운 것은 정량 영상·추적, 갭 범위(Co 9.1→0.39), 그것을 쓴 폐합·일반화 검증이다 |
 
 ### 3-4. 필요한 데이터와 실현성 메모
 - 주장 10: 크기별 기포 속도(추적), j, Γ(둘레 합/면적), ΔP, 액체만 ΔP. 프레임당 이동이 이웃 간격의 1/3 이하가 되는 fps. 연결 감사 크기별 100건.
@@ -261,7 +263,7 @@ Co = Lc/H, Lc = √(σ/(gΔρ)). 물 20 °C Lc = 2.73 mm, 100 °C 2.50 mm(`estim
   3. 열전대 위치와 영상 창의 관계(국소 φ_c를 짝지을 수 있는가).
   4. 같은 채널에서 액체만 흘린 ΔP 자료가 있는가(유효 갭 보정과 주장 10의 기준선).
 - **확인하지 못한 것**
-  - Huang 2024 본문(상관식 형태, 정확도, 형상 일반화 여부, 비전 불확도 처리).
+  - Huang 2024 본문(상관식 형태, 정확도, 형상 일반화 여부, 비전 불확도 처리). ScienceDirect·Purdue PDF·SSRN 프리프린트(abstract_id=4740495, Scholar에 [PDF] 표시)가 모두 이 환경에서 막혔다(403/503). **사용자가 브라우저로 SSRN판을 받아 확인하면 주장 11·13의 판정이 확정된다.**
   - Shinmoto 2017의 결론부(본문 뒤 28k자). ΔP·매립 열전대·정성 영상은 확인했다.
   - 갭 값: Geisler & Bar-Cohen 2009, Ishibashi & Nishikawa 1969, Satitchaicharoen & Wongwises 2004(IJMF 30:225), Mishima 1993 원문 값(1.07/2.45/5.0 여부).
   - Willingham & Mudawar 1992 본문, Gasanov 2026(J Eng Thermophys 35:175, 갭 효과 과냉 비등)과 Khandelwal 2026의 내용.
