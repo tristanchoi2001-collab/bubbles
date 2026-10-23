@@ -26,6 +26,8 @@ parity 救済のテスト (透明な流路用)
          PARITY_CONTACT_FRAC 以上 (= 液に囲まれた領域。スラグの下の液だまりのように別の気体と接する領域は足さない)
        - 面積 <= 画面 × PARITY_MAX_AREA_FRAC (超えたものは足さずに parity_report.json の skipped に書く)
   4. 足す気泡の形: 2_raw_track.py の救済と同じく、境界確率の尾根で壁の画素を両側に分ける (面積の決め方が同じ)
+  5. PARITY_MERGE: 足した気泡が検出済みの気泡と接していて、接する線に二値化画像 B の白い輪 (境界) が無ければ 1個にまとめる
+     (U-Net が L字の上の帯だけを検出し、parity が縦の帯を足して 2個になるのを防ぐ。画像に境界の線が見える組はまとめない)
 
 使い方:
   1. 2_raw_track.py の設定 (UNET_CKPT, IMAGE_FOLDER, BACKGROUND_PATH, OUTPUT_FOLDER など) はいつもどおりそちらに書く
@@ -36,7 +38,7 @@ parity 救済のテスト (透明な流路用)
                 parity/ (足したフレームの画像) と parity_report.json。いつもの結果と 3_tracking_qc.py で比べる。
                 ROI は元の OUTPUT_FOLDER の roi_saved.json があれば写して同じ ROI を使う。
                 比べるときは 2つの実行のゲートを同じにする (ENABLE_BOOTSTRAP = False か、承認画面で同じ値)
-  3. 画像の色: 緑 = もともとの気泡、赤 = parity で足した気泡、青 = 基準にした液の領域、紫 = 大きすぎて足さなかった候補
+  3. 画像の色: 緑 = もともとの気泡、赤 = parity で足した (まとめた) 気泡、青 = 基準にした液の領域、紫 = 大きすぎて足さなかった候補
 """
 import glob
 import importlib.util
@@ -71,6 +73,14 @@ PARITY_CONTACT_MIN = 50        # アンカーとの接触の最小長 (px)
 PARITY_ANCHOR = "bubbles"      # "bubbles" / "largest" (上の説明)
 PARITY_ANCHOR_MIN_BUBBLES = 3  # "bubbles": この数以上の気泡を取り囲む領域がなければ、空いている一番大きい領域
 PARITY_MAX_AREA_FRAC = 0.5     # 画面のこの割合より大きい領域は足さない (基準を取り違えたときに画面の大半を気泡にしないため)
+PARITY_MERGE = True            # 2つの気泡が接していて、接する線に 二値化画像 B の白い輪 (境界) が無ければ 1個にまとめる。
+                               # U-Net が L字の上の帯だけを検出し parity が縦の帯を足すと 2個になる (639) のを 1個にする。
+                               # 画像に境界の線が見える組 (640 / 641 の角) はまとめない
+PARITY_MERGE_SCOPE = "parity"  # "parity": parity で足した気泡と、それに接する気泡の組だけ /
+                               # "all": U-Net の気泡どうし (両方 PARITY_MIN_AREA 以上) もまとめる (偽の壁で切れたスラグも 1個になるが、
+                               #        parity を足さないフレームの検出も変わる)
+PARITY_MERGE_MAX_RIM = 0.2     # 接する線 (両端 4 px を除く) の画素のうち、1 px 以内に白い輪がある割合がこれ以下ならまとめる
+PARITY_MERGE_MIN_CONTACT = 8   # 接する線 (両端を除く) がこれより短い組はまとめない (判定できない)
 SAVE_IMAGES = True             # 足した (または大きすぎて足さなかった) フレームの確認画像を保存
 SAVE_IMAGES_MAX = 300          # 保存する確認画像の最大枚数
 
@@ -247,8 +257,81 @@ def parity_rescue(prob, inst, ring=None, steps=None):
         free &= ~mm
         info.update(label=k, area=int(mm.sum()))
         rep["added"].append(info)
+    rep["merged"], rep["not_merged"] = [], []
+    if PARITY_MERGE:
+        out = merge_without_rim(out, ring, rep)
     rep["anchor_mask"] = anchor_mask
     return out, rep
+
+
+def merge_without_rim(out, ring, rep):
+    """接している 2つの気泡のあいだに 二値化画像の白い輪 (境界) が無ければ 1個にまとめる (同じ気体が偽の壁で切れたもの)。
+    PARITY_MERGE_SCOPE = "parity" なら parity で足した気泡が絡む組だけ。まとめた組は rep["merged"]、輪があってまとめなかった組は
+    rep["not_merged"] に書く。まとめた後のラベルは組の中で一番小さい番号 (= U-Net の気泡の番号)。接する線の隙間の画素も含める"""
+    if PARITY_MERGE_SCOPE not in ("parity", "all"):
+        raise ValueError(f'PARITY_MERGE_SCOPE は "parity" / "all": {PARITY_MERGE_SCOPE!r}')
+    added = {a["label"] for a in rep["added"]}
+    if ring is None or ring.shape != out.shape or (PARITY_MERGE_SCOPE == "parity" and not added):
+        return out
+    H, W = out.shape
+    area = np.bincount(out.ravel())
+    objs = ndimage.find_objects(out)
+    big = {int(l) for l in np.nonzero(area >= PARITY_MIN_AREA)[0] if l > 0}
+
+    def box(*labels, pad=6):
+        sls = [objs[l - 1] for l in labels]
+        return (max(min(sl[0].start for sl in sls) - pad, 0), min(max(sl[0].stop for sl in sls) + pad, H),
+                max(min(sl[1].start for sl in sls) - pad, 0), min(max(sl[1].stop for sl in sls) + pad, W))
+
+    pairs = set()
+    for a in sorted(added if PARITY_MERGE_SCOPE == "parity" else big):
+        if objs[a - 1] is None:
+            continue
+        y0, y1, x0, x1 = box(a, pad=3)
+        sub = out[y0:y1, x0:x1]
+        for b in np.unique(sub[ndimage.binary_dilation(sub == a, iterations=2)]):
+            if b != a and int(b) in big:
+                pairs.add((min(a, int(b)), max(a, int(b))))
+    parent = {}
+
+    def find(x):
+        while parent.get(x, x) != x:
+            x = parent[x]
+        return x
+
+    gaps = []
+    for a, b in sorted(pairs):
+        y0, y1, x0, x1 = box(a, b)
+        sub = out[y0:y1, x0:x1]
+        ma, mb = sub == a, sub == b
+        line = (ndimage.binary_dilation(ma, iterations=2) & mb) | (ndimage.binary_dilation(mb, iterations=2) & ma)
+        inner = ndimage.binary_erosion(ndimage.binary_closing(ma | mb, iterations=2), iterations=4)
+        core = line & inner                                # 接する線のうち、2つを合わせた形の縁 (線の両端) から 4 px 以上内側
+        rec = {"labels": [int(a), int(b)], "contact": int(core.sum())}
+        if rec["contact"] < PARITY_MERGE_MIN_CONTACT:
+            continue
+        rec["rim_frac"] = round(float(ndimage.binary_dilation(ring[y0:y1, x0:x1], iterations=1)[core].mean()), 3)
+        if rec["rim_frac"] > PARITY_MERGE_MAX_RIM:
+            rep["not_merged"].append(rec)
+            continue
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+        rep["merged"].append(rec)
+        gaps.append((y0, y1, x0, x1, ndimage.binary_dilation(line, iterations=2) & (sub == 0), a))
+    if not rep["merged"]:
+        return out
+    lut = np.arange(len(area), dtype=out.dtype)
+    for l in list(parent):
+        lut[l] = find(l)
+    out = lut[out]
+    for y0, y1, x0, x1, gap, a in gaps:                    # 2つのあいだの、どちらにも属さない画素 (壁の残り)
+        sub = out[y0:y1, x0:x1]
+        sub[gap & (sub == 0)] = find(a)
+    for a in rep["added"]:
+        if find(a["label"]) != a["label"]:
+            a["merged_into"] = int(find(a["label"]))
+    return out
 
 
 def draw_parity(base_gray, inst, out, rep):
@@ -257,19 +340,19 @@ def draw_parity(base_gray, inst, out, rep):
     am = rep.get("anchor_mask")
     if am is not None:
         vis[am] = vis[am] * 0.75 + np.array((255, 120, 0), np.float32) * 0.25
-    added = np.isin(out, [a["label"] for a in rep["added"]]) if rep["added"] else np.zeros(out.shape, bool)
-    vis[added] = vis[added] * 0.5 + np.array((0, 0, 255), np.float32) * 0.5
+    changed = (out != inst) & (out > 0)                    # parity で足した / まとめて変わった画素
+    vis[changed] = vis[changed] * 0.5 + np.array((0, 0, 255), np.float32) * 0.5
     vis = vis.astype(np.uint8)
     cs, _ = cv2.findContours((inst > 0).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     cv2.drawContours(vis, cs, -1, (0, 200, 0), 1)
-    for a in rep["added"]:
-        cs, _ = cv2.findContours((out == a["label"]).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    for l in np.unique(out[changed]):                      # 足した気泡・まとめた後の気泡の輪郭 (赤)
+        cs, _ = cv2.findContours((out == l).astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         cv2.drawContours(vis, cs, -1, (0, 0, 255), 2)
     for s in rep["skipped"]:
         x0, y0, x1, y1 = s["bbox"]
         cv2.rectangle(vis, (x0, y0), (x1, y1), (255, 0, 255), 2)
-    txt = f"parity +{len(rep['added'])}" + (f"  skip {len(rep['skipped'])}" if rep["skipped"] else "") + \
-          (f"  anchor {rep['anchor']['how']}" if rep.get("anchor") else "")
+    txt = f"parity +{len(rep['added'])}" + (f"  merge {len(rep.get('merged', []))}" if rep.get("merged") else "") + \
+          (f"  skip {len(rep['skipped'])}" if rep["skipped"] else "") + (f"  anchor {rep['anchor']['how']}" if rep.get("anchor") else "")
     cv2.putText(vis, txt, (6, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3, cv2.LINE_AA)
     cv2.putText(vis, txt, (6, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
     return vis
@@ -317,15 +400,19 @@ def summarize(frames, out_dir, t_parity):
                "added": len(added), "added_area_total": int(sum(a["area"] for a in added)),
                "added_area_max": int(max((a["area"] for a in added), default=0)),
                "added_touching_frame": sum(1 for a in added if a["touches_frame"]),
-               "skipped_too_large": len(skipped), "parity_sec_per_frame": round(t_parity / max(len(frames), 1), 3)}
+               "skipped_too_large": len(skipped), "merged_pairs": sum(len(f.get("merged", [])) for f in frames),
+               "parity_sec_per_frame": round(t_parity / max(len(frames), 1), 3)}
     settings = {k: globals()[k] for k in ("PARITY_STEPS", "PARITY_USE_RING", "PARITY_MIN_AREA", "PARITY_FREE_FRAC",
                                           "PARITY_CONTACT_FRAC", "PARITY_CONTACT_MIN", "PARITY_ANCHOR",
-                                          "PARITY_ANCHOR_MIN_BUBBLES", "PARITY_MAX_AREA_FRAC", "PARITY_ENABLE")}
+                                          "PARITY_ANCHOR_MIN_BUBBLES", "PARITY_MAX_AREA_FRAC", "PARITY_MERGE",
+                                          "PARITY_MERGE_SCOPE", "PARITY_MERGE_MAX_RIM", "PARITY_MERGE_MIN_CONTACT",
+                                          "PARITY_ENABLE")}
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "parity_report.json"), "w", encoding="utf-8") as fp:
         json.dump({"summary": summary, "settings": settings, "frames": frames}, fp, ensure_ascii=False, indent=1)
     print(f"\n[parity] {summary['frames']}フレーム中 {summary['frames_with_added']}フレームで {summary['added']}個 足した "
           f"(合計 {summary['added_area_total']} px, 最大 {summary['added_area_max']} px, 画面端に接する {summary['added_touching_frame']}個)"
+          + (f", 輪の無い境界でまとめた組 {summary['merged_pairs']}個" if summary["merged_pairs"] else "")
           + (f", 大きすぎて足さなかった候補 {summary['skipped_too_large']}個" if skipped else "")
           + f"  parity の時間 {summary['parity_sec_per_frame']} s/フレーム")
     print(f"  一覧: {os.path.join(out_dir, 'parity_report.json')}")
@@ -355,12 +442,13 @@ def run_check(M, out_dir):
         inst = M.unet_instances(prob)
         B = b_plane(M, detector, raw, bg)
         t0 = time.time()
-        out, rep = parity_rescue(prob, inst, B > 0, steps) if PARITY_ENABLE else (inst, {"added": [], "skipped": [], "anchor": None})
+        out, rep = parity_rescue(prob, inst, B > 0, steps) if PARITY_ENABLE else (inst, {"added": [], "skipped": [], "merged": [], "not_merged": [], "anchor": None})
         t_par += time.time() - t0
         name = os.path.basename(p)
         frames.append({"file": name, **strip(rep)})
-        if rep["added"] or rep["skipped"]:
+        if rep["added"] or rep["skipped"] or rep["merged"]:
             print(f"  [{name}] parity +{len(rep['added'])} " + " ".join(f"{a['area']}px@({a['cx']},{a['cy']})" for a in rep["added"])
+                  + (f"  まとめた組 {len(rep['merged'])}" if rep["merged"] else "")
                   + (f"  (大きすぎて足さない {len(rep['skipped'])}個)" if rep["skipped"] else ""))
             if SAVE_IMAGES and n_img < SAVE_IMAGES_MAX:
                 cv2.imwrite(os.path.join(img_dir, os.path.splitext(name)[0] + ".png"), draw_parity(B, inst, out, rep))
@@ -405,10 +493,11 @@ def run_track(M, out_dir):
         cur["n"] += 1
         name = cur["name"] or f"frame{cur['n']:05d}"
         frames.append({"file": name, **strip(rep)})
-        if rep["added"] or rep["skipped"]:
+        if rep["added"] or rep["skipped"] or rep["merged"]:
             print(f"    parity +{len(rep['added'])} " + " ".join(f"{a['area']}px@({a['cx']},{a['cy']})" for a in rep["added"])
+                  + (f"  まとめた組 {len(rep['merged'])}" if rep["merged"] else "")
                   + (f"  (大きすぎて足さない {len(rep['skipped'])}個)" if rep["skipped"] else ""))
-            if SAVE_IMAGES and sum(1 for f in frames if f["added"] or f["skipped"]) <= SAVE_IMAGES_MAX and B is not None:
+            if SAVE_IMAGES and sum(1 for f in frames if f["added"] or f["skipped"] or f["merged"]) <= SAVE_IMAGES_MAX and B is not None:
                 cv2.imwrite(os.path.join(img_dir, os.path.splitext(name)[0] + ".png"), draw_parity(B, inst, out, rep))
         return out
 

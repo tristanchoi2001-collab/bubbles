@@ -14,6 +14,9 @@ parity 救済のテスト (raw/5_parity_test.py)
   g) check / track: 偽の確率 (画像の明るさから作る) で 2_raw_track.py の検出・追跡を通す。check は L を毎フレーム足して画像と
      parity_report.json を出す。track は CSV に L の気泡が入り、PARITY_ENABLE = False なら 2_raw_track.py の main と CSV が
      バイト単位で同じ
+  h) まとめる規則 (PARITY_MERGE): U-Net が L の上の帯だけを検出し (境目に偽の壁)、parity が縦の帯を足す。境目に二値化画像の
+     白い輪が無ければ 1個 (U-Net の番号) にまとまり L とほぼ一致する。輪があれば 2個のまま (not_merged に記録)、
+     PARITY_MERGE = False でも 2個。U-Net が両方検出したとき: "parity" ではそのまま、"all" ならまとめる
 
 使い方: リポジトリのルートで  python -B tests/test_parity.py     (pytest でも実行できる)
 """
@@ -180,6 +183,50 @@ def test_f_gap_ring_fragment():
     assert iou(out == rep["added"][0]["label"], L) > 0.85, iou(out == rep["added"][0]["label"], L)
     inst, out, rep = run(pr, ring, PARITY_USE_RING=False)              # 輪を壁にしなければ下の端だけ
     assert len(rep["added"]) == 1 and rep["added"][0]["region_area"] < 0.25 * L.sum(), rep["added"]
+
+
+def l_split(pr, detect_vertical=False):
+    """L字: 上の帯 (x 120..257) は U-Net が検出 (内部確率が高い)、縦の帯は取りこぼし (detect_vertical なら両方検出)。
+    境目 (x 257..259) に偽の壁 (境界確率 0.95)。戻り値: L のマスク"""
+    L = l_mask()
+    o = outline(L)
+    top = np.zeros((H, W), bool)
+    top[30:70, 120:257] = True
+    pr[:, L & ~o] = np.array([0.93, 0.05, 0.02], np.float32)[:, None]
+    pr[:, (top if not detect_vertical else L) & ~o] = np.array([0.03, 0.95, 0.02], np.float32)[:, None]
+    pr[:, o] = np.array([0.03, 0.02, 0.95], np.float32)[:, None]
+    pr[:, 30:70, 257:260] = np.array([0.03, 0.02, 0.95], np.float32)[:, None, None]
+    return L
+
+
+def test_h_merge_without_rim():
+    pr = liquid_with_bubbles()
+    L = l_split(pr)
+    ring = outline(L)                                                  # 画像では L の輪だけ (境目に線なし)
+    inst, out, rep = run(pr, ring)
+    top_label = [l for l in np.unique(inst[L]) if l and (inst == l).sum() > 3000]
+    assert len(top_label) == 1 and len(rep["added"]) == 1, (top_label, rep["added"])
+    t = top_label[0]
+    assert len(rep["merged"]) == 1 and rep["merged"][0]["rim_frac"] == 0 and rep["added"][0]["merged_into"] == t, rep["merged"]
+    assert iou(out == t, L) > 0.9 and not (out == rep["added"][0]["label"]).any(), iou(out == t, L)
+    assert np.array_equal(out[(inst > 0) & (inst != t)], inst[(inst > 0) & (inst != t)])     # ほかの気泡は変わらない
+    line = np.zeros((H, W), bool)
+    line[30:70, 257:260] = True
+    inst, out2, rep2 = run(pr, ring | line)                            # 境目に白い線 (輪) が見える -> まとめない
+    assert not rep2["merged"] and rep2["not_merged"] and rep2["not_merged"][0]["rim_frac"] > 0.5, rep2["not_merged"]
+    assert (out2 == t).sum() < 0.6 * L.sum() and (out2 == rep2["added"][0]["label"]).sum() > 0.3 * L.sum()
+    inst, out3, rep3 = run(pr, ring, PARITY_MERGE=False)
+    assert not rep3["merged"] and len(np.unique(out3[L])) >= 3          # 背景 + 2個
+    vis = P.draw_parity(np.zeros((H, W), np.uint8), inst, out, rep)
+    assert (vis[..., 2][L] > 100).mean() > 0.5                         # まとめた気泡も赤
+    # U-Net が偽の壁の両側を検出: "parity" ではそのまま、"all" ならまとめる
+    pr = liquid_with_bubbles()
+    L = l_split(pr, detect_vertical=True)
+    inst, out, rep = run(pr, outline(L))
+    assert not rep["added"] and not rep["merged"] and np.array_equal(out, inst)
+    assert len([l for l in np.unique(inst[L]) if l and (inst == l).sum() > 3000]) == 2
+    inst, out, rep = run(pr, outline(L), PARITY_MERGE_SCOPE="all")
+    assert len(rep["merged"]) == 1 and len([l for l in np.unique(out[L]) if l]) == 1 and iou(out == out[100, 280], L) > 0.9
 
 
 # ---- 検出・追跡を通す ----
