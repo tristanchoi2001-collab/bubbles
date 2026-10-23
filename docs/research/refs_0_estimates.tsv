@@ -8,3 +8,9 @@ doi	first_author	year	short_title	level	note
 10.1016/S0065-2717(08)70205-3	Cooper	1984	Heat flow rates in saturated nucleate pool boiling	C	estimates 8장
 10.1017/jfm.2022.1008	Booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton cradle	C+F	estimates 5장 C0 식의 출처(주제 3)
 10.1063/1.4793544	Cantat	2013	Liquid meniscus friction on a wet plate	C+F	estimates 5장 메니스커스 계수(주제 3)
+10.1063/1.2976306	Bławzdziewicz	2008	Far-field response of a suspension in a parallel-wall channel (Clausius-Mossotti permeability)	C+A	estimates 5.4 유효 매질 식의 이론 선례; arXiv 0804.0751 초록
+10.1029/93wr01529	Fourar	1993	Two-phase flow in smooth and rough fractures: porous-medium and pipe flow models	C	estimates 5.4 균열 선례; 검색 요약
+10.1029/95wr00171	Persoff	1995	Two-phase flow visualization and relative permeability in rough-walled rock fractures	C+A	estimates 5.4 균열 선례; OSTI 81783 초록
+10.1029/2004wr003837	Chen	2006	Two-phase flow in rough-walled fractures: experiments and a flow structure model	C	estimates 5.4; 영상 굴곡도로 상대 투과율; 검색 요약
+10.2139/ssrn.6505385	Kharangate	2026	Large-scale vision-based characterization of flow regimes and interfacial distributions for HTC prediction (preprint of Naderi 2026 ATE)	C+A	SSRN 선행판 초록: 수평 미니채널 1개, 107조건, YOLOv8 기공률·건조 비율 -> 하이브리드 NN 국소 h MAPE 14-15%
+10.2139/ssrn.5914773	Kharangate	2025	Applying computer vision to flow boiling analysis: feature extraction and data-driven HTC prediction	C	같은 그룹 선행판, 초록 없음
