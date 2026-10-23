@@ -884,4 +884,8 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - 지시서: `docs/research/HANDOFF.md`.
   - 웹 검색 메모(52건, 정리 전): `docs/research/notes_websearch.md`.
 - 이 세션의 네트워크 정책은 논문 DB(Crossref, OpenAlex, Semantic Scholar, Google Scholar, doi.org, arXiv, J-STAGE)를 막았다.
-  - 사용자가 환경 설정을 "모든 도메인 허용"으로 바꿨지만, 이미 실행 중인 세션에는 반영되지 않았다(새 세션부터 적용될 것으로 봄).
+  - "모든 도메인 허용"은 사용자가 새로 만든 "리서치" 환경에만 설정되어 있다. 이 세션의 "Default" 환경은 그대로다.
+    컨테이너를 다시 시작한 뒤에도 api.crossref.org, export.arxiv.org는 프록시 403, WebFetch는 DNS 실패였다(2026-10-23 확인). WebSearch만 된다.
+- 철 채널 프로그램 개선 조사(사용자 요청 "앞으로 철 채널 프로그램을 어떻게 개선하고 발전해 나갈지 리서치")는 "리서치" 환경의 새 세션에 맡겼다.
+  - 지시서 `docs/steel_research/HANDOFF.md`, 결과 `docs/steel_research/report.md`, 진행 기록 `docs/steel_research/PROGRESS.md`.
+  - 그 세션은 코드를 고치지 않고 `docs/steel_research/`만 쓴다. CLAUDE.md 반영은 이 세션이 한다.
