@@ -3,15 +3,19 @@
 중단되면 이 파일부터 읽고 이어서 한다. 브랜치는 `claude/tracker2-bubble-tracking-ffz50u`. 푸시 전에 `git pull --rebase`.
 
 ## 접속 상태
-- 2026-10-23 16:14 UTC: OpenAlex, Crossref, Semantic Scholar, doi.org, arXiv, J-STAGE, ScienceDirect, Springer, OSTI 모두 프록시 403(정책 거부). WebFetch도 DNS 실패.
-  - 열리는 곳: github, pypi. **WebSearch는 동작한다.**
-  - 이 세션의 환경: `env_01KeTKUxBSkb8xf3iEYPtuzC`. 계정에 "Default" 환경이 2개 있다(다른 하나 `env_019KXZbYr7VDi7LWjkDSgyG4`).
-  - 사용자에게 Network access 변경 방법을 안내했다. 바뀌면 다시 시험한다:
-    `curl -sS -m 20 -o /dev/null -w "%{http_code}\n" "https://api.openalex.org/works?search=microgap&per-page=1"`
-- DB가 막힌 동안의 규칙
-  - DOI는 "Crossref 미대조"로 표시한다.
-  - Elsevier PII(ScienceDirect 주소의 S…)에서 만든 DOI는 "PII 유도"로 표시한다.
-  - 검색 결과 요약에서 본 수치는 "(검색 요약 기준)"으로 표시한다.
+- **2026-10-23 16:30 UTC (새 세션 session_01QFVWo3BPZ98Eh7jXYmYxkN, 네트워크 "모든 도메인 허용")**
+  - Crossref API: 200 정상. 일부 문헌은 초록도 준다 → DOI 대조 가능.
+  - OpenAlex: 접속은 되지만 429. 이 클라우드 IP가 함께 쓰는 무료 일일 예산이 바닥났다(00:00 UTC = 09:00 KST 초기화).
+    무료 API 키는 이메일 등록이 필요하다. 개인 이메일을 요청에 넣지 않는 규칙 때문에 발급하지 않았다.
+  - Semantic Scholar: 429(인증 없는 공용 한도). 간격을 두고 재시도한다.
+  - Google Scholar: curl은 CAPTCHA("unusual traffic")로 막힌다. **WebFetch 도구로는 검색 결과(인용 수 포함)가 열린다.** 사용자 요청(2026-10-23)으로 함께 참조한다.
+  - 열림: arXiv, J-STAGE, Europe PMC, Cambridge Core, NASA NTRS, OSTI 검색 페이지, HAL, CiNii, doi.org.
+  - 막힘(사이트 쪽 Cloudflare 봇 차단 403): ScienceDirect, Wiley, T&F, ASME, AIP, APS, ResearchGate, CORE. KoreaScience는 시간 초과.
+- 2026-10-23 16:14 UTC (이전 세션): OpenAlex, Crossref, Semantic Scholar, doi.org, arXiv, J-STAGE, ScienceDirect, Springer, OSTI 모두 프록시 403(정책 거부). WebFetch도 DNS 실패.
+  - 이 세션의 환경: `env_01KeTKUxBSkb8xf3iEYPtuzC`.
+- 확인 수준 표시 규칙
+  - `C+F` Crossref 대조 + 전문 확인 / `C+A` Crossref 대조 + 초록 확인(수치에 "(초록 기준)") / `C` Crossref 대조만(내용은 2차 자료, 수치에 "(2차 인용)") / `U` 미대조.
+  - Elsevier PII(ScienceDirect 주소의 S…)에서 만든 DOI는 Crossref로 대조하기 전까지 "PII 유도"로 표시한다.
 
 ## 작업 상태
 | # | 작업 | 상태 | 결과 파일 |
