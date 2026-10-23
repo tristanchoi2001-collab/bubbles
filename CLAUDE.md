@@ -866,3 +866,15 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - 위의 각 절에 나오는 `tracker3.py`, `docs/PIV_TASK.md`, `reference/piv_prior.py` 등은 이제 old/ 아래 경로다.
 - 테스트 실행 (루트에서): `python -B tests/test_events.py`, `tests/test_qc.py`, `tests/test_instances.py`, `tests/test_tau.py`, `tests/test_dots.py`,
   `tests/test_binarized.py`, `tests/test_prelabel.py`, `tests/test_raw.py`, `tests/test_gates.py`, `tests/test_link_audit.py`, `tests/test_steel.py`. 또는 `python -m pytest`(루트의 pytest.ini가 tests/만 모은다. old/tests는 이름이 겹치므로 `cd old`에서 따로). 정리 후 63개 통과.
+
+## 2026-10-23 결정과 인계
+- 사용자 결정: 투명 채널은 현 단계에서 개선·개발 중단, 철 채널에 집중. 근거와 숫자는 `docs/status_2026-10-23.md`.
+- 월요일(10-26) 발표 자료: `docs/presentation_2026-10-26/`
+  - `slides_ko.md`: PPT 작성 AI에 넣을 원고(슬라이드 15장, 본문 + 대본).
+  - `fig/`: 그림 10장. 생성 스크립트는 세션 scratchpad에만 있다.
+  - 14·15번 슬라이드(논문 방향, 일정)는 연구 조사 결과로 고칠 것.
+- 연구 조사(1/3/7 mm 마이크로갭 논문 방향 + 유사 논문)는 새 세션으로 옮겼다.
+  - 지시서: `docs/research/HANDOFF.md`.
+  - 웹 검색 메모(52건, 정리 전): `docs/research/notes_websearch.md`.
+- 이 세션의 네트워크 정책은 논문 DB(Crossref, OpenAlex, Semantic Scholar, Google Scholar, doi.org, arXiv, J-STAGE)를 막았다.
+  - 사용자가 환경 설정을 "모든 도메인 허용"으로 바꿨지만, 이미 실행 중인 세션에는 반영되지 않았다(새 세션부터 적용될 것으로 봄).
