@@ -15,3 +15,4 @@ doi	first_author	year	short_title	level	note
 10.2139/ssrn.6505385	Kharangate	2026	Large-scale vision-based characterization of flow regimes and interfacial distributions for HTC prediction (preprint of Naderi 2026 ATE)	C+A	SSRN 선행판 초록: 수평 미니채널 1개, 107조건, YOLOv8 기공률·건조 비율 -> 하이브리드 NN 국소 h MAPE 14-15%
 10.2139/ssrn.5914773	Kharangate	2025	Applying computer vision to flow boiling analysis: feature extraction and data-driven HTC prediction	C	같은 그룹 선행판, 초록 없음
 10.1103/physreva.35.2221	Jensen	1987	Effect of gravity on the Saffman-Taylor meniscus: theory and experiment	C	정적: Bo>1이면 손가락이 아래 벽에서 떨어질 수 있음(de Lozar 2008 원문의 서술). 2Lc 경계 근거
+-	Matsumura	1987	The characteristics of bubble flow in a vertical narrow rectangular channel: void distributions and frictional pressure drops	U	鹿児島大学工学部研究報告 29:37-45; hdl.handle.net/10232/11421; 저장소 초록(영문)
