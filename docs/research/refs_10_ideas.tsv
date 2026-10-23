@@ -1,1 +1,65 @@
 doi	first_author	year	short_title	level	note
+10.1103/physrevfluids.9.123603	Wu	2024	The motion and deformation of a bubble in a Hele-Shaw cell	C+F	저자 공개본(people.maths.ox.ac.uk, pdftotext) 6장: 부력 구동 속도를 ρgh²sinα/24μ로 나누면 압력 구동과 같은 식(27). 부력 실험(h 0.29 mm, 7.5°, Ca 2.3e-4)+Maxworthy+Monnet은 한 곡선에 모이나 이론보다 크게 빠름. 압력 구동은 이론과 일치. I2, N-a
+10.1017/jfm.2022.361	Monnet	2022	Bubble rise in a Hele-Shaw cell: bridging the gap between viscous and inertial regimes	C	검색 요약. 부력 상승의 점성·관성 영역. I2
+10.1103/physrevfluids.9.073601	Monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	C+A	lit_1 D14(HAL 초록). 기울기·막 비대칭·마찰 항 일률 균형. I2
+10.1017/s002211208600109x	Maxworthy	1986	Bubble formation, motion and interaction in a Hele-Shaw cell	C+A	lit_1 D3. 기울인 셀 상승 속도. I2
+10.1209/epl/i2002-00204-2	Aussillous	2002	Bubbles creeping in a viscous liquid along a slightly inclined plane	C	lit_3 P22(원문 미확인). I2
+10.1017/jfm.2022.1008	Booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	C+F	lit_3. 이동도 식 Ub^(2/3)=δ(2−Ub), β1 3.88, β2 −1.13. I2, I3
+10.1063/1.857492	Saffman	1989	Prediction of bubble velocity in a Hele-Shaw cell: thin film and contact angle effects	C+A	lit_1 G4. 접촉각(부분 젖음)이 기포를 느리게 함. I2, I5, I6
+10.1088/0957-0233/16/10/009	Ryu	2005	Use of bubble image velocimetry for measurement of plunging wave impinging on structure and associated greenwater	C	BIV(기포를 추적자로 쓰는 3차원 기포 흐름 속도계). I3
+10.1007/s00348-020-03016-3	Alipour	2020	Concentration-based velocity reconstruction in convective Hele-Shaw flows	C	검색 요약: Hele-Shaw에서 시딩 없이 농도장으로 속도 재구성(Darcy 모사로 검증). 기포 아님. I3
+10.1098/rsos.252426	Booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	C+F	estimates 5.4(오픈 전문). N개 기포 정방향 모델, 평균 ΔP 없음. I3
+10.1063/1.3109686	Labrot	2009	Extracting the hydrodynamic resistance of droplets from their behavior in microchannel networks	C+F	lit_3 T11. 1차원 운동학→저항. I3, N-c
+10.1103/physrevfluids.10.023301	Raufaste	2025	Friction-induced bubble edge curvature in flowing 2D confined foams	C+F	lit_5 #15. 2D 거품 경계 곡률로 마찰. I3
+10.1016/j.ces.2009.11.014	Sathe	2010	Advanced PIV/LIF and shadowgraphy system to visualize flow structure in two-phase bubbly flows	C	lit_1 G8. 액체 속도장 PIV + 기포별 슬립. I3
+10.1017/jfm.2016.131	Franco-Gómez	2016	Sensitivity of Saffman-Taylor fingers to channel-depth perturbations	C	깊이 섭동 민감도. I4
+10.1039/c7sm01478c	Franco-Gómez	2017	Bubble propagation on a rail: a concept for sorting bubbles by size	C	Scholar 요약: 정해진 깊이 변화(레일)가 기포 경로를 정함. 역산 아님. I4
+10.1017/jfm.2014.100	Thompson	2014	Multiple finger propagation modes in Hele-Shaw channels of variable depth	C	I4
+10.1103/physrevfluids.9.093605	Lawless	2024	Stable bubble formations in a depth-perturbed Hele-Shaw channel	C+A	lit_1 G2, lit_8 D2. 깊이 1~2.4% 레일로 안정 대형. I4, I8
+10.1017/jfm.2025.167	Baué	2025	Droplet velocity in both limits of low and high soluble surfactants in a Hele-Shaw cell	C+A	Crossref 초록 재확인: 잘 녹는 계면활성제 → 반지름과 함께 증가, 잘 안 녹는 → 감소(기름 액적). 지시문·estimates 5.2의 부호 서술 정정 필요. I5
+10.1063/1.868059	Park	1994	The influence of surfactant on the bubble motion in Hele-Shaw cells	C+A	Crossref 초록: 실리콘유 속 공기 기포는 Taylor-Saffman에 가깝고, SDS 물방울은 10배 느림. I5
+10.1103/physrevfluids.4.113602	Reichert	2019	Predicting droplet velocity in a Hele-Shaw cell	C+F	lit_1 D12. 깨끗한 기포 이동도 1.0~1.65. I5
+10.1103/physrevb.9.5056	Johnson	1974	Optical constants of transition metals: Ti, V, Cr, Mn, Fe, Co, Ni, and Pd	C+F	lit_6 #19 데이터. 철 수직 반사율 공기 접촉 0.512, 물 접촉 0.416(계산). I6
+10.1364/ao.27.001278	Lekner	1988	Why some things are darker when wet	C+A	lit_6 #21. 거친 면은 젖으면 어두움 → 마른 자리는 밝음(같은 부호). I6
+10.1016/j.ijheatmasstransfer.2003.07.033	Nishio	2004	Visualization of boiling structures in high heat-flux pool-boiling	C	전반사법(투명 가열면 필요). I6
+10.1016/j.ijheatmasstransfer.2020.120329	Kim	2020	Pool boiling heat transfer on bare and microporous surfaces confined in a narrow gap	C+A	lit_2 #7. 유리창 너머 구리 가열면의 건조 영역을 정성 관찰. I6
+10.1115/interpack2009-89238	Sheehan	2009	Thermal imaging of two-phase cooled microgap channel wall	C+A	lit_2 #35. 사파이어 창 너머 IR로 국소 건조. I6
+10.1016/j.applthermaleng.2016.07.020	Mancin	2016	Flow boiling heat transfer, dewetting-rewetting, and dryout visualization of HFOs in an asymmetrically heated rectangular plain channel	C	lit_2 #50. I6
+10.1016/j.ijheatmasstransfer.2010.04.016	Betz	2010	Can segmented flow enhance heat transfer in microchannel heat sinks?	C	lit_4 #59. 액체 질량유속 330~2000 kg/m²s에서만 Nu 100% 넘게 증가(검색 요약). I7
+10.1115/1.4002807	Muzychka	2011	Heat transfer enhancement using laminar gas-liquid segmented plug flows	C+A	lit_4 #54. I7
+10.3390/fluids6040150	Vasilev	2021	Gas-liquid two-phase flow and heat transfer without phase change in microfluidic heat exchanger	C	검색 요약: 기체 분율 10~30%에서만 강화(Nu 최대 1.67배). I7
+10.1115/icnmm2011-58237	Talimi	2011	A numerical study on shear stress and heat transfer of segmented flow between parallel plates	C	Scholar 요약: 액적이 길수록 단상 거동에 가까움. I7
+10.1299/kikaib.55.483	Monde	1989	Enhancement of heat transfer due to a bubble passing through a narrow vertical rectangular channel (Effect of subcooling on heat transfer)	C+F	lit_4 #2. 공기 기포 + 서브쿨 물, h가 통과 주기 T0만의 함수(약 5배). I7, I12
+10.1299/kikaib.55.2030	Monde	1989	Enhancement of heat transfer due to bubbles passing through a narrow vertical rectangular channel (Theoretical analysis without evaporation on an interface)	C+F	lit_4 #3. 잔류막(증발 없음)+비정상 전도 모델. I7
+10.1299/kikaib.53.1788	Monde	1987	Boiling heat transfer in a narrow vertical rectangular channel (Relationship between heat transfer coefficient and period of passing bubble)	C+F	lit_4 #4. 같은 장치 비등. I12
+10.1016/j.ijheatmasstransfer.2014.09.029	Albahloul	2015	Observations of bubble shape and confinement in diabatic two-phase flow in a minichannel	C+A	lit_7·lit_4. 수평 1.29~1.48 mm, 위 벽 가열, 공기 주입. I7
+10.1039/b510841a	Garstecki	2006	Formation of droplets and bubbles in a microfluidic T-junction - scaling and mechanism of break-up	C	주입부 형성(squeezing) 스케일. 식의 꼴은 널리 인용되는 것을 썼고 원문 미확인. I8
+10.1016/0301-9322(91)90003-l	Wambsganss	1991	Two-phase flow patterns and transitions in a small, horizontal, rectangular channel	C+A	lit_1 A8. 수평 19.05×3.18 mm, 압력 신호로 천이 판정. I8, I9
+10.1016/s0029-5493(00)00306-x	Hibiki	2001	Flow regime transition criteria for upward two-phase flow in vertical narrow rectangular channels	C+A	lit_1 A10. 수직 0.3~17 mm. I8
+10.1017/jfm.2022.618	Keeler	2022	The interaction of multiple bubbles in a Hele-Shaw channel	C+A	lit_1 G1, lit_8 D1. 크기별 속도 차 → 따라잡기 합체. I8, N-d
+10.1017/jfm.2022.492	Ruiz-Rus	2022	Coalescence of bubbles in a high Reynolds number confined swarm	C+F	lit_8 B1. 1 mm 정지 액체, 합체 효율 약 80%. I8, N-d
+10.1016/0301-9322(84)90007-7	Matsui	1984	Identification of flow regimes in vertical gas-liquid two-phase flow using differential pressure fluctuations	C	lit_6 #35. I9
+10.1016/j.expthermflusci.2005.03.010	Ide	2005	Experimental research on the correlations of holdup and frictional pressure drop in air-water two-phase flow in a capillary rectangular channel	C+A	lit_7 A19. 액괴 통과 빈도. I9
+10.1016/j.ijmultiphaseflow.2018.05.007	Kingston	2018	High-frequency thermal-fluidic characterization of dynamic microchannel flow boiling instabilities: Part 1	C	lit_6 #38. 압력-영상 동기. I9
+10.1039/b815002h	Vanapalli	2009	Hydrodynamic resistance of single confined moving drops in rectangular microchannels	C+A	lit_3 T10. 단일 액적 초과 ΔP 직접 측정. I9, N-c
+10.1039/b706549c	Fuerstman	2007	The pressure drop along rectangular microchannels containing bubbles	C+A	lit_3 T9. ΔP가 기포 수로 정해짐. I1, N-c
+10.1111/ecog.02881	Roberts	2017	Cross-validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure	C	묶음(블록) 교차검증의 표준 근거. I10
+10.1016/j.ijheatmasstransfer.2019.119211	Qiu	2020	An artificial neural network model to predict mini/micro-channels saturated flow boiling heat transfer coefficient based on universal consolidated data	C	검색 요약: 16,953점·50출처, 시험 MAE 14.3%. 유체·형상 단위 홀드아웃은 요약에서 확인 못 함. I10
+10.1016/j.ijmultiphaseflow.2024.104928	Huang	2024	Machine learning boiling prediction: from autonomous vision of flow visualization data to performance parameter theoretical modeling	C+F	lit_5 #1. 조건 밖 검증 없음. I10
+10.1016/j.applthermaleng.2026.132079	Naderi	2026	Large-scale vision-based interfacial characterization for heat transfer prediction in horizontal mini-channel flow boiling	C+A	lit_5 #4(선행판 SSRN 초록). 채널 1개. I10
+10.1098/rspa.1932.0169	Taylor	1932	The viscosity of a fluid containing small drops of another fluid	C	묽은 에멀전 점도. 기포 극한 1+α는 원문 미확인(널리 인용되는 값). I11
+10.1016/s0377-0257(02)00013-7	Rust	2002	Effects of bubble deformation on the viscosity of dilute suspensions	C	Ca에 따라 점도 증가→감소. I11
+10.1038/nmat1962	Steinberger	2007	High friction on a bubble mattress	C	벽에 붙은 기포층이 마찰을 키울 수 있음. I11
+10.1016/s0017-9310(96)85017-4	Houston	1996	Heat transfer to sliding bubbles on a tube under evaporating and non-evaporating conditions	C	lit_4 #38. 증발/비증발 미끄럼 기포 비교. I12
+10.1016/0017-9310(72)90099-3	Kenning	1972	Convective heat transfer to water containing bubbles: enhancement not dependent on thermocapillarity	C	lit_4 #42. I12
+10.1016/j.ijheatmasstransfer.2015.07.133	Donnelly	2015	The dynamics of sliding air bubbles and the effects on surface heat transfer	C	lit_4 #43. 공기 미끄럼 기포 강화(검색 요약: 최대 9배). I12
+10.1016/j.ces.2013.05.026	Zimmerman	2013	Evaporation dynamics of microbubbles	C	뜨거운 마른 공기 미세 기포의 증발. I12, N-e
+10.1063/1.2976306	Bławzdziewicz	2008	An analysis of the far-field response to external forcing of a suspension in the Stokes flow in a parallel-wall channel	C+A	estimates 5.4. 유효 매질 이론 바탕. I1
+10.1016/0301-9322(95)00005-i	Fourar	1995	Experimental study of air-water two-phase flow through a fracture (narrow channel)	C	estimates 5.4. 균열 상대 투과율(포화도는 따로 잼). I1
+10.1029/2004wr003837	Chen	2006	Two-phase flow in rough-walled fractures: experiments and a flow structure model	C	estimates 5.4. I1
+10.2172/10180933	(OSTI 보고서)	1993	Interfacial area and interfacial transfer in two-phase flow	C	Crossref 레코드(저자 없음). Scholar 요약: 수평 기포류에서 압력 강하 자료로 기공률을 계산할 수 있다는 서술. 원문 미확인. I1
+10.1039/c0lc00478b	Molla	2011	Pressure drop of slug flow in microchannels with increasing void fraction: experiment and modeling	C	검색 요약: 기체 팽창으로 기공률 증가, 매립 막 센서로 국소 압력. 기포 팽창으로 압력을 역산하지는 않음(요약 기준). N-b
+10.1115/fedsm-icnmm2010-30882	Molla	2010	Pressure drop of accelerating slug flow in microchannels: modeling and experiment	C	공개 PDF 503으로 원문 못 봄. N-b
+10.1016/0098-1354(92)80021-z	Wright	1992	Solutions of inverse problems in population balances - I. Aggregation kinetics	C	인구 균형 역문제(응집 커널). N-d
+10.1021/acs.iecr.5b01368	Chakraborty	2015	Inverse problems in population balances. Determination of aggregation kernel by weighted residuals	C	N-d
+10.1016/j.cherd.2025.01.034	Hassanaly	2025	Bayesian calibration of bubble size dynamics applied to CO2 gas fermenters	C	검색 요약: 기포탑 PBM 합체·분열 닫힘을 베이즈 역보정. N-d
