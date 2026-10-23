@@ -338,3 +338,120 @@
   - 7 mm: 공기 기포는 바닥에 안 닿고(φ_c ≈ 0) 증기는 바닥에서 생긴다 → φ_c로 짝을 맞출 수 없다. 이것 자체가 "공기는 중력이, 비등은 핵생성이 접촉을 정한다"는 결과다.
 - 반증 조건: 0.3~1 mm에서 비등과 공기 자료가 (φ_c, f)에서 한 곡선이면 증발 기여가 작다는 뜻이다(예상과 반대).
 - 위험: 수온 차(공기는 서브쿨, 비등은 포화) → 물성 보정. 공기 실험의 증발(습도) → N-e로 잰다. 비등 쪽의 녹은 공기(탈기 필요). 비등은 길이 방향으로 기포가 자라 φ_c·f가 x에 따라 변한다.
+
+## 13. 우선순위 표
+
+| 구분 | 아이디어 | 이유 | 먼저 할 일(사용자에게 물을 것 포함) |
+|---|---|---|---|
+| **논문 1(단열)에 넣을 것** | I8 전이 기준 | 기존 0.3·0.7 mm 영상으로 지도를 그린다. 형성 대 합체를 위치별 영상으로 가른다 | 주입부 형상(바늘·T 접합, w_inj), 채널 폭 W, 2~3개 위치 영상이 있는지 |
+| 〃 | I3 경계조건 역산형(조건부) | 마찰 법칙 없이 프레임마다 시야 ΔP, 기포마다 마찰력. α·β 식의 결정론판 | 0.3·0.7 mm 영상의 fps, 시야에 측벽이 들어오는지, 저유속 점 몇 개 |
+| 〃 | I5 오염 진단(보조) | c 해석에 필수, 싸다 | 수질(전도도)·표면장력 기록, 부호 정정 반영 |
+| 〃 | N-b 기포 압력계(0.3 mm) | 촬영 구간의 국소 φ_L² → 탭 대표성 문제 해결 | 같은 기포의 면적 변화 추적, 물의 공기 포화 여부 |
+| 논문 1 또는 후속 | N-d 크기 분포로 합체 효율 | 고속 촬영(ξ < 0.2) 없이 합체 효율 | 2~3곳 촬영 |
+| **논문 2(가열)에 넣을 것** | I7 열적 유효 매질 | 핵심 예측(0.3 mm 감소, f·H²/α로 접기) | 가열 공기 주입 + 열전대 위 φ_c·f |
+| 〃 | I10 갭 하나 빼기 | 검증 규칙(검출기 포함) | — |
+| 〃(보조) | I12 공기 vs 비등, N-e 증발계 | 증발 기여를 분리·측정 | 비등 실험 계획, 국소 수온 |
+| 〃(검증 후) | I6 반사율 건조 | 싸게 검증 가능. 성공하면 마른 자리 지도 | 소수성 띠 정지 기포 시험 |
+| **부록** | I1 압력 기공률계 | N1의 따름 결과, β 정밀도 문제 | — |
+| 〃 | I2 기울기 교정 (+ N-a 기울기 변조) | Wu 2024 불일치로 전이 위험. N-a가 낫다 | 기울기 조절대가 있는지 |
+| 〃 | I4 갭 높이 지도 | 다이얼 게이지·단상 ΔP–Q가 더 쌈. 바닥 홈(레일) 점검용 | 덮개 재질·두께, 홈 방향 |
+| 〃 | I9 압력 스펙트럼 (+ N-c 계단 분석) | 고전. 빠른 차압계가 있으면 N-c로 승격 | 차압계 종류·응답 속도 |
+| **버릴 것** | I11 미세 거품 유효 점성 | 효과가 오차 아래. β 치우침 점검만 부록 한 줄 | — |
+
+## 14. 점검 중 떠오른 새 아이디어 (같은 형식, 짧게)
+
+### N-a. 기울기 변조 (I2 개선)
+- 내용: 강제 흐름 운전 중 채널을 +θ, −θ(예 ±2°)로 번갈아 기울이고, 크기 구분별 속도 차 ΔV = V(+θ) − V(−θ)를 잰다. 유량계 상태는 그대로 둔다.
+- 선행: Wu et al. 2024 부록 B(압력 구동 + 부력 혼합의 이론). 운전 중 변조로 마찰 응답을 잰 실험은 못 찾았다.
+- 새로움 중, 실현성 중(기울기 조절대, 사용자 판단).
+- 식: 마찰 없는 원형이면 V = 2U + V_TS(피에조미터 압력의 Laplace 문제라 선형 중첩) → ΔV/2 = V_TS·r(δ). r는 같은 Booth 식에서 나오는 응답 계수(마찰 없으면 1, 마찰이 클수록 작음).
+- 크기: 1 mm·2°면 V_TS ≈ 28 mm/s → j 0.1~0.4 m/s에서 ΔV/V ≈ 7~28%(잘 보임). 0.3 mm는 V_TS 2.6 mm/s라 1~5%(어려움). 0.7~1 mm가 적당하다.
+- 예상: r 대 δ가 응답 곡선(작은 기포 0 근처, 큰 기포 1 근처)을 그린다. 운전 Ca에서의 마찰을 직접 주므로 I2의 Ca 외삽 문제가 없다.
+- 반증: r가 강제 흐름 이동도로 정한 c로 계산한 값과 다르면 마찰 법칙이 구동 방식에 따라 다르다(Wu 2024 불일치의 원인 시험이 된다).
+- 위험: 기울일 때의 정수압 변화(ρgL·sinθ, 0.1 m·2°면 34 Pa)를 빼야 한다. 기울기 전환 직후의 과도 시간, 기포의 옆 흐름.
+
+### N-b. 기포 압력계 (0.3 mm)
+- 내용: 같은 기포를 추적하며 면적 증가(기체 팽창)를 재서 촬영 구간의 국소 압력 기울기를 얻는다. α·β를 잰 바로 그 구간의 φ_L²를 얻어, 탭 위치가 시야를 대표하는가 하는 문제를 없앤다.
+- 선행: Molla et al. 2010·2011(C): 미세유로에서 기체 팽창으로 기공률이 커지는 슬러그 흐름. 국소 압력은 매립 막 센서로 쟀다(검색 요약). 기포 팽창으로 압력을 역산한 예는 못 찾았다(WebSearch 1회, Scholar 1회는 오류).
+- 새로움 중, 실현성 중(0.3 mm 전용, 0.7 mm는 고유량에서만).
+- 식: d ln A/dx ≈ −d ln p/dx(d ≫ H, 갭 고정, 등온, 녹음·빠짐 무시). 곡률 압력 2σ/H(0.3 mm 485 Pa)는 거의 일정해서 상쇄된다.
+- 크기: 0.3 mm, j 0.1 m/s, 시야 60 mm 가정 → 면적 약 +1%. j 0.4 m/s면 약 +4~5%. 기포 하나의 면적 오차 약 3%(지름 150 px, ±1 px) → 100개 평균 0.3%.
+- 예상: 탭 기울기와 일치하는 직선. 입구 쪽 발달 구간에서는 기울기가 더 크다. 1 mm는 1/11로 작아 안 보인다.
+- 반증: ΔP ≈ 0인 점에서도 면적이 변하면 녹음·빠짐·온도가 지배한다 → 압력계로 못 쓴다.
+- 위험: 물이 공기로 포화되지 않으면 기포가 녹아 들어간다(추정 상대 변화 약 1%/s × (1 − 포화도), 통과 0.4 s면 0.4% × (1 − 포화도)). 수온 변화, 합체, Ca에 따른 윤곽 변화.
+
+### N-c. 메니스커스 분해 압력 계단 (거대 기포 영역, I9 개선)
+- 내용: 빠른 차압계와 영상을 동기화한다. 탭을 지나는 앞·뒤 메니스커스마다 생기는 계단 높이를 잰다. 몸통이 지나는 동안은 경사로라 구별된다.
+- 선행: Vanapalli et al. 2009(C+A, 단일 액적 초과 ΔP), Fuerstman et al. 2007(C+A), Labrot et al. 2009(C+F). mm 갭 물-공기 넓은 채널은 못 찾았다.
+- 새로움 중, 실현성 중(차압계 ≥ 1 kHz, 분해능 1~10 Pa, 동기 신호, 사용자 판단).
+- 식: 계단 = (2σ/H)·β1·Ca^(2/3)(앞) 또는 (2σ/H)·|β2|·Ca^(2/3)(뒤). 경사로 기울기 = (12μj/H²)·V.
+- 예상: 앞·뒤 계단 히스토그램이 Ca^(2/3)로 접혀 β1 ≈ 3.88, |β2| ≈ 1.13(깨끗)에서 9.78, 2.85(굳음) 사이에 놓인다. 0.3 mm에서 가장 잘 보인다(앞 계단 약 48 Pa).
+- 반증: 계단이 Ca^(2/3)로 접히지 않으면 1차원 폐합(추정 5.5절)의 메니스커스 항을 고쳐야 한다.
+- 위험: 배관 공진·감쇠로 계단이 둥글어진다(짧고 단단한 배관). 탭 구멍 근처의 국소 교란.
+
+### N-d. 여러 위치의 크기 분포로 합체 효율 역산 (N4 대안)
+- 내용: 2~3개 위치에서 크기 분포만 잰다(합체 사건을 직접 세지 않음). 따라잡기 커널 h_ij = (d_i + d_j)·|V_i − V_j|로 인구 균형을 풀어 효율 λ를 역산한다. V(d)는 낮은 fps 추적이나 Booth 곡선에서 얻는다.
+- 선행: Wright & Ramkrishna 1992(C), Chakraborty 2015(C), Hassanaly et al. 2025(C, 기포탑 닫힘 모델의 베이즈 역보정), Ruiz-Rus et al. 2022(C+F, 사건 직접 계수). 얇은 갭 흐름에서 위치별 분포로 역산한 예는 못 찾았다(WebSearch 1회).
+- 새로움 중, 실현성 중~높음(ξ < 0.2 고속 촬영이 필요 없다).
+- 식: d(n_k·V_k)/dx = ½·Σ_{i+j→k} λ·h_ij·n_i·n_j − n_k·Σ_j λ·h_kj·n_j(+ 분열, 0.3 mm는 기체 팽창 보정).
+- 예상: 갭별 λ를 막대그래프로 낸다. 막 배수 시간이 갭에 따라 다르면 λ도 다르다. 사건 직접 계수(가능한 조건)와 교차 검증한다.
+- 반증: 역산 λ가 위치 쌍마다 크게 다르면 커널 꼴(따라잡기)이 틀렸다.
+- 위험: 역문제가 불안정하다(정칙화 필요). 분열을 무시하면 치우친다. 작은 기포의 검출 재현율이 낮으면 가짜 성장으로 보인다.
+
+### N-e. 기포 부피 증발계 (가열 공기 주입)
+- 내용: 가열 구간 앞뒤에서 같은 기포(또는 크기 분포)의 부피를 비교한다. 압력 팽창과 열팽창을 빼고 남은 증가분으로 공기 기포 속 증발량(잠열 흡수)을 잰다. I7·I12의 "증발 없음" 가정을 직접 점검한다.
+- 선행: Zimmerman et al. 2013(C, 뜨거운 마른 공기 미세 기포의 증발). 기포탑 가습기(특허, 검색 요약). 좁은 갭 가열 공기 주입에서 기포 부피로 잠열을 잰 예는 못 찾았다(WebSearch 1회).
+- 새로움 중, 실현성 중(기포 위치의 수온·압력이 필요).
+- 식: 포화 기포면 V2/V1 = [(p1 − p_v1)/(p2 − p_v2)]·(T2/T1)(마른 공기 몰 수 보존). 측정 비가 이보다 작으면 덜 포화(증발 진행 중), 크면 녹은 공기 방출. 잠열 = ṁ_공기·Δω·h_fg.
+- 크기: 포화 시 마른 공기 대비 부피 배수 1.08 / 1.25 / 1.88(40 / 60 / 80 °C, 101 kPa).
+- 예상: 40 °C 아래는 압력·열팽창만으로 설명된다. 60 °C 이상은 입구 직후 빠르게 커진 뒤 포화선을 따라간다. 0.3 mm는 막이 얇고 표면적/부피가 커서 가장 빨리 포화한다.
+- 위험: 기포 위치의 수온을 모른다(벽 열전대 + 가정). 0.3 mm는 압력 팽창(수 %)과 섞인다 → N-b와 함께 쓴다.
+
+## 15. 검색 기록 ("없다"의 근거)
+
+### WebSearch (standard, 18회)
+| # | 검색어(요지) | 결과 |
+|---|---|---|
+| 1 | void fraction from frictional pressure drop, inverse, narrow channel, Hele-Shaw | 정방향 상관식만(미니채널 기공률·마찰 상관식, 좁은 직사각 역류 등). 역산·Hele-Shaw 없음 |
+| 2 | inclined Hele-Shaw bubble friction calibration → pressure-driven prediction | Monnet 2024(마찰 항 일률 균형), Wu 2024(Booth PRF 2024 PDF: 압력 구동은 수평 셀, 상승은 기울인 셀에서 따로 연구). 교정→예측 전이 없음 |
+| 3 | bubbles as tracers, reconstruct liquid velocity, slip model, inverse | 미끄럼 보정 상승 기포 추적자(arXiv 2012.09545), 헬륨 비누 방울 슬립(Exp Fluids 2021), 기포 줄무늬 단층 촬영(UBC 학위논문). Hele-Shaw 없음 |
+| 4 | Hele-Shaw depth variation inferred from bubble speed, rail | Lawless 2024(레일로 높이 1~2.4% 감소), 국소 갭 b²로 흐름이 변한다는 윤활 모델. 역산 없음 |
+| 5 | bubble velocity size dependence, surfactant contamination indicator, Hele-Shaw | 3차원 기포: 속도·모양이 오염 지표라는 서술. Hele-Shaw 이동도 진단 없음 |
+| 6 | dry patch detection, opaque metal heater, visible reflectance, narrow gap | 전반사(ITO·사파이어), DEPIcT(IR), 좁은 갭 ITO 2.25 mm. 불투명 금속 가시광 없음 |
+| 7 | segmented flow heat transfer lower than single-phase, air injection reduces h | 강화만(Betz 2010 조건부, Vasilev 2021 기체 10~30%만, Muzychka). 감소 보고 없음 |
+| 8 | bubble-to-slug transition, coalescence time vs residence time, horizontal narrow | KAIST 수평 0.4~4 mm 지도, 수직 3 mm 증기-물(공기-물 기준이 잘 안 맞음), 1.41/10 mm 임계 기공률 약 0.23. 합체·체류 기준 없음 |
+| 9 | pressure step when single bubble enters section, hydrodynamic resistance | Gedupudi 외(비등 기포 성장의 압력 과도), Walsh(계면 추가 압력 약 40% 작음). 단일 기포 계단 공식 없음 |
+| 10 | leave-one-group-out CV, heat transfer correlation ML, unseen geometry/fluid | 명시적 LOGO 사례 없음. 일반화 한계를 지적하는 2026 학회 논문 |
+| 11 | evaporating vs non-evaporating sliding bubbles, air vs vapour | Houston & Cornwell 1996, Donnelly(공기 미끄럼 최대 9배), Sateesh 모델. 정량 분리 없음 |
+| 12 | microbubbles smaller than gap, effective viscosity, laminar ΔP | Truby 2015(3상 현탁액), Ca에 따른 부호 변화, Taylor 1932. 갭 안 미세 기포 ΔP 없음 |
+| 13 | Qiu 2020 ANN excluded working fluid | 16,953점·50출처, 무작위 분할 MAE 14.3%. 유체 홀드아웃 확인 못 함 |
+| 14 | bubble length increase along microchannel used to measure local pressure | Molla(Schlumberger) 기체 팽창·매립 막 센서. 역산 없음 |
+| 15 | inverse population balance, coalescence kernel from successive distributions | Hassanaly 2025 베이즈 역보정, SINTEF 커널(정방향). 위치별 분포 역산 없음 |
+| 16 | pressure field from bubble boundary velocities, Hele-Shaw, Darcy, boundary integral | PIV 압력 재구성 일반, 자유 상승 기포 압력장(APS 초록), Alipour 2020(농도 기반 Hele-Shaw 속도). 기포 경계 역산 없음 |
+| 17 | air bubbles in heated water, evaporation into bubble, volume growth | 가습 특허, Zimmerman 2013, Plesset & Zwick(증기 기포). 측정 없음 |
+| 18 | pancake bubbles Hele-Shaw heat transfer, heated wall | 유체역학(Wu 2024 등)만. 팬케이크 기포 열전달 없음 |
+
+### Google Scholar (WebFetch, 7회 후 중단)
+| # | 검색어 | 결과 |
+|---|---|---|
+| 1 | "air injection" OR "gas injection" "heat transfer" "narrow channel" OR "minichannel" "decrease" ... | 0건(검색식이 너무 좁음) |
+| 2 | "Hele-Shaw" bubble "inclined" OR "tilted" "pressure-driven" friction mobility calibration | 10건, 해당 0 |
+| 3 | "Taylor flow" OR "segmented flow" heat transfer "lower than" "single-phase" Nusselt laminar | 32건 중 첫 쪽 10건. 감소 명시 0(강화 2건, 비등의 "단열층" 언급 2건, Talimi 2011 평행판) |
+| 4 | "dry patch" OR "dry spot" OR "dryout" detection "reflectance" OR "reflectivity" metal boiling | 약 93건 중 첫 쪽 10건. 대부분 IR·DEPIcT. Jung 2014·2017은 "반사율 지식 필요"(방법 미확인). 불투명 금속 가시광 0 |
+| 5 | "void fraction" "from pressure drop" inferred horizontal inverse | 약 289건 중 첫 쪽 10건. OSTI 1993 보고서만 "압력 강하 자료로 기공률 계산" 서술. Hele-Shaw·균열 0 |
+| 6 | "Hele-Shaw" bubbles "velocity field" reconstruction "gap thickness" bubble speed | 6건. 기포 속도 → 액체장 역산 0, 기포 운동 → 깊이 역산 0(Franco-Gómez 2017은 정방향) |
+| 7 | bubble volume/length expansion "local pressure" microchannel "ideal gas" | 0건 + "지금 처리할 수 없음" 오류 → 지침대로 Scholar 중단 |
+
+### Crossref와 원문
+- Crossref: 3묶음 25건 검색 + DOI 3건 초록 조회(Baué 2025, Monnet 2024, Park 1994). 429 한 번 → 간격을 늘려 재시도해 통과.
+- 원문: Wu et al. 2024 저자 공개본(people.maths.ox.ac.uk, pdftotext로 1·6·7장 확인). Molla 2010 학회 PDF는 503으로 못 봤다.
+- 확인하지 못한 것: Garstecki 2006의 식 계수, Taylor 1932의 기포 극한(널리 인용되는 값을 씀), KAIST 수평 지도 학위논문(U), Jung 2014·2017의 광학 방법, Ravichandran 2023(미대조), Ishii 1993 보고서 본문.
+
+## 16. 메인 세션에 알릴 것
+1. **부호 정정(I5)**: `estimates_microgap.md` 5.2절 끝의 "잘 녹는 계면활성제가 많으면 반대가 될 수 있다(Baué et al. 2025)"는 "잘 안 녹는(비압축 단분자층) 계면활성제면 반대"로 고쳐야 한다(Crossref 초록). 보고서 ③ N2 위험 칸의 "크기 의존의 부호로 계면 상태 판별"은 그대로 둬도 되지만, 부호와 용해도의 짝을 확인할 것.
+2. **Wu et al. 2024 PRF 9:123603(C+F)**를 보고서 ②에 더할 가치가 있다.
+   - 압력 구동 팬케이크 기포의 속도·모양 실험이 Booth 이론과 맞았다(실리콘유, 저 Re). N2의 "이론 + 저 Re 실험은 있다"의 직접 근거다.
+   - 부력 구동은 같은 식인데 실험이 이론보다 빨랐다. 또 부력 자료가 Ca O(10⁻¹)까지 한 곡선에 모여, "Bretherton 압력 강하 모델이 Ca ≈ 0.1까지도 충분할 수 있다"고 적었다. 보고서의 성립 범위(Ca ≲ 5×10⁻³)와 비교할 거리다.
+3. 철 바닥의 홈은 깊이 섭동(레일)일 수 있다. 1~2.4% 턱으로도 기포 대형이 바뀐다(Lawless 2024). 유효 매질 평균장 가정과 합체율 해석 전에 홈의 방향·깊이를 확인할 것(I4).
+4. `lit_6`의 "가시광 밝기로 액막 유무를 판정할 근거는 없다"는 전반사 논리에 한정된다. 프레넬 논리로는 막/마름이 철 계면에서 달라진다(+23%). I6의 소규모 검증으로 가를 수 있다.
+5. 사용자에게 물을 것(이번 점검에서 새로 생김): 주입부 형상과 채널 폭 W(I8), 덮개 재질·두께와 바닥 홈의 방향(I4), 기울기 조절대가 있는지(I2·N-a), 차압계의 응답 속도(I9·N-c), 0.3·0.7 mm 영상의 fps와 시야에 측벽이 들어오는지(I3·N-b), 물이 공기로 포화돼 있는지(N-b).
