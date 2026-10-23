@@ -1,5 +1,5 @@
 doi	first_author	year	short_title	level	note
-10.1103/physrevfluids.9.123603	Wu	2024	The motion and deformation of a bubble in a Hele-Shaw cell	C+F	저자 공개본(people.maths.ox.ac.uk, pdftotext) 6장: 부력 구동 속도를 ρgh²sinα/24μ로 나누면 압력 구동과 같은 식(27). 부력 실험(h 0.29 mm, 7.5°, Ca 2.3e-4)+Maxworthy+Monnet은 한 곡선에 모이나 이론보다 크게 빠름. 압력 구동은 이론과 일치. I2, N-a
+10.1103/physrevfluids.9.123603	Wu	2024	The motion and deformation of a bubble in a Hele-Shaw cell	C+F	저자 공개본(people.maths.ox.ac.uk, pdftotext) 6장: 부력 구동 속도를 ρgh²sinα/24μ로 나누면 압력 구동과 같은 식(27). 부력 실험(h 0.29 mm, 7.5°, Ca 2.3e-4)+Maxworthy+Monnet은 한 곡선에 모이나 이론보다 크게 빠름. 압력 구동 실험(공기 기포, 실리콘유 4.6 mPa·s, 저 Re)은 이론과 일치. 부력 자료가 Ca O(0.1)까지 모여 Bretherton 모델이 그 범위까지 충분할 수 있다고 서술. I2, N-a
 10.1017/jfm.2022.361	Monnet	2022	Bubble rise in a Hele-Shaw cell: bridging the gap between viscous and inertial regimes	C	검색 요약. 부력 상승의 점성·관성 영역. I2
 10.1103/physrevfluids.9.073601	Monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	C+A	lit_1 D14(HAL 초록). 기울기·막 비대칭·마찰 항 일률 균형. I2
 10.1017/s002211208600109x	Maxworthy	1986	Bubble formation, motion and interaction in a Hele-Shaw cell	C+A	lit_1 D3. 기울인 셀 상승 속도. I2
