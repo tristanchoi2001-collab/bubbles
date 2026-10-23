@@ -86,7 +86,8 @@
 | Q1 | 실험별 설계·수식·예상 결과 고찰(단열 팬케이크·거대 기포·영역 경계·이동도·가열 공기 주입·비등·광학 대비·합체) | `docs/research/design_predictions.md` | 주 세션 | 1판 완료(실험 A~I, 우선순위, 갭별 요약) |
 | Q2 | 마이크로갭 유사 논문·데이터 목록(수치 자료가 있는 문헌, 디지털화 가능 그림, 공개 데이터셋) | `docs/research/microgap_data_catalog.md`, `refs_9_data.tsv` | 서브 에이전트 | 진행 중 |
 | Q3 | 새 아이디어 후보(I1~I12)의 신규성 빠른 점검 | `docs/research/idea_checks.md`, `refs_10_ideas.tsv` | 서브 에이전트 | 진행 중 |
-| Q4 | 아이디어 기록(계속 추가) | `docs/research/idea_log.md` | 주 세션 | 대기 |
+| Q4 | 아이디어 기록(계속 추가) | `docs/research/idea_log.md` | 주 세션 | 묶음 2~4(I13~I36) 기록. 묶음 2·3의 8개는 서브 에이전트가 점검 중(`idea_checks_2.md`) |
 | Q5 | Q2·Q3 결과를 보고서·신규성 분석에 통합, bib 재생성 | 보고서 등 | 주 세션 | 대기 |
 | Q6 | 다음 아이디어 묶음 도출 → Q3처럼 점검(반복) | | 주 세션 | 대기 |
 - 2026-10-23 23:12 UTC: 사용자 지시("쉬지 말고 계속")로 자동 재개 예약을 다시 만듦: **trig_013J7rHTeNDDJm1JmNCAj5Sh** (매시 41분, 2026-10-25 01:00 UTC 이후 삭제).
+- 2026-10-23 23:24 UTC: design_predictions 1판(실험 A~I, 결과 시나리오, 비등 갭별 표, 7 mm 웅덩이 장애물 효과, 기존 자료로 만들 그림 8장), idea_log 묶음 2~4, reading_list 작성. 서브 에이전트 3개(데이터 목록, 아이디어 점검 I1~I12, I13~I30 중 8개) 진행 중.
