@@ -1,40 +1,77 @@
 doi	first_author	year	short_title	level	note
-10.1016/j.ijmultiphaseflow.2024.104928	Huang	2024	ML boiling prediction: autonomous vision of flow visualization data to performance parameter modeling (IJMF 179)	C+A	ML-extracted void fraction + wetting front area used to improve HTC correlation; microgravity flow boiling. Closest precedent for image stats -> measured h
-10.1016/j.ijheatmasstransfer.2023.124656	Chang	2023	BubbleMask: autonomous visualization of digital flow bubbles for predicting CHF (IJHMT 217)	C+A	30,000 images, 155,000 bubbles, 10 features -> CHF via Interfacial Lift-off Model
-10.1109/itherm55375.2024.10709607	Huang	2024	Modeling flow boiling utilizing ML vision data (ITherm 2024)	C+A	conference companion of Huang 2024 IJMF; rectangular channel single-sided heating
-10.1016/j.ijmultiphaseflow.2022.104336	Seong	2023	Automated bubble analysis of subcooled flow boiling: U-Net transfer learning + global optical flow (IJMF 159)	C	content from search summary: ~10 training images, >90% accuracy/precision vs 100 GT images
-10.1038/s41598-021-88334-0	Kim	2021	Deep learning-based universal bubble detection and mask extraction (Sci Rep 11:8940)	C+F	Mask R-CNN (BubMask); AP50 98%; >92% detected at alpha<=1%, >87% at 2%
-10.1016/j.ijmultiphaseflow.2022.104169	Hessenkemper	2022	Bubble identification from images with ML methods (IJMF 155)	C+F	read arXiv 2202.03107 version; synthetic-image test: gas fraction error ~12% (SD+UNet) at lowest alpha; not acceptable above 5%
-10.1016/j.ces.2019.115467	Haas	2020	BubCNN: Faster RCNN + shape regression (CES 216)	C+A	
-10.1016/j.ces.2020.116163	Cerqueira	2021	DL bubble pattern recognition and shape reconstruction in dense bubbly flows (CES 230)	C+A	
-10.1016/j.ijmultiphaseflow.2016.04.011	Fu	2016	Robust image processing for bubbly flow in a narrow rectangular channel (IJMF 84)	C	prompt said "Fu & Liu 2018 IJMF"; Crossref says 2016. Not deep learning
-10.1016/j.ces.2019.04.004	Fu	2019	BubGAN: synthetic bubbly flow images (CES 204)	C+F	read arXiv 1809.02266
-10.1016/j.ijheatmasstransfer.2018.04.156	Hobold	2018	ML classification of boiling regimes from low-speed visualization (IJHMT 125)	C+A	>93% accuracy
-10.1016/j.ijheatmasstransfer.2018.12.170	Hobold	2019	Visualization-based nucleate boiling heat flux quantification using ML (IJHMT 134)	C+A	error as low as 7%
-10.1038/s41598-021-85150-4	Suh	2021	Deep learning predicts boiling heat transfer (Sci Rep 11:5622)	C+F	HyPR: VGG16 + Mask R-CNN bubble stats; mean error 6%
-10.1016/j.applthermaleng.2021.116849	Rassoulinejad-Mousavi	2021	DL strategies for CHF detection in pool boiling (ATE 190)	C+A	transfer learning; 94.79% with 1% of DS2
-10.1016/j.ijheatmasstransfer.2021.122501	Rokoni	2022	Physical descriptors from reduced-order analysis of bubble dynamics (IJHMT 186)	C	abstract not obtained
-10.1016/j.applthermaleng.2019.114357	Ravichandran	2019	Online IR boiling analysis with ANN (ATE 163)	C+A	ANN measures growth time, period, NSD from IR; R>=0.95
-10.1016/j.eswa.2023.120265	Al-Hindawi	2023	Generalizing CHF detection with unsupervised image-to-image translation (ESWA 227)	C+A	
-10.1016/j.ijmultiphaseflow.2023.104589	Soibam	2023	DL segmentation of bubble dynamics in subcooled boiling (IJMF 169)	C	
-10.1016/j.egyai.2023.100309	Suh	2024	VISION-iT: framework for digitizing bubbles and droplets (Energy and AI 15)	C	
-10.1063/5.0207546	Dunlap	2024	BubbleID: DL framework for bubble interface dynamics (J Appl Phys 136)	C	
-10.1016/j.ijmultiphaseflow.2023.104402	Malakhov	2023	DL segmentation: bubble dynamics and heat transfer at various pressures (IJMF 162)	C	Dunlap review lists authors as Serdyukov et al.; Crossref first author Malakhov
-10.1016/j.ijheatmasstransfer.2025.127894	Zhang	2026	Generalizable physical descriptors of pool boiling from unsupervised learning of images (IJHMT 255)	C	
-10.1016/j.egyai.2025.100668	Na	2026	Bubble segmentation and heat flux estimation in nucleate boiling (Energy and AI 23)	C	
-10.1515/tp-2026-0081	Dunlap	2026	Open datasets and ML for two-phase heat transfer: review (Transport Phenomena 1(3))	C+F	read arXiv 2605.23037v2; no image-stat -> pressure drop study listed
-10.1016/j.aitf.2026.100028	Zhang	2026	Multi-modality fusion: two-phase flow (AI Thermal Fluids 5)	C	Scholar snippet: void fraction and wetting front area improve HTC correlations
-10.1016/j.aitf.2026.100043	Fu	2026	Bubble2Heat: optical to thermal inference in pool boiling (AI Thermal Fluids 7)	C	arXiv 2505.00823
-10.1016/j.ijheatmasstransfer.2019.119211	Qiu	2020	ANN for mini/micro-channel flow boiling HTC (IJHMT 149)	C	Mudawar group
-10.1016/j.ijheatmasstransfer.2020.120351	Zhou	2020	ML for flow condensation HTC (IJHMT 162)	C	Mudawar group
-10.1016/j.ijheatmasstransfer.2021.121607	Qiu	2021	ML for flow boiling pressure drop in mini/micro-channels (IJHMT 178)	C	Mudawar group
-10.1016/j.applthermaleng.2022.118305	Bard	2022	ML prediction of flow boiling HTC in mini/micro-channels (ATE 210)	C	Kharangate group
-10.1088/1361-6501/ab1db8	Sciacchitano	2019	Uncertainty quantification in PIV (MST 30:092001)	C	review
-10.1088/1361-6501/aa6a03	Schneiders	2017	Track benchmarking method for UQ of PTV (MST 28:065302)	C	
-10.1007/s11263-020-01375-2	Luiten	2021	HOTA: higher order metric for MOT (IJCV 129(2):548-578)	C	Crossref published 2020 online
-10.1038/s41592-023-01879-y	Maska	2023	Cell Tracking Challenge: 10 years (Nat Methods 20:1010-1020)	C	
-10.1016/j.ijmultiphaseflow.2019.103194	Poletaev	2020	Bubble patterns recognition using neural networks: bubbly jet (IJMF 126)	C	
-10.1016/j.rse.2014.02.015	Olofsson	2014	Good practices for estimating area and assessing accuracy of land change (RSE 148)	C	cross-field analog: sample-based accuracy -> bias-corrected area + CI
-10.1016/j.rse.2012.10.031	Olofsson	2013	Stratified estimation of accuracy and area (RSE 129)	C	cross-field analog
-10.1002/cyto.a.23863	Caicedo	2019	DL strategies for nucleus segmentation (Cytometry A 95)	C	3-class (background/interior/boundary) U-Net precedent
--	Maduabuchi	2024	MSEG-VCUQ: segmentation + UQ for HSV phase-detection boiling data	U	arXiv 2411.07463v5 (2026); not in Crossref. Read full text: dry area <2%, contact line density <8% vs 5-expert GT; perimeter PRE 13.8%->6.6% with dilation
+10.1016/j.ijmultiphaseflow.2024.104928	Huang	2024	ML boiling prediction: autonomous vision of flow visualization data to performance parameter modeling (IJMF 179)	C+F	[1] read author-posted publisher PDF (suh.lab.uic.edu). FC-72, 2.5x5 mm, microgravity, 10 cases. HTC revision: 5/13 correlations improved, 8 worse (best MAE 15.9%->28.2%); velocities computed not measured; dP not modeled; no UQ; data not shareable
+10.1109/itherm55375.2024.10709607	Huang	2024	Modeling flow boiling utilizing ML vision data (ITherm 2024)	C+A	conference version of [1]
+10.1016/j.ijheatmasstransfer.2023.124656	Chang	2023	BubbleMask: autonomous visualization of digital flow bubbles for predicting CHF (IJHMT 217)	C+F	[2] read author-posted PDF. ILM with image b (0.14/0.20/0.46): CHF errors 39/22/1%; 16-35% cut-off bubbles filtered; MLR on ~10 cases
+-	Chang	2026	Boiling Intelligence: Vision-Based and Event-Driven Flow Boiling Analysis (PhD dissertation, UC Irvine)	U	[3] escholarship.org/uc/item/8gx8t5td, full text read. Ch.4: event-camera descriptors + operating conditions -> MLP dP, LOOCV 24 conditions, RMSE 0.1419->0.0940 kPa (-33.8%); Flutec PP1, 2.5x5 mm
+10.1016/j.applthermaleng.2026.132079	Naderi	2026	Large-scale vision-based interfacial characterization for heat transfer prediction in horizontal mini-channel flow boiling (ATE 303)	C	[4] content not obtained (ScienceDirect blocked); SSRN 6505385 preprint
+10.2139/ssrn.5914773	Kharangate	2025	Applying computer vision to flow boiling analysis: feature extraction and data-driven HTC prediction (SSRN)	C	[5] posted content; Scholar snippet only
+10.1016/j.icheatmasstransfer.2026.110611	Sun	2026	Deep learning-enhanced investigation of R134a/R245fa flow boiling in microchannels (ICHMT 172)	C	[6] Scholar snippet: BGSF links bubble behavior to HTC
+10.1016/j.aitf.2026.100028	Zhang	2026	Multi-modality fusion: illuminating the complexity of two-phase flow (AI Thermal Fluids 5)	C+F	[7] partial read (author-posted PDF); cites [1] as the example of VF/wetting front improving HTC correlations
+10.3390/s24113363	Schepperle	2024	CV and DL determination of flow regimes, void fraction and resistance sensor data in microchannel flow boiling (Sensors 24(11))	C+F	[8] full text via Europe PMC. 0.5 mm deep x 1.5 mm MC in stainless steel block, Pyrex lid with Pt RTDs, top view 2000 fps; U-Net Dice 99.1%
+10.1038/s41598-021-85150-4	Suh	2021	Deep learning predicts boiling heat transfer (Sci Rep 11:5622)	C+F	[9] mean error 6%
+10.1016/j.ijheatmasstransfer.2018.12.170	Hobold	2019	Visualization-based nucleate boiling heat flux quantification using ML (IJHMT 134)	C+A	[10]
+10.1038/s41467-023-37899-7	Zhang	2023	A unifying criterion of the boiling crisis (Nat Commun 14:2321)	C+A	[11] IR bubble statistics -> CHF criterion across surfaces, pool/flow, water/LN2
+10.1016/j.ijheatmasstransfer.2022.123016	Khodakarami	2022	Machine learning enabled condensation heat transfer measurement (IJHMT 194)	C	[12] not read
+10.1007/s10404-019-2307-x	Kurimoto	2019	Pressure drop of gas-liquid Taylor flow in square microchannels (Microfluid Nanofluid 24(1):5)	C+F	[13] Kobe Univ repository AM. Dh 190/298/505 um; image-measured bubble velocity/length -> unit cell dP model
+10.1039/b706549c	Fuerstman	2007	The pressure drop along rectangular microchannels containing bubbles (Lab Chip 7(11):1479)	C+A	[14] abstract via Europe PMC: dP governed by number of bubbles
+10.1103/physrevfluids.10.023301	Raufaste	2025	Friction-induced bubble edge curvature in flowing 2D confined foams (PRF 10(2):023301)	C+F	[15] HAL hal-05331426. h=0.9 mm; grad P L w h = 2 f_v l_proj N_bub, f_v ~ gamma Ca^(2/3)
+10.1063/1.3142502	Raufaste	2009	Dissipation in quasi-two-dimensional flowing foams (PoF 21:053102)	C	friction law source cited in [15] (K_f ~5.1)
+10.1016/j.ijmultiphaseflow.2004.05.002	Chung	2004	The effect of channel diameter on adiabatic two-phase flow characteristics in microchannels (IJMF 30)	C	[16] abstract not obtained
+10.1016/j.ijheatmasstransfer.2012.07.080	Alam	2012	Experimental investigation and flow visualization to determine the optimum dimension range of microgap heat sinks (IJHMT 55)	C	[17] abstract not obtained; topic 2 overlap
+10.1016/j.ijheatmasstransfer.2011.09.024	Harirchian	2012	Flow regime-based modeling of heat transfer and pressure drop in microchannel flow boiling (IJHMT 55(4))	C	[18] Purdue copy blocked
+10.1007/s00348-024-03856-3	Jegorovs	2024	Optical imaging of MHD bubble flow in Hele-Shaw liquid metal cells (Exp Fluids 65(8):113)	C+F	[19] arXiv 2311.06288 read
+10.1017/jfm.2012.233	Bouche	2012	Homogeneous swarm of high-Re bubbles rising within a thin gap. Part 1 (JFM 704)	C+A	[20]
+10.1016/j.ijmultiphaseflow.2016.04.011	Fu	2016	Robust image processing for bubbly flow in a narrow rectangular channel (IJMF 84)	C	[21] prompt said "Fu & Liu 2018 IJMF"; Crossref has 2016. Fu 2018 PhD dissertation (VT, hdl 10919/85390) has no DOI
+10.1063/5.0336482	Zhang	2026	CV approach for bulk flow parameters and Lagrangian bubble motion in mm-scale tubes (PoF 38(10):103324)	C+A	[22] mask-overlap matching; velocity type-B uncertainty 0.47%
+10.1063/5.0097597	Durve	2022	DropTrack: droplet tracking with YOLOv5 and DeepSORT (PoF 34(8):082003)	C+A	[23]
+10.1007/s00348-022-03399-5	Zvejnieks	2022	MHT-X: offline multiple hypothesis tracking with algorithm X (Exp Fluids 63(3):55)	C+A	[24] merges/splits
+10.1140/epje/i2007-10298-8	Graner	2008	Discrete rearranging disordered patterns I: robust statistical tools (EPJE 25(4))	C+A	[25]
+10.1016/j.ijmultiphaseflow.2022.104336	Seong	2023	Automated bubble analysis of subcooled flow boiling: U-Net transfer learning + global optical flow (IJMF 159)	C	[26] search summary: ~10 training images, >90% vs 100 GT images
+10.1038/s41598-021-88334-0	Kim	2021	Deep learning-based universal bubble detection and mask extraction (Sci Rep 11:8940)	C+F	[27]
+10.1016/j.ijmultiphaseflow.2022.104169	Hessenkemper	2022	Bubble identification from images with ML methods (IJMF 155)	C+F	[28] arXiv 2202.03107 read; gas fraction error ~9-12%
+10.1007/s00348-025-03963-9	Wang	2025	3D tracking of deformable bubbles in swarms using temporal information (Exp Fluids 66(2):34)	C+F	[29] Springer OA read; MOTA 0.28-0.94, rise velocity error 0.09-12.7 mm/s on artificial sequences
+10.1016/j.ijmultiphaseflow.2024.104932	Hessenkemper	2024	3D detection and tracking of deformable bubbles in swarms with DL (IJMF 179)	C	predecessor of [29]
+10.1016/j.ces.2019.115467	Haas	2020	BubCNN: Faster RCNN + shape regression (CES 216)	C+A	[30]
+10.1016/j.ces.2020.116163	Cerqueira	2021	DL bubble pattern recognition and shape reconstruction in dense bubbly flows (CES 230)	C+A	[31]
+10.1016/j.ijmultiphaseflow.2019.103194	Poletaev	2020	Bubble patterns recognition using neural networks: bubbly jet (IJMF 126)	C+A	[32]
+10.1016/j.ces.2019.04.004	Fu	2019	BubGAN: synthetic bubbly flow images (CES 204:35-47)	C+F	[33] arXiv 1809.02266 read
+10.1063/5.0207546	Dunlap	2024	BubbleID: DL framework for bubble interface dynamics (J Appl Phys 136(1):014902)	C+A	[34] NSF PAR abstract: Mask R-CNN + SORT
+10.1016/j.egyai.2023.100309	Suh	2024	VISION-iT: framework for digitizing bubbles and droplets (Energy and AI 15)	C	[35] PDF downloaded, not read
+10.1038/s41598-022-16145-y	Choi	2022	Bubble velocimetry using conventional and CNN-based optical flow (Sci Rep 12:11879)	C+A	[36]
+10.1002/cyto.a.23863	Caicedo	2019	Evaluation of DL strategies for nucleus segmentation (Cytometry A 95(9))	C+F	[37] Europe PMC: 3-class U-Net, boundary weight 10x
+10.1038/nmeth.1237	Jaqaman	2008	Robust single-particle tracking in live-cell sequences (Nat Methods 5(8))	C+A	[38] u-track, merging/splitting
+10.1088/0957-0233/6/6/013	Keane	1995	Super-resolution particle imaging velocimetry (MST 6(6):754-768)	C	mentioned in Q6 only; content not read
+10.1016/j.ijheatmasstransfer.2018.04.156	Hobold	2018	ML classification of boiling regimes from low-speed visualization (IJHMT 125)	C+A	[39]
+10.1016/j.applthermaleng.2021.116849	Rassoulinejad-Mousavi	2021	DL strategies for CHF detection in pool boiling (ATE 190)	C+A	[40]
+10.1016/j.eswa.2023.120265	Al-Hindawi	2023	Generalizing CHF detection with unsupervised image-to-image translation (ESWA 227)	C+A	in [40] note
+10.1016/j.ijheatmasstransfer.2021.122501	Rokoni	2022	Physical descriptors from reduced-order analysis of bubble dynamics (IJHMT 186)	C	[41]
+10.1016/j.ijheatmasstransfer.2025.127894	Zhang	2026	Generalizable physical descriptors of pool boiling from unsupervised learning of images (IJHMT 255)	C	in [41] note
+10.1016/j.applthermaleng.2019.114357	Ravichandran	2019	Online IR boiling analysis with ANN (ATE 163)	C+A	[42]
+10.1515/tp-2026-0081	Dunlap	2026	Open datasets and ML for two-phase heat transfer: review (Transport Phenomena 1(3))	C+F	[43] arXiv 2605.23037v2 read; no image-stat -> dP study listed
+10.1038/s41524-024-01223-8	Suh	2024	Recent progress of AI for liquid-vapor phase change heat transfer (npj Comput Mater 10:65)	C+A	[44]
+10.1016/j.ijheatmasstransfer.2009.09.011	Zhang	2010	Correlations of two-phase frictional pressure drop and void fraction in mini-channel (IJHMT 53)	C	[45] Zhang W, Hibiki, Mishima; ANN for dominant parameters (secondary)
+10.1016/j.ijheatmasstransfer.2019.119211	Qiu	2020	ANN for mini/micro-channel flow boiling HTC (IJHMT 149)	C	[46]
+10.1016/j.ijheatmasstransfer.2020.120351	Zhou	2020	ML for flow condensation HTC (IJHMT 162)	C	in [46] note
+10.1016/j.applthermaleng.2022.118305	Bard	2022	ML prediction of flow boiling HTC in mini/micro-channels (ATE 210)	C	in [46] note
+10.1016/j.ijheatmasstransfer.2021.121607	Qiu	2021	ML for flow boiling pressure drop in mini/micro-channels (IJHMT 178)	C	[47]
+10.1016/j.pnucene.2024.105466	Sajjad	2024	Prediction and optimization of flow boiling HT in mini/micro channel heat sinks (PNE 177)	C	[48] Scholar snippet (SHAP)
+10.1016/j.rineng.2024.102538	Hussain	2024	Physics-informed data-driven two-phase pressure drop of refrigerants (Results Eng 23)	C	[49] Scholar snippet (SHAP)
+10.1038/s41467-022-35084-w	Xie	2022	Data-driven discovery of dimensionless numbers and governing laws (Nat Commun 13:7562)	C+A	[50]
+10.1038/s43588-022-00355-5	Bakarji	2022	Dimensionally consistent learning with Buckingham Pi (Nat Comput Sci 2(12))	C+A	[51]
+10.1073/pnas.1517384113	Brunton	2016	SINDy: discovering governing equations by sparse identification (PNAS 113(15))	C	[52]
+10.1016/j.energy.2025.138752	Shi	2025	Hybrid symbolic regression: governing dimensionless numbers in supercritical heat transfer (Energy 338)	C	[53]
+-	Cranmer	2023	Interpretable ML for science with PySR and SymbolicRegression.jl	U	[54] arXiv 2305.01582
+-	Maduabuchi	2024	MSEG-VCUQ: segmentation + UQ for HSV phase-detection boiling data	U	[55] arXiv 2411.07463v5 read; dry area <2%, CLD <8% vs 5 experts; perimeter PRE 13.8%->6.6%
+10.1088/1361-6501/ab1db8	Sciacchitano	2019	Uncertainty quantification in PIV (MST 30(9):092001)	C+A	[56]
+10.1016/j.ijmultiphaseflow.2018.10.017	Villegas	2019	Image processing for dense dispersed flows: bubbly flows (IJMF 111:16-30)	C+A	[57]
+10.1007/s11263-020-01375-2	Luiten	2021	HOTA: higher order metric for MOT (IJCV 129(2):548-578)	C	[58] Crossref online 2020
+10.1155/2008/246309	Bernardin	2008	Evaluating MOT performance: CLEAR MOT metrics (EURASIP JIVP)	C	[59]
+10.1007/978-3-319-48881-3_2	Ristani	2016	Performance measures and data set for multi-target multi-camera tracking (ECCV Workshops, IDF1)	C	[60]
+10.1038/s41592-023-01879-y	Maska	2023	Cell Tracking Challenge: 10 years (Nat Methods 20(7))	C	[61]
+10.1038/s41592-023-02151-z	Maier-Hein	2024	Metrics reloaded: recommendations for image analysis validation (Nat Methods 21(2))	C	[62]
+10.1016/j.patter.2023.100804	Kapoor	2023	Leakage and the reproducibility crisis in ML-based science (Patterns 4(9))	C	[63]
+10.1016/j.rse.2014.02.015	Olofsson	2014	Good practices for estimating area and assessing accuracy of land change (RSE 148)	C+A	[64] cross-field analog for sample audit -> bias-corrected quantity + CI
+10.1016/j.rse.2012.10.031	Olofsson	2013	Stratified estimation of accuracy and area (RSE 129)	C	in [64] note
+10.1214/ss/1009213286	Brown	2001	Interval estimation for a binomial proportion (Stat Sci 16(2))	C	[65]
+10.1080/01621459.1927.10502953	Wilson	1927	Probable inference, law of succession, statistical inference (JASA 22(158))	C	in [65] note (Wilson interval)
+10.2139/ssrn.7225772	Daoud	2026	Bubble dynamics in confined pool boiling using ML-based tracking (SSRN)	C	not in tables; content not verified (confined gap ML tracking candidate)

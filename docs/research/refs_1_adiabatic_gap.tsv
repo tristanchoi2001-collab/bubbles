@@ -1,0 +1,100 @@
+doi	first_author	year	short_title	level	note
+10.1016/0301-9322(93)90027-r	Mishima	1993	Some characteristics of gas-liquid flow in narrow rectangular ducts	C+A	A1; abstract via CityU portal; void C0~1.35, slug C0 1.0-1.2, Chisholm C 21->0
+10.1016/s0301-9322(98)00057-3	Xu	1999	Gas-liquid two-phase flow regimes in rectangular channels with mini/micro gaps	C+A	A2; abstract via HKUST portal; gaps 0.3/0.6/1.0 mm vertical
+10.1016/s0142-727x(99)00002-8	Xu	1999	Experimental study on gas-liquid two-phase flow regimes in rectangular channels with mini gaps	C	A3; search summary only
+10.1016/0017-9310(94)90064-7	Wilmarth	1994	Two-phase flow regimes in narrow rectangular vertical and horizontal channels	C	A4; gaps 1 and 2 mm (search summary); plate orientation unverified
+10.1299/kikaib.58.408	Sadatomi	1992	Effects of gap width and orientation on two-phase flow in a narrow passage between two flat plates (Japanese)	C+F	A5; J-STAGE full text read (pages 1,4,7); gaps 0.778/1.465 mm, 6 orientations
+10.1002/cjce.5450710502	Ali	1993	Adiabatic two-phase flow in narrow channels between two flat plates	C	A6; English version of A5
+10.1016/s0301-9322(00)00050-1	Lee	2001	Pressure drop correlations for two-phase flow within horizontal rectangular channels with small heights	C	A7; Crossref first author shown as 'Ju Lee Han' (name order swapped); 0.4-4 mm horizontal (search summary)
+10.1016/0301-9322(91)90003-l	Wambsganss	1991	Two-phase flow patterns and transitions in a small, horizontal, rectangular channel	C+A	A8; abstract of report version ANL-90/19 (OSTI 7067684); 19.05 x 3.18 mm
+10.1016/0894-1777(92)90055-a	Wambsganss	1992	Frictional pressure gradients in two-phase flow in a small horizontal rectangular channel	C+A	A8; same OSTI report abstract
+10.1016/0301-9322(82)90068-4	Sadatomi	1982	Two-phase flow in vertical noncircular channels	C+F	A9; full text read via Japanese version 10.1299/kikaib.48.1893 (J-STAGE)
+10.1299/kikaib.48.1893	Sadatomi	1982	Two-phase flow in vertical noncircular channels (Japanese version)	C+F	A9 Japanese version; channels 7x50, 10x50, 17x50, 7x20.6 mm
+10.1016/s0029-5493(00)00306-x	Hibiki	2001	Flow regime transition criteria for upward two-phase flow in vertical narrow rectangular channels	C+A	A10; abstract via CityU portal; data gaps 0.3-17 mm
+10.1016/j.ijmultiphaseflow.2003.11.006	Satitchaicharoen	2004	Two-phase flow pattern maps for vertical upward gas-liquid flow in mini-gap channels	C	A11; title/snippet level
+10.1016/j.ijheatmasstransfer.2018.09.047	Chalgeri	2019	Flow patterns of vertically upward and downward air-water two-phase flow in a narrow rectangular channel	C	A12; title level
+10.1016/j.ijheatmasstransfer.2018.12.015	Chalgeri	2019	Flow regime identification and classification based on void fraction and differential pressure of vertical two-phase flow in rectangular channel	C	A13; title/snippet level
+10.1016/j.pnucene.2021.103750	Yuan	2021	Air-water two-phase flow regime and transition criteria in vertical upward narrow rectangular channels	C	A14; search summary: side walls raise coalescence probability at 1 mm
+10.1016/j.expthermflusci.2005.03.010	Ide	2005	Experimental research on the correlations of holdup and frictional pressure drop in air-water two-phase flow in a capillary rectangular channel	C	A15; title level; related ASME conf. papers on horizontal flat capillary channels (10.1115/icmm2003-1066, 10.1115/icnmm2011-58083) not read
+10.1016/j.ijthermalsci.2006.07.012	Ide	2007	Fundamental data on the gas-liquid two-phase flow in minichannels	C	A16; title level
+10.1016/0301-9322(95)00005-i	Fourar	1995	Experimental study of air-water two-phase flow through a fracture (narrow channel)	C	A17; title level
+-	Lowry	1988	Adiabatic vertical two-phase flow in narrow flow channels (as cited)	U	not found in Crossref; cited in older reviews; title as given in task prompt
+-	Sowinski	2009	Velocity and gas-void fraction in two-phase liquid-gas flow in narrow mini-channels (Archives of Mechanics 61)	U	no Crossref record found; search summary says C0 approached 1.2 for gaps 1/2.4/5 mm
+10.1016/j.expthermflusci.2010.08.004	Ong	2011	Macro-to-microchannel transition in two-phase flow: Part 1	C+A	B1; abstract/thesis wording via EPFL infoscience: Co~0.3-0.4 lower, Co~1 upper threshold
+10.1016/s1359-4311(96)00071-3	Kew	1997	Correlations for the prediction of boiling heat transfer in small-diameter channels	C	B2; Co definition; threshold 0.5 not verified
+10.1016/s0301-9322(98)00054-8	Triplett	1999	Gas-liquid two-phase flow in microchannels Part I: two-phase flow patterns	C	B3; title level
+10.1016/s0301-9322(02)00037-x	Kawahara	2002	Investigation of two-phase flow pattern, void fraction and pressure drop in a microchannel	C	B4; search summary
+10.1016/j.ijmultiphaseflow.2004.05.002	Chung	2004	The effect of channel diameter on adiabatic two-phase flow characteristics in microchannels	C	B5; title level
+10.1016/0735-1933(92)90061-l	Brauner	1992	Identification of the range of small diameters conduits, regarding two-phase flow pattern transitions	C	B6; criterion not verified
+10.1017/s0022112061000160	Bretherton	1961	The motion of long bubbles in tubes	C+A	B7; W~1.29(3Ca)^(2/3); dP~3.58(3Ca)^(2/3)sigma/r; no rise if rho g r^2/sigma<0.842
+10.1017/s0022112066000442	Zukoski	1966	Influence of viscosity, surface tension, and inclination angle on motion of long bubbles in closed tubes	C+A	B8
+10.1017/s0022112087002787	Couet	1987	The effects of surface tension and tube inclination on a two-dimensional rising bubble	C+A	B9; 2D duct
+10.1002/cjce.5450590322	Weber	1981	Drift in intermittent two-phase flow in horizontal pipes	C	B10; title level
+10.1017/s0022112068000133	Benjamin	1968	Gravity currents and related phenomena	C	B11; title level
+10.2172/6871478	Ishii	1977	One-dimensional drift-flux model and constitutive equations for relative motion between phases (ANL-77-47)	C+F	C1; OSTI full text; Eq.68 rectangular C0=1.35-0.35sqrt(rg/rf)
+10.1007/s42757-019-0009-y	Hibiki	2019	One-dimensional drift-flux correlations for two-phase flow in medium-size channels	C+F	C2; open access full text; horizontal Vgj=0; rectangular C0 validated for aspect ratio 2.8-9.4
+10.1016/j.ijheatmasstransfer.2024.125270	Rassame	2024	Drift-flux model for dispersed adiabatic and boiling two-phase flows in rectangular channels	C+A	C3; abstract via CityU portal; C_inf 1.35 (AR<0.25) / 1.20 (AR>0.33)
+10.1016/j.ijthermalsci.2024.109086	Shen	2024	A full-flow-range drift-flux model ... vertical narrow rectangular flow channels	C+A	C4; abstract via CityU portal; 1758 points, 13 databases, 13.1%
+10.1016/j.ijheatmasstransfer.2024.126207	Khunsrimek	2024	Two-group drift-flux model for dispersed gas-liquid flow in rectangular channel	C+A	C5; abstract via CityU portal; C_inf 1.00 (group 1) / 1.45 (group 2)
+10.1016/j.ijheatfluidflow.2017.11.002	Rassame	2018	Drift-flux correlation for gas-liquid two-phase flow in a horizontal pipe	C+A	C6; abstract via CityU portal; Vgj=0; corrigendum 10.1016/j.ijheatfluidflow.2021.108884
+10.1016/j.ijheatfluidflow.2012.04.007	Shen	2012	One-dimensional interfacial area transport of vertical upward bubbly flow in narrow rectangular channel	C	C7; search summary of INIS abstract: gap 0.993 mm x 40 mm, 7 axial locations, jL 0.214-2.08 m/s, void 3.92-42.6%, axial change by coalescence/breakup
+10.1016/s0894-1777(02)00152-8	Kim	2002	Interfacial structures of confined air-water two-phase bubbly flow	C	C8; OSTI 774251 conference version abstract (wall peak, C0=1.35 comparison)
+10.1016/j.nucengdes.2003.10.008	Sun	2004	Modeling of bubble coalescence and disintegration in confined upward two-phase flow	C	C9; title level
+10.1016/j.nucengdes.2003.10.014	Sun	2004	Model evaluation of two-group interfacial area transport equation for confined upward flow	C	C10; title level
+10.1016/j.ijmultiphaseflow.2024.105038	Bois	2025	Void drift in narrow rectangular channels for highly advective bubbly flows	C+A	C11; abstract via HAL (cea-04834989)
+10.1016/j.cej.2009.07.006	Bhusan	2009	Rise of Taylor bubbles through narrow rectangular channels	C	C12; Scholar snippet only
+10.1016/0301-9322(75)90015-4	Jones	1975	The interrelation between void fraction fluctuations and flow patterns in two-phase flow	C	C13; title level; rectangular channel data often cited for C0 (not verified)
+10.1093/qjmam/12.3.265	Taylor	1959	A note on the motion of bubbles in a Hele-Shaw cell and porous medium	C	D1; 2x result confirmed via Reichert 2019 text
+10.1017/s0022112084000367	Park	1984	Two-phase displacement in Hele Shaw cells: theory	C+A	D2
+10.1017/s002211208600109x	Maxworthy	1986	Bubble formation, motion and interaction in a Hele-Shaw cell	C+A	D3
+10.1063/1.866566	Kopf-Sill	1988	Bubble motion in a Hele-Shaw cell	C+A	D4
+10.1063/1.857404	Meiburg	1989	Bubbles in a Hele-Shaw cell: numerical simulation of three-dimensional effects	C+A	D5
+10.1063/1.857610	Burgess	1990	Analysis of the boundary conditions for a Hele-Shaw bubble	C+A	D6
+10.1063/1.4878095	Gallaire	2014	Marangoni induced force on a drop in a Hele Shaw cell	C+A	D7
+10.1103/physrevlett.115.064501	Huerre	2015	Droplets in microchannels: dynamical properties of the lubrication film	C+A	D8; abstract via HAL
+10.1063/1.4952398	Ling	2016	Droplet migration in a Hele-Shaw cell: effect of the lubrication film on the droplet dynamics	C+A	D9; also arXiv 1601.06976
+10.1017/jfm.2016.357	Zhu	2016	A pancake droplet translating in a Hele-Shaw cell: lubrication film and flow field	C+A	D10
+10.1017/jfm.2018.457	Reichert	2018	Topography of the lubrication film under a pancake droplet travelling in a Hele-Shaw cell	C+A	D11
+10.1103/physrevfluids.4.113602	Reichert	2019	Predicting droplet velocity in a Hele-Shaw cell	C+F	D12; HAL hal-02396701 full text; bubble mobility 1.0-1.65 (figure reading), cell 14 um
+10.1017/jfm.2025.167	Baue	2025	Droplet velocity in both limits of low and high soluble surfactants in a Hele-Shaw cell	C+A	D13; first author Baué
+10.1103/physrevfluids.9.073601	Monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	C+A	D14; abstract via HAL hal-04689418
+10.1007/s00348-014-1728-2	Shen	2014	Dynamics of a small number of droplets in microfluidic Hele-Shaw cells	C	D15; title level
+10.1016/j.ijmultiphaseflow.2018.09.015	Hashida	2019	Rise velocities of single bubbles in a narrow channel between parallel flat plates	C+A	E1; abstract via Semantic Scholar; gap 3 mm; OA manuscript at Kobe Univ. repository
+10.1017/jfm.2015.355	Filella	2015	Oscillatory motion and wake of a bubble rising in a thin-gap cell	C+A	E2; gap 3.1 mm
+10.1017/jfm.2012.289	Roig	2012	Dynamics of a high-Reynolds-number bubble rising within a thin gap	C+A	E3
+10.1017/jfm.2022.361	Monnet	2022	Bubble rise in a Hele-Shaw cell: bridging the gap between viscous and inertial regimes	C+A	E4
+10.1017/jfm.2012.233	Bouche	2012	Homogeneous swarm of high-Reynolds-number bubbles rising within a thin gap. Part 1	C+A	E5
+10.1017/jfm.2014.544	Bouche	2014	Homogeneous swarm ... within a thin gap. Part 2. Liquid dynamics	C	E6; title level
+10.1017/jfm.2020.4	Filella	2020	Interaction of two oscillating bubbles rising in a thin-gap cell	C	E7; title level
+10.1103/physreve.85.027302	Huisman	2012	Interaction and coalescence of large bubbles rising in a thin gap	C	E8; title level
+10.1063/5.0342482	Zhang	2026	Single bubble rising behavior in narrow rectangular channels with finite channel width	C+A	E9; abstract via CityU portal and Semantic Scholar
+10.1103/physrevfluids.6.093605	Pavlov	2021	Kinematics of a bubble freely rising in a thin-gap cell with additional in-plane confinement	C+A	E10; abstract via Semantic Scholar
+10.1063/1.4903488	Wang	2014	Experimental and numerical study of buoyancy-driven single bubble dynamics in a vertical Hele-Shaw cell	C	E11; title level
+10.1103/physreve.91.063013	Piedra	2015	Dynamics of two-dimensional bubbles	C	E12; title level
+10.1016/j.ijmultiphaseflow.2016.04.011	Fu	2016	Development of a robust image processing technique for bubbly flow measurement in a narrow rectangular channel	C	F1; Scholar snippet
+10.1016/j.nucengdes.2016.10.044	Fu	2016	Experimental study of bubbly flow using image processing techniques	C	F2; title level
+10.1016/j.cherd.2022.10.039	Liu	2023	Characteristics of one-dimensional bubbly flow interfacial area transport in horizontal narrow rectangular channel	C	F3; Scholar snippet
+10.1016/j.ijheatmasstransfer.2025.127453	Han	2025	Two-group bubble interfacial area concentration correlation for two-phase flows in narrow rectangular flow channels	C	F4; title level
+10.1016/j.ijheatmasstransfer.2023.124887	Chen	2024	Experimental study on turbulent characteristics of dispersed bubbly flow in a narrow rectangular channel by two-phase PIV	C	F5; Scholar snippet; preprint 10.2139/ssrn.4576764
+10.1016/j.flowmeasinst.2011.06.001	Ito	2011	Micro wire-mesh sensor for two-phase flow measurement in a rectangular narrow channel	C	F6; title level
+10.2172/5349611	Bentley	1992	Phase distribution measurements in narrow rectangular channels using image-processing techniques (ORNL/TM-12011)	C+A	F7; abstract via OSTI
+10.1016/j.ijmultiphaseflow.2006.08.008	Murai	2007	Skin friction reduction by large air bubbles in a horizontal channel flow	C	F8; search summary
+10.1017/jfm.2022.618	Keeler	2022	The interaction of multiple bubbles in a Hele-Shaw channel	C+A	G1; abstract via arXiv 2112.11053
+10.1103/physrevfluids.9.093605	Lawless	2024	Stable bubble formations in a depth-perturbed Hele-Shaw channel	C+A	G2; abstract via arXiv 2302.01038 (arXiv title lacks 'depth-perturbed')
+10.1017/jfm.2020.844	Gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	C+A	G3; abstract via arXiv 2005.13959
+10.1063/1.857492	Saffman	1989	Prediction of bubble velocity in a Hele-Shaw cell: thin film and contact angle effects	C+A	G4
+10.1103/physreve.73.011505	Cantat	2006	Experimental evidence of flow destabilization in a two-dimensional bidisperse foam	C+A	G5; abstract via HAL hal-00009454
+10.1016/j.ijmultiphaseflow.2007.07.007	Agostini	2008	Elongated bubbles in microchannels. Part I: elongated bubble velocity	C	G6; title level
+10.1016/j.ijmultiphaseflow.2007.07.006	Revellin	2008	Elongated bubbles in microchannels. Part II: bubble collisions	C	G7; title level
+10.1016/j.ces.2009.11.014	Sathe	2010	Advanced PIV/LIF and shadowgraphy system to visualize flow structure in two-phase bubbly flows	C	G8; search summary
+10.1016/j.cherd.2021.01.010	Almani	2021	Single bubbles rising ... inside a thin-gap bubble column (microalgae)	C+A	G9; abstract via Semantic Scholar; 4 mm gap
+10.3390/fluids11090217	Zehara	2026	Bubble hydrodynamics in rectangular columns: confinement and co-/counter-current liquid flow	C+A	G10; Crossref abstract
+10.3389/fenrg.2020.00096	Ren	2020	Visualization experiment of bubble coalescence in a narrow vertical rectangular channel	C+F	G11; Frontiers full text via WebFetch; boiling, 2 mm gap
+10.1016/s0029-5493(02)00289-3	Kim	2003	Interfacial area transport and evaluation of source and sink terms for confined air-water bubbly flow	C	G12; title level
+10.1063/1.1813871	Cubaud	2004	Transport of bubbles in square microchannels	C+A	G13
+10.1039/b815002h	Vanapalli	2009	Hydrodynamic resistance of single confined moving drops in rectangular microchannels	C	G14; title level
+10.1039/c1lc20534j	Jakiela	2011	Speed of flow of individual droplets in microfluidic channels ...	C	G15; title level
+10.1103/physreve.80.016317	Sessoms	2009	Droplet motion in microfluidic networks: hydrodynamic interactions and pressure-drop measurements	C	G16; title level
+10.1016/j.ces.2009.06.020	Lundin	2009	Modeling of bubble coalescence in bubbly co-current flows restricted by confined geometry	C	G17; title level
+10.1016/j.ijmultiphaseflow.2014.05.015	Gangloff	2014	A model of two-phase resin and void flow during composites processing	C	search log only (Scholar snippet: bubble velocity vs size in pressure-driven Hele-Shaw flow cell); not in tables
+10.1103/pm4m-18nt	-	2026	Bubble dynamics in a Hele-Shaw channel and velocity selection without surface tension	C	G18; Crossref author field 'Anonymous', no volume/page; probably arXiv 1910.04327 (unverified); search summary: speed increases monotonically with size from tracer limit, saturates
