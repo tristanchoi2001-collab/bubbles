@@ -38,9 +38,9 @@ for i,(lab,kind,cmax,cmin) in enumerate(rows):
     if kind=="ours":
         for H in (0.3,0.7,1,3,7):
             ax.plot(H/2.73,y,"o",ms=7,mfc=col,mec=SURF,mew=2)
-for x,t in ((1,"H = Lc"),(2,"H = 2Lc (horizontal: a top-wall\npuddle no longer touches the bottom)")):
+for x,t in ((1,"H = Lc"),(2,"H = 2Lc (horizontal: a top-wall puddle no longer touches the bottom)")):
     ax.axvline(x,color=INK2,lw=1)
-    ax.text(x*1.04,4.6,t,fontsize=8,color=INK2,va="top")
+    ax.text(x*1.04,5.5,t,fontsize=8,color=INK2,va="center")
 ax.set_yticks(range(n)); ax.set_yticklabels([r[0] for r in rows][::-1],fontsize=8.3)
 ax.set_xscale("log"); ax.set_xlim(0.025,25); ax.set_ylim(-0.8,n-0.2)
 ax.set_xlabel("H / Lc  (fluid-specific capillary length; Co = Lc/H)")
