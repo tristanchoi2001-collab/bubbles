@@ -796,9 +796,47 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
   - 거대 슬러그 중심부의 −5~−10 대비로 U-Net이 안/밖을 구분하는지는 학습 후에만 알 수 있다.
   - 거품 무리를 영역으로 다룰지(면적 집계만)는 미정.
 
+## parity 구제 시험 파일 (2026-10-23, 사용자 요청 "parity는 따로 만들어줘 코드를. 한번 테스트해보게")
+- 배경: 사용자 판단 — 백라이트 투명 채널은 재촬영해도 기포 내부 정보가 안 나온다. 그래서 월요일(10-26)에 방향을 정하려 한다:
+  철 = 5채널 U-Net(내부 −25~−45), 투명 = U-Net(3채널) + 위상 규칙. 내 의견: 방향은 맞고, "규칙이 U-Net을 대신하는 게 아니라 뒤에 붙는다",
+  "철 5채널은 학습 후 같은 라벨로 'bin'(3채널)과 비교해야 확정"으로 말하라고 함. 근거 = 이 파일의 앞 절들(B 절제, 내부 대비 측정, MobileSAM, parity 실험).
+- `raw/5_parity_test.py` (손으로 씀). `2_raw_track.py`를 importlib로 불러와 고치지 않고 쓴다.
+  - `MODE = "check"`: RawDetector → unet_instances → parity. OUTPUT_FOLDER + `_parity`/check/*.png, parity_report.json.
+  - `MODE = "track"`: 모듈의 preprocess_image(파일명), RawDetector.prob_raw(B 평면), unet_instances(뒤에 parity, mode=None 호출만)를 감싸고 M.main().
+    OUTPUT_FOLDER + `_parity`로 출력, 원래 폴더의 roi_saved.json을 복사해 같은 ROI. 끝나면 감싼 함수와 OUTPUT_FOLDER를 원래대로.
+    `PARITY_ENABLE = False`면 2_raw_track.py main과 CSV 바이트 동일(테스트 g).
+  - 알고리즘은 exp_parity A3 그대로다.
+    - 단계: (0.5,3) + RESCUE_SCHEDULE, 벽은 pedge와 pedge+ring(B > 0) 두 가지.
+    - 후보 조건: 면적 ≥ 500, 빈 화소 ≥ 95%, 기준 액체와의 접촉 ≥ 50 px이고 전체 접촉의 50% 이상, 앞 후보와 50% 넘게 겹치지 않음.
+  - 실험에 더한 것
+    1. 기준 액체(anchor) `"bubbles"`: 검출된 기포를 가장 많이 둘러싼 영역(기포 바깥 2~4 px 화소의 다수결, 기포 자기 내부 영역 제외, 대부분 빈 영역만).
+       3개 미만이면 빈 영역 중 가장 큰 것. `"largest"`(실험과 같음)는 슬러그가 화면 절반을 넘으면 액체를 기체로 더한다(테스트 d).
+    2. 크기 상한 `PARITY_MAX_AREA_FRAC` = 0.5. 넘으면 더하지 않고 skipped로만 보고한다.
+    3. 조각 정리: 나중 후보가 앞 후보의 절반 이상을 품으면 앞 후보는 버린다(637이 3077 + 45737 두 조각 → 50109 한 개).
+    4. 기포 모양은 구제와 같은 watershed(경계 확률 능선으로 벽 화소 나눔).
+    5. 빈 영역이 가장 큰 영역 하나뿐인 단계는 접촉 계산을 건너뛴다(시간 1.05 → 0.77 s/프레임, 결과 동일).
+- 저장된 확률맵으로 재현(scratchpad/parity_impl/regress.py)
+  - 637~641(best)·638~641(TAU): 실험과 같은 영역(637 50109, 638 42137, 639 15008, 640 14331, 641 15172 px 등).
+  - 731~790: 770의 823 px(화면 끝, 애매) 1개뿐. 실험과 같다.
+  - "bubbles" 기준 액체는 모든 프레임에서 가장 큰 영역과 같았다(기포 73~88개를 둘러쌈).
+- 속도: 1080×416에서 parity 약 0.8 s/프레임(unet_instances 0.3 s 별도).
+- 한계
+  - U-Net이 위 띠를 잡은 640/641은 세로 띠만 더해져 L이 두 개(위 띠 + 세로 띠)로 나온다. 세로 띠 아래쪽 약 150 px은 못 살린다.
+  - 파라미터는 같은 60프레임을 보고 정했다(독립 검증 아님).
+- 테스트 `tests/test_parity.py` a~g
+  - a 벽 영역 = _wall_regions
+  - b L자 복구(IoU > 0.9, 원래 기포 불변)
+  - c 검출된 슬러그 밑 액체 주머니는 안 더함
+  - d 기준 액체(bubbles vs largest, 상한)
+  - e 놓친 것 없으면 그대로
+  - f 윤곽 틈 + 약한 가짜 벽 → ring 벽으로 L 전체 1개, 조각 버림, ring 끄면 아래 끝만
+  - g check/track(가짜 확률), PARITY_ENABLE=False면 CSV 바이트 동일
+- 사용자 PC에서 할 일: 투명 채널 영상(거대 슬러그 포함)에 check → 빨간 영역 판정 → 괜찮으면 track으로 QC 비교(게이트 고정).
+
 ## 저장소 구성 (2026-10-21 정리, 사용자 요청: "앞으로 쓸 것만 모으고 옛날 파일은 old/에 보존")
 - 사용자용 안내는 `README.md`(한국어). 폴더 하나만 PC에 복사하면 동작하게 했다.
 - `raw/` — 비이진화 버전(앞으로 주로 사용). `1_raw_train.py`, `2_raw_track.py`, `3_tracking_qc.py`, `4_link_audit.py`. 전부 `tools/build_raw.py`가 생성(직접 고치지 않음).
+  예외: `5_parity_test.py`는 손으로 쓴 parity 구제 시험 파일(아래 절). build_raw는 이 파일을 건드리지 않는다.
 - `steel/` — 철(불투명) 배경 채널용 고정 사본(2026-10-22, 위 절) + 철블록 실험에 맞춘 조정(2026-10-23, 위 절). 생성하지 않고 직접 고친다.
 - `binarized/` — 이진화 버전. `0_prelabel.py`(손으로 씀), `1_bin_train.py`, `2_bin_track.py`, `3_tracking_qc.py`, `4_link_audit.py`(손으로 씀, raw/에 복사). **이 폴더가 이진화 코드의 기준이며 직접 고친다.** 고친 뒤 `python tools/build_raw.py`.
   - `3_tracking_qc.py`의 기준은 `binarized/3_tracking_qc.py`(raw/는 복사본).
@@ -808,7 +846,7 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `tests/` — 지금 코드의 테스트.
   - `bundles.py`: binarized/의 1파일 버전을 원래 모듈 이름(tracker3, piv_field, tau_unet, tau_tracker, watershed, dot_labels)으로 import하게 한다. `importlib.reload`가 되도록 binarized/를 sys.path에 넣고 이름으로 import. 같은 이름의 다른 모듈(old/)이 이미 읽혀 있으면 오류로 멈춘다.
   - `test_events.py`, `test_instances.py`, `test_tau.py`, `test_dots.py`: 원래 테스트를 bundles 경유로 binarized/에 대해 돈다. 바꾼 곳: import 경로, 학습 스크립트 경로(`bundles.TRAIN_PATH`), dot의 OUT/REVIEW/main → DOT_OUT/DOT_REVIEW/main_dots, 학습 main → main_train, test_tau f는 USE_PRIOR=True(번들 기본값 False).
-  - `test_qc.py`(binarized/3_tracking_qc.py), `test_prelabel.py`, `test_binarized.py`(번들 전용 d STEP 연결, e 3ch/5ch 디스패치만 남김), `test_raw.py`, `test_gates.py`(게이트 보정), `test_link_audit.py`(연결 감사), `test_steel.py`(steel/), `fake_detector.py`(테스트용 사본).
+  - `test_qc.py`(binarized/3_tracking_qc.py), `test_prelabel.py`, `test_binarized.py`(번들 전용 d STEP 연결, e 3ch/5ch 디스패치만 남김), `test_raw.py`, `test_gates.py`(게이트 보정), `test_link_audit.py`(연결 감사), `test_steel.py`(steel/), `test_parity.py`(raw/5_parity_test.py), `fake_detector.py`(테스트용 사본).
 - `old/` — 보관(`old/README.md`에 목록). tracker2/3, watershed, piv_field, tau_unet, tau_tracker, 1_tau_unet_train, dot_labels, 3_tracking_qc(정리 시점 사본), fake_detector, sim_compare, sim_piv, qc_compare, reference/piv_prior.py, docs/PIV_TASK.md, tools/build_binarized.py, tests/.
   - `cd old && python -B tests/test_events.py` 등으로 예전 테스트가 그대로 돈다(정리 시점에 events 11, instances 14, qc 12, tau 7, dots 8 모두 통과). old/tests/test_binarized.py와 old/tools/build_binarized.py는 old/binarized/를 찾으므로 동작하지 않는다.
   - 위의 각 절에 나오는 `tracker3.py`, `docs/PIV_TASK.md`, `reference/piv_prior.py` 등은 이제 old/ 아래 경로다.

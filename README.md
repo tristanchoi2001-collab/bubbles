@@ -23,12 +23,20 @@
 | 2 | `2_raw_track.py` | 검출·추적. `UNET_CKPT`, `IMAGE_FOLDER`, `BACKGROUND_PATH`, `OUTPUT_FOLDER` → `result_tracking.csv` 등 |
 | 3 | `3_tracking_qc.py` | 추적 점검. `TRACKING_CSV` = 2의 `result_tracking.csv` |
 | (선택) | `4_link_audit.py` | **연결 감사**: 기포를 무작위로 골라 다음 프레임 연결이 맞는지 y/n으로 판정 → 크기별 연결 정확도·끊김 비율(95% 구간). 논문용 실데이터 추적 정확도 |
+| (시험) | `5_parity_test.py` | **parity 구제 시험**: `2_raw_track.py`를 고치지 않고 불러와, U-Net이 놓친 큰 기체 영역(L자 슬러그 등)을 위상 규칙("액체에서 벽을 한 번 넘으면 기체")으로 더한다. 아래 설명 |
 
 - `INPUT_MODE`: `'bin+sign'`(기본, 이진화 + 어두워진 분 + 밝아진 분) / `'bin+diff'` / `'diff'` / `'bin'`(비교용).
 - 추가 부품 (on/off): `CTX_LAYERS`(작은 트랜스포머, 0 = 끔, 시도 2), `USE_PRIOR`(TAU, 앞뒤 프레임의 검출을 함께 입력).
   새로 붙인 부분의 가중치는 0에서 시작하므로 학습 전에는 시작 모델과 같은 결과다. 학습 로그의 `入口の重み` / `トランスフォーマー出口`가 0 근처에 머물면 그 부품은 쓰이지 않은 것이다.
 - 입력 방식·부품·전처리 값은 best.pt에 기록되어 `2_raw_track.py`가 자동으로 맞춘다. TAU 모델이면 `2_raw_track.py`가 여러 번 다시 검출한다(`PRIOR_PASSES`).
 - 지금 이진화 best.pt를 `2_raw_track.py`에 넣으면 `binarized/2_bin_track.py`와 같은 결과가 나온다.
+
+### parity 구제 시험 (`5_parity_test.py`)
+- 설정(UNET_CKPT, IMAGE_FOLDER, BACKGROUND_PATH, OUTPUT_FOLDER)은 평소처럼 `2_raw_track.py`에 쓰고, 이 파일에서는 `MODE`만 고른다.
+  - `MODE = "check"`: 검출만 한다(추적·ROI·승인 창 없음). parity가 더한 기포를 칠한 그림을 `OUTPUT_FOLDER_parity/check/`에, 목록을 `parity_report.json`에 저장한다. **먼저 이것으로 빨간 영역이 진짜 기체인지 눈으로 본다.**
+  - `MODE = "track"`: `2_raw_track.py`의 추적까지 parity를 넣어서 돌린다. 결과는 `OUTPUT_FOLDER_parity/`(CSV·오버레이·qc_report + `parity/` 그림). 평소 결과와 `3_tracking_qc.py`로 비교한다(두 실행의 게이트를 같게: `ENABLE_BOOTSTRAP = False` 또는 승인 창에서 같은 값).
+- 그림 색: 초록 = 원래 검출된 기포, 빨강 = parity가 더한 기포, 파랑 = 기준으로 삼은 액체 영역, 보라 상자 = 너무 커서(화면의 50% 초과) 더하지 않은 후보.
+- 알려진 한계: U-Net이 L자의 위 띠만 잡은 경우 parity는 세로 띠만 더해서 L이 두 개로 나온다. 세로 띠 아래쪽 끝 일부는 못 살린다. 프레임당 약 0.2~0.8초 더 걸린다.
 
 ## steel/ — 철(불투명) 배경 채널 (철블록 실험에 맞춤, 2026-10-23)
 
@@ -84,5 +92,6 @@
 
 - `raw/`의 파일은 `tools/build_raw.py`가 `binarized/` + `tools/raw_parts/`로 만든다. `binarized/`나 `tools/raw_parts/`를 고치면 `python tools/build_raw.py`.
 - `steel/`은 생성하지 않는다(고정 사본, 직접 고침). 테스트는 `tests/test_steel.py`.
+- `raw/5_parity_test.py`도 손으로 쓴 파일이다(생성 대상 아님). 테스트는 `tests/test_parity.py`.
 - 테스트: `python -B tests/test_raw.py` 등 (`tests/` 안의 `test_*.py`), 또는 루트에서 `python -m pytest`.
 - 자세한 경위와 결정 사항은 `CLAUDE.md`.
