@@ -32,11 +32,14 @@
 ## 작업 상태
 | # | 작업 | 상태 | 결과 파일 |
 |---|---|---|---|
-| 1 | 크기 추정(압력 강하 항, 열전달 항, 열전대 응답) | 대기 | `docs/research/estimates_microgap.md` |
-| 2 | 주제별 문헌 조사(HANDOFF 3장의 6주제) | 대기 | `docs/research/lit_*.md` |
+| 1 | 크기 추정(압력 강하 항, 열전달 항, 열전대 응답) | 진행 중(메인 세션) | `docs/research/estimates_microgap.md` |
+| 2 | 주제별 문헌 조사 7개(서브 에이전트, 2026-10-23 16:57 UTC 시작) | 진행 중 | `docs/research/lit_<n>_*.md`, `refs_<n>_*.tsv` |
 | 3 | 보고서 `docs/research_microgap_paper.md` | 대기 | |
-| 4 | `docs/refs_microgap.bib` | 대기 | |
-| 5 | 발표 원고 14·15번 슬라이드 수정 | 대기 | `docs/presentation_2026-10-26/slides_ko.md` |
+| 4 | `docs/refs_microgap.bib` (Crossref 메타데이터로 생성) | 대기 | |
+| 5 | 발표 자료 수정: `slides_ko.md` 14·15번, Google Slides(일본어) 15·16번은 사용자 확인 후 | 대기 | |
+
+- 에이전트 주제: 1 단열 좁은 갭 이상류 / 2 좁은 갭 비등 / 3 압력 강하 모델 / 4 열전달 모델 / 5 AI 영상·ML / 6 계측·자료 처리 / 7 가장 가까운 선행 연구·새로움.
+  - 공통 지침: `docs/research/agent_brief.md`. 세션이 끊겨 에이전트가 멈췄으면, 남은 lit 파일을 확인하고 빠진 주제만 다시 맡긴다.
 
 ## 자동 재개
 - 사용자 요청: 일요일 10시(주간 한도 초기화, UTC+9로 가정 = 2026-10-25 01:00 UTC)까지 스스로 계속한다. 세션 한도가 끝나면 초기화를 기다렸다가 이어서 한다.
@@ -48,3 +51,4 @@
 - 2026-10-23 16:30 UTC: 두 "Default" 환경이 모두 "trusted network access"(기본값)로 표시됐다. 지난번 변경은 저장되지 않은 것으로 보인다.
   - 바꾸는 곳: claude.ai/code 새 세션 화면 → 입력창 위 구름 아이콘(환경 이름) → 환경 오른쪽 톱니바퀴 → Network access(None/Trusted/Full/Custom) → 저장 → 새 세션. 실행 중인 세션에서는 바꿀 수 없다.
   - 사용자가 설정을 바꾸고 새 세션에서 시작하기로 했다. 이 세션은 조사·계산을 시작하지 않았다(작업 1~5 모두 미착수).
+- 2026-10-23 16:57 UTC: 새 세션에서 접속 확인(Crossref 정상, Scholar는 WebFetch로), 비용 규칙 반영, 예약 작업 생성, 주제별 에이전트 7개 시작.
