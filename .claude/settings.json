@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Google_Slides__read_presentation",
+      "mcp__Google_Slides__read_slide_page",
+      "mcp__Google_Slides__read_slide_page_thumbnail",
+      "mcp__Google_Slides__update_presentation",
+      "WebSearch",
+      "WebFetch"
+    ]
+  }
+}
