@@ -31,6 +31,7 @@ UA = "bubbles-research/0.1 (literature check; no contact address)"
 ACCEPT = {
     "10.1615/0-8493-9925-4.70": "Crossref 연도 2023은 Begell 디지털화 연도. 학회 발표는 1988-07",
     "10.2172/60784": "OSTI 보고서라 Crossref 저자가 기관(LBL). 실제 저자 Zimmerman & Bodvarsson",
+    "10.1103/pm4m-18nt": "PRF 2026 게재 예정판이라 Crossref 저자가 'Anonymous'. 제목·학술지는 일치. 저자는 미확인(arXiv 1910.04327로 추정)",
 }
 
 
