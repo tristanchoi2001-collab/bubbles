@@ -1,0 +1,30 @@
+# 연구 조사 진행 기록 (HANDOFF.md 작업)
+
+중단되면 이 파일부터 읽고 이어서 한다. 브랜치는 `claude/tracker2-bubble-tracking-ffz50u`. 푸시 전에 `git pull --rebase`.
+
+## 접속 상태
+- 2026-10-23 16:14 UTC: OpenAlex, Crossref, Semantic Scholar, doi.org, arXiv, J-STAGE, ScienceDirect, Springer, OSTI 모두 프록시 403(정책 거부). WebFetch도 DNS 실패.
+  - 열리는 곳: github, pypi. **WebSearch는 동작한다.**
+  - 이 세션의 환경: `env_01KeTKUxBSkb8xf3iEYPtuzC`. 계정에 "Default" 환경이 2개 있다(다른 하나 `env_019KXZbYr7VDi7LWjkDSgyG4`).
+  - 사용자에게 Network access 변경 방법을 안내했다. 바뀌면 다시 시험한다:
+    `curl -sS -m 20 -o /dev/null -w "%{http_code}\n" "https://api.openalex.org/works?search=microgap&per-page=1"`
+- DB가 막힌 동안의 규칙
+  - DOI는 "Crossref 미대조"로 표시한다.
+  - Elsevier PII(ScienceDirect 주소의 S…)에서 만든 DOI는 "PII 유도"로 표시한다.
+  - 검색 결과 요약에서 본 수치는 "(검색 요약 기준)"으로 표시한다.
+
+## 작업 상태
+| # | 작업 | 상태 | 결과 파일 |
+|---|---|---|---|
+| 1 | 크기 추정(압력 강하 항, 열전달 항, 열전대 응답) | 진행 중 | `docs/research/estimates_microgap.md` |
+| 2 | 주제별 문헌 조사(HANDOFF 3장의 6주제) | 대기 | `docs/research/lit_*.md` |
+| 3 | 보고서 `docs/research_microgap_paper.md` | 대기 | |
+| 4 | `docs/refs_microgap.bib` | 대기 | |
+| 5 | 발표 원고 14·15번 슬라이드 수정 | 대기 | `docs/presentation_2026-10-26/slides_ko.md` |
+
+## 자동 재개
+- 사용자 요청: 일요일 10시(주간 한도 초기화, UTC+9로 가정 = 2026-10-25 01:00 UTC)까지 스스로 계속한다. 세션 한도가 끝나면 초기화를 기다렸다가 이어서 한다.
+- 이 세션에 1시간마다 깨우는 예약 작업을 건다. 2026-10-25 01:00 UTC가 지나면 예약을 지우고 멈춘다.
+
+## 기록
+- 2026-10-23 16:20 UTC: 시작. 접속 확인, 브랜치 전환, 기존 자료(HANDOFF, notes_websearch, status, slides) 읽음.
