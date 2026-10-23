@@ -239,7 +239,7 @@ def load_tau_model(ckpt_path: str, dev: str = "cpu", force_prior: bool = False):
     ck = torch.load(ckpt_path, map_location="cpu")
     sd = {k: (v.float() if v.is_floating_point() else v) for k, v in ck["state_dict"].items()}  # fp16 版も読める
     inp = ck.get("input") or {}
-    if inp.get("bg_match") is not None:                     # steel/1_steel_train.py の ckpt (背景の明るさ合わせ)
+    if inp.get("bg_match") is not None or inp.get("bg_register") is not None:   # steel/1_steel_train.py の ckpt
         raise ValueError(f"{ckpt_path}: steel/1_steel_train.py の ckpt です。steel/2_steel_track.py で使ってください")
     if inp.get("mode", "bin") != "bin" or ck.get("ctx"):   # raw/1_raw_train.py の ckpt (差分の入力・トランスフォーマー)
         raise ValueError(f"{ckpt_path}: raw/1_raw_train.py の ckpt です (入力 {inp.get('mode')!r}"

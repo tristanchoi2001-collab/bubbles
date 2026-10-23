@@ -12,9 +12,9 @@ class RawDetector:
         ck = torch.load(ckpt_path, map_location="cpu")
         sd = {k: (v.float() if v.is_floating_point() else v) for k, v in ck["state_dict"].items()}
         inp = ck.get("input") or {}
-        if inp.get("bg_match") is not None:     # steel/1_steel_train.py の ckpt (背景の明るさを合わせてから入力を作る)
-            raise ValueError(f"{ckpt_path}: steel/1_steel_train.py の ckpt です (背景の明るさ合わせ {inp.get('bg_match')!r})。"
-                             "steel/2_steel_track.py で使ってください")
+        if inp.get("bg_match") is not None or inp.get("bg_register") is not None:   # steel/1_steel_train.py の ckpt
+            raise ValueError(f"{ckpt_path}: steel/1_steel_train.py の ckpt です (背景の位置合わせ {inp.get('bg_register')!r}, "
+                             f"明るさ合わせ {inp.get('bg_match')!r})。steel/2_steel_track.py で使ってください")
         self.mode, self.uses_prior, names = ckpt_layout(ck, sd)
         self.preproc = tuple(int(v) for v in (inp.get("preproc") or PREPROC_FIXED or PREPROC_DEFAULT))
         self.edge_px = int(inp.get("prior_edge_px") or ck.get("prior_edge_px") or PRIOR_EDGE_PX)

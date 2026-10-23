@@ -723,7 +723,7 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
 - `steel/` = raw/(commit bb568f7)를 떼어 낸 **고정 사본**. 사용자 요청: "parity를 강하게 적용하기 전에 철 채널 검출 코드는 따로 빼서 남겨 둔다".
   - 파일: `1_steel_train.py`, `2_steel_track.py`(raw/의 1·2를 복사해 이름만 바꿈), `3_tracking_qc.py`, `4_link_audit.py`(복사, 안내 문구·기본 경로만 steel용).
   - **tools/build_raw.py로 만들지 않는다.** raw/·binarized/의 이후 변경은 들어오지 않는다. 고칠 때는 steel/ 파일을 직접 고친다(1과 2의 fit_background/apply_background/match_background/make_planes는 같이).
-  - raw/와 다른 점: `BG_MATCH`(1_steel_train 설정, 기본 'offset' / 'gain' / None).
+  - raw/와 다른 점: `BG_MATCH`(1_steel_train 설정, 'offset' / 'gain' / None. 기본은 2026-10-23에 None으로 바꿈, 아래 "철 블록 실험" 절).
     - `fit_background(raw, bg, mode)` → (a, b) 또는 None. 'offset'은 (원본−배경) 히스토그램의 **최빈값**(= 액체)에서 시작해, 그 봉우리 근처(±15)로 σ를 구하고 |차−b| ≤ max(3σ, 3) 화소 평균을 3번.
       처음 판(중앙값 시작)은 리뷰에서 결함 확인: 어두운 띠가 화면 45%면 b = −13(실사진). 최빈값 시작은 −40 띠 50%까지 4.5~4.9로 정확, 55% 이상은 거부.
       'gain'은 같은 액체 화소로 최소제곱, a가 0.5~2 밖이면(무늬 약한 배경의 회귀 희석) 'offset' 값. 고치는 양(배경 중앙값에서 (a−1)·g + b)이 `BG_MATCH_MAX` = 15 넘으면 None.
@@ -744,10 +744,62 @@ x 방향 예측도 tracker3에 이미 있어서 PIV의 dx를 그대로 쓴다.
     d DST 평면 = 맞춘 배경 평면, 같은 설정 재사용·BG_MATCH 변경 재생성, e 학습 → 추적(qc_report bg_fit, unet_input.png = U-Net의 B) → TAU 경로.
   - 독립 검토(workflow 3 에이전트: 코드, 변이 24종, 사진 재측정)의 지적은 위에 모두 반영했다. 변이 검사에서 살아남았던 7종(데이터셋 평면 미검사, B만 안 맞춤, 항상 재생성, TAU 기록, gain 폴백, 단일 채널 피팅 등)은 새 테스트가 잡는다.
 
+## 철 블록 실험 (2026-10-23, 사용자 요청 "철블록 코드를 이 화면에 맞게 조정해줘. U-Net의 5채널을 잘 써서 정밀하게 검출하고 추적도 잘 하고 싶다")
+- 데이터: 사용자가 올린 image0000000/18/21/492.bmp + Background.bmp(1920×1200). 백라이트를 못 써서 화면 안의 밝기 편차가 크다(배경 90~180).
+  이 세션의 scratchpad/steel2/data에 있다(세션이 끝나면 없어진다). 측정 스크립트는 scratchpad/steel2/work. 학습·U-Net 추론은 하지 않았다.
+- 측정
+  - 기포 내부는 액체보다 어둡다.
+    - 직경 100~230 px 기포: 중심까지 −25~−45(중심이 가장 어둡다).
+    - 큰 기포·슬러그: 테두리에서 50~100 px까지 −20~−30, 중심은 −5~−10(거대 슬러그 중심은 ≈0).
+    - 대비가 조명 밝기(배경 90~180)에 비례하지 않는다 → 차분 그대로 쓴다(나눗셈 정규화 안 함).
+  - 테두리: 폭 20~25 px의 밝은 띠(+30~+85)와 그 안쪽의 어두운 띠. → DB(밝은 테두리)와 DK(내부·안쪽 띠)가 나뉜다. 'bin+sign' 그대로 쓴다.
+  - 거품: 직경 5~8 px 미세 기포가 무리 지어 있는 프레임이 있다. 간격 약 10 px인데 프레임당 약 50 px 이동하므로 1개씩은 추적할 수 없다.
+  - 흐름: 오른쪽으로 약 48~53 px/frame, dy ≈ 0(상호상관).
+  - 배경과 프레임의 어긋남(마스크 affine ECC, 1/2 해상도)
+    - 0/492: x −0.75~−1.0 px.
+    - 18/21(기포 많음): 화면 중앙 dx 0.5~1.7, dy 2.1~2.8 px, 세로 배율 0.9964~0.9968(카메라나 덮개 변형으로 추정).
+    - 맞추면 국소 잔차 3.3~3.5 → 2.4~2.5(0/492), 8.0 → 4.8(18/21). f18의 조용한 영역에서 B 오점등 7.2% → 1.05%.
+  - 밝기: 프레임 사이 차가 약 1 계조 이하. BG_MATCH 'offset'은 슬러그가 화면 대부분인 f0에서 −5.95로 틀렸다(슬러그 안을 액체로 봄).
+- 변경 (steel/만, 전부 설정으로 끌 수 있음)
+  - `FLOW_DIRECTION`(2_steel_track, 기본 "right"; "up"이면 종래 계산과 같음 = 테스트 f)
+    - `leading_edge_from_points(direction, trailing)`: 흐름 방향 끝의 윤곽점 5% 평균 = 선단부, 반대쪽 = 후단부(`Detection.trailing_x/y`).
+    - `compute_velocity_ema(rows, n, dets)`: 흐름 방향 좌표의 변화. 선단 쪽이 화면 끝에서 잘린 관측끼리는 후단부, 양쪽 다 잘리면 이전 값 유지.
+    - CSV 속도 열 이름은 `SPEED_COLUMN`("right"는 速度X(px/frame)). 3_tracking_qc와 4_link_audit는 이 열을 읽지 않는다.
+    - 추적(연결)은 원래 x, y 2차원이라 영향 없음.
+  - `BG_REGISTER`(1_steel_train, 기본 'affine' / 'shift' / None; ckpt `input.bg_register` → 2_steel_track이 자동 사용)
+    - `fit_register`: 1/2 축소, 고역 통과(σ 4), 차가 큰 화소(기포·테두리·거품)를 뺀 마스크로 ECC 2회. 범위 `BG_REGISTER_LIMITS`(배율 ±0.02, 전단 ±0.01, 이동 15 px, 상관 ≥ 0.5, 쓸 수 있는 화소 ≥ 5%).
+      실프레임 0.17~0.35 s/프레임.
+    - 0에서 시작해 실패하면 위상 상관으로 잡은 초기값에서 1회 더 한다. 합성 테스트에서 발견한 약점이다: 무늬가 고운 배경에서 2 px 이상 어긋나면 첫 마스크가 비어 포기했다.
+      실프레임 4장은 이 재시도 경로를 타지 않으므로 결과가 변경 전과 같다.
+    - `apply_register`, `make_planes(..., bg_match, bg_register)`(위치 → 밝기 순서). 1과 2의 함수는 소스가 같다(테스트 g가 확인).
+    - 검출 `RawDetector.register_fit`: 앞 프레임의 행렬로 시작한다. 실패하면 0에서 다시, 그래도 실패하면 직전 행렬(첫 프레임이면 안 움직임).
+      `reg_summary` → qc_report `bg_reg_fit`(화면 중앙 dx/dy, 배율 범위, 거부 수). main_tau는 프레임마다 1회만 맞춘다.
+    - 학습 build_dataset도 같은 함수를 쓴다. meta.json `bg_register`가 바뀌면 재생성.
+  - `BG_MATCH` 기본 'offset' → None(위 측정).
+  - `ORIGINAL_IMAGE_DIRS` / `ORIGINAL_MAX_DIFF`=6(1_steel_train): Roboflow JPEG 대신 원래 BMP를 읽는다.
+    - `index_originals`, `find_original`: 원래 이름 → 확장자 뺀 이름으로 찾고, 크기가 같고 그레이 평균 차 ≤ 6인 것 중 가장 가까운 것.
+    - 없으면 내보내기 화상을 쓰고 경고한다.
+  - 기본값: MAX_SPEED 70→100, MIN_TRACK_AREA 10→100, FLOW_PRIOR_RADIUS 150→300, CROP (1088,416)→(672,672)(같은 화소 수의 정사각형), AUG_FLIP True(빛이 위에서 와서 좌우 반전은 같은 외형. 상하 반전은 안 함).
+    INPUT_MODE 'bin+sign', PREPROC (15,4,0), EDGE_PX 4, PIV 창은 그대로다.
+  - raw/·binarized/는 `input.bg_register`만 있는 ckpt도 거부한다.
+- 테스트 `tests/test_steel.py`(9개)
+  - f: 흐름 방향.
+  - g: 알려진 어긋남(실측 비슷한 affine, 큰 어긋남, 평행이동)을 0.3 px 이내로 찾는지, 다른 배경·무늬 없음·범위 초과는 None인지, 두 파일의 소스가 같은지.
+  - h: 검출의 위치 맞춤.
+  - i: 원래 BMP 읽기.
+  - d/e: BG_REGISTER 재생성, CSV 열 이름, TAU 경로 1프레임 1회, 패스별 QC.
+- 라벨 안내(사용자에게 전함)
+  - Roboflow Instance Segmentation. 기포마다 폴리곤 1개를 밝은 테두리 바깥 가장자리에(그림자 제외). 거품은 하나씩 그리지 않는다.
+  - 원본 BMP를 원래 이름으로 올리고, 영상이 여러 개면 영상별 접두어를 붙인다. COCO Segmentation으로 Resize·Augmentation 없이 내보낸다. 거대 슬러그 프레임은 test에 넣는다.
+- 남은 일
+  - 사용자 라벨링 → PC 학습 → 검출 확인.
+  - 거대 슬러그 중심부의 −5~−10 대비로 U-Net이 안/밖을 구분하는지는 학습 후에만 알 수 있다.
+  - 거품 무리를 영역으로 다룰지(면적 집계만)는 미정.
+
 ## 저장소 구성 (2026-10-21 정리, 사용자 요청: "앞으로 쓸 것만 모으고 옛날 파일은 old/에 보존")
 - 사용자용 안내는 `README.md`(한국어). 폴더 하나만 PC에 복사하면 동작하게 했다.
 - `raw/` — 비이진화 버전(앞으로 주로 사용). `1_raw_train.py`, `2_raw_track.py`, `3_tracking_qc.py`, `4_link_audit.py`. 전부 `tools/build_raw.py`가 생성(직접 고치지 않음).
-- `steel/` — 철(불투명) 배경 채널용 고정 사본(2026-10-22, 위 절). 생성하지 않고 직접 고친다.
+- `steel/` — 철(불투명) 배경 채널용 고정 사본(2026-10-22, 위 절) + 철블록 실험에 맞춘 조정(2026-10-23, 위 절). 생성하지 않고 직접 고친다.
 - `binarized/` — 이진화 버전. `0_prelabel.py`(손으로 씀), `1_bin_train.py`, `2_bin_track.py`, `3_tracking_qc.py`, `4_link_audit.py`(손으로 씀, raw/에 복사). **이 폴더가 이진화 코드의 기준이며 직접 고친다.** 고친 뒤 `python tools/build_raw.py`.
   - `3_tracking_qc.py`의 기준은 `binarized/3_tracking_qc.py`(raw/는 복사본).
   - 1_bin_train.py와 2_bin_track.py에 같은 이름으로 들어 있는 TAU/모델 부품(synth_prior, degrade_image, TauDetector, build_model 등, 원래 tau_unet.py)은 **두 파일을 같이 고친다.** `tests/test_binarized.py` f가 같은지 확인한다(의도한 차이 main, extract_instances, HERE만 예외).

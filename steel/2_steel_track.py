@@ -5,11 +5,14 @@
     python 2_steel_track.py
 
 steel/ は raw/ (commit bb568f7) から分けた固定コピー。raw/ と binarized/ をこの先 (parity 救済など) 直しても、ここは変わらない。
-tools/build_raw.py では作らない (直すときはこのファイルを直接直す)。raw/ との違いは次の 3つだけ:
-  - ckpt の input.bg_match ('offset' / 'gain') があれば、背景画像の明るさを毎フレーム元画像に合わせてから U-Net の入力を作る
-    (1_steel_train.py の BG_MATCH と同じ。記録の無い ckpt は合わせない = raw/ と同じ)
-  - 既定の OUTPUT_FOLDER (output_steel)
-  - 説明文
+tools/build_raw.py では作らない (直すときはこのファイルを直接直す)。raw/ との違い:
+  - ckpt の input.bg_register ('affine' / 'shift') があれば、背景画像の位置を毎フレーム元画像に合わせる (溝の模様の残りを減らす)。
+    input.bg_match ('offset' / 'gain') があれば、明るさも合わせる。どちらも 1_steel_train.py の設定と同じ。
+    記録の無い ckpt は合わせない = raw/ と同じ入力
+  - FLOW_DIRECTION: 気泡が流れる向き (鉄ブロックの動画は "right")。先端部・CSV の速度をその向きで測る。
+    先端側が画面端で切れた観測どうしでは後端部で速度を測る
+  - 鉄ブロックの画面 (1920×1200、右へ約 50 px/frame) に合わせた既定値: MAX_SPEED 100, MIN_TRACK_AREA 100 (泡は追わない),
+    FLOW_PRIOR_RADIUS 300、OUTPUT_FOLDER (output_steel)
 
 元画像 + 背景画像 -> 二値化画像 B・差分画像 D・暗く/明るくなった分 DK/DB (1_steel_train.py と同じ作り方)
 -> U-Net (背景 / 気泡内部 / 気泡境界) -> 気泡ごとのマスク -> トラッキング
@@ -121,9 +124,18 @@ ROI_SAVE_PATH = None # 選択したROIを保存/再利用するファイルパ�
 # トラッキングパラメータ（気泡のスケール・撮影fpsに合わせて調整すること）
 # ------------------------------------------------------------
 LEADING_EDGE_PERCENTILE = 5.0
+FLOW_DIRECTION = "right"     # 気泡が流れる向き: "up" (上へ。透明な流路の動画) / "down" / "left" / "right" (鉄ブロックの動画は右へ約 50 px/frame)。
+                             # 先端部 = 流れの向きの端にある輪郭点 LEADING_EDGE_PERCENTILE % の平均 (CSV の 先端部X/Y・オーバーレイの赤い点)。
+                             # CSV の速度 = 先端部の流れ方向の座標の変化 (x か y、画像の座標の向きのまま) の EMA。
+                             # 先端側が画面端で切れている観測どうしでは後端部の変化を使う (入ってくる・出ていく途中の大きい気泡の速度が
+                             # 0 に見えないように)。両側とも切れていれば (画面をまたぐスラグ) 前の値のまま。
+                             # トラッキング (対応付け) は x, y の2次元なので、この設定には関係しない
+FLOW_AXES = {"up": (1, -1), "down": (1, 1), "left": (0, -1), "right": (0, 1)}   # 向き -> (座標軸 0 = x / 1 = y, 符号)
+SPEED_COLUMN = {"up": "上昇速度(px/frame)", "down": "速度Y(px/frame)", "left": "速度X(px/frame)", "right": "速度X(px/frame)"}
 
 # --- 1対1対応のゲート (ブートストラップで自動算出できる) ---
-MAX_SPEED = 70.0             # 1フレームで気泡が動ける最大距離 (px)。速度がまだ分からないトラック(新規・分裂直後)の探索半径
+MAX_SPEED = 100.0            # 1フレームで気泡が動ける最大距離 (px)。速度がまだ分からないトラック(新規・分裂直後)の探索半径。
+                             # 鉄ブロックの動画は右へ約 50 px/frame (相関で実測)。ブートストラップを使えば動画から決め直す
 POS_GATE = 15.0              # 速度が分かっているトラック: 予測位置からのずれの許容 (px)
 POS_GATE_SIZE_FRAC = 0.25    # 予測ずれの許容に「等価直径 × この値」を足す (大きい気泡ほど変形で位置が揺れる)
 AREA_RATIO_GATE = 1.8        # 1対1対応で許す面積比。これを超える変化は合体/分裂として扱う
@@ -164,7 +176,9 @@ EDGE_TOUCH_PX = 3            # 外接矩形が画面端からこの px 以内な
                              # U-Net の気泡は画面端の 1〜2 px 手前で止まることが多い (実データで確認)。ぴったり接するときだけだと、
                              # 入ってくる途中/出ていく途中の大きい気泡が画面内の気泡として扱われ、見えている面積が増減するたびに
                              # 面積ゲート (AREA_RATIO_GATE) で途切れて毎フレーム新しいIDになる。0 で従来どおり (ぴったり接するときだけ)
-MIN_TRACK_AREA = 10          # これより小さい検出はトラッキングしない (数px のノイズの点滅で新規/消失が大量に出るため)。
+MIN_TRACK_AREA = 100         # これより小さい検出はトラッキングしない (数px のノイズの点滅で新規/消失が大量に出るため)。
+                             # 鉄ブロックの動画: 泡 (直径 5〜8 px = 20〜50 px) は 1フレームで約 50 px 動き、間隔 (約 10 px) の数倍なので
+                             # 1個ずつは追えない (透明な流路の動画は 10)。
                              # 面積・個数の集計 (ROI) には含まれる。0 なら全てトラッキング
 
 # --- 1対1対応のコストの重み (各項は 0〜1 に正規化済み) ---
@@ -178,7 +192,7 @@ SHAPE_AREA_REF = 300.0       # 面積がこれより小さい気泡では重な�
 
 # --- 速度未知トラックの初速度の推定 ---
 USE_FLOW_PRIOR = True        # 新しく現れた気泡は「静止」と「周りの気泡と同じ速度で移動」の2仮説で次の位置を探す (False なら静止のみ)
-FLOW_PRIOR_RADIUS = 150.0    # 「周り」とみなす半径 (px)
+FLOW_PRIOR_RADIUS = 300.0    # 「周り」とみなす半径 (px)。鉄ブロックの画面 (1920×1200、気泡の直径 100〜400 px) に合わせて 150 から広げた
 PRIOR_AREA_RATIO = 3.0       # 「周りの気泡」は面積比がこれ以内の気泡だけ (大きさで速度が違う流れで、スラグの速度を
                              # 小さい気泡に当てはめないため)。周りに該当がなければ 0 (静止のみ)。0 なら大きさを問わない (旧動作)
 
@@ -827,13 +841,102 @@ def match_background(raw_bgr, bg_bgr, mode='offset'):
     return apply_background(bg_bgr, a, b, raw_bgr.shape), (a, b), ok
 
 
-def make_planes(raw_bgr, bg_bgr, preproc, bg_match=None):
+BG_REGISTER_MODES = (None, 'shift', 'affine')
+BG_REGISTER_SCALE = 0.5        # 位置合わせを当てはめる画像の縮小率 (実測: 0.5 でも 1.0 と同じ精度で 2〜7倍速い)
+BG_REGISTER_DEV = 8.0          # 元画像と背景画像の差 (9×9 平均) がこれより大きい画素 (気泡・輪郭・泡) は当てはめに使わない
+BG_REGISTER_LIMITS = {'scale': 0.02, 'shear': 0.01, 'shift': 15.0, 'min_cc': 0.5, 'min_frac': 0.05}
+                               # 信用する当てはめの範囲: 倍率 1±0.02、せん断 ±0.01、移動 15 px 以内、相関 0.5 以上、使える画素 5% 以上
+
+
+def fit_register(raw_bgr, bg_bgr, mode='affine', init=None, scale=BG_REGISTER_SCALE):
+    """背景画像を元画像に重ねる変換 (2×3 行列、元画像の画素座標) を求める。戻り値 (行列, 相関)、信用できなければ None。
+    鉄ブロックの実測 (2026-10-23, Background.bmp と image0000000/18/21/492): 背景より x に -0.75〜-1.0 px ずれ、
+    気泡の多いフレーム (18, 21) では縦の倍率も 0.9964〜0.9967 (画面の上下で 3〜4 px の差) だった。
+    'affine' で合わせると溝の模様の残り (局所のばらつき) が 3.3〜3.5 -> 2.4〜2.5、7.5〜8.0 -> 4.8 に下がった。
+    方法: 両方を scale に縮小して模様だけを残し (ぼかしとの差)、ECC で当てはめる。気泡・輪郭・泡で差の大きい所は
+    マスクで除き、合わせ直した差でマスクを作り直してもう 1回。'shift' は平行移動だけ。
+    init (前のフレームの行列) から始めると速い。init が無く、ずれ 0 から始めて当てはめられなかったときは、位相相関で
+    付けたずれの見当からもう 1回当てはめる (ずれが模様の細かさより大きいと、最初のマスクがほとんど空になるため)。
+    倍率・せん断・移動量が BG_REGISTER_LIMITS を超えたら None"""
+    if mode is None:
+        return np.eye(2, 3, dtype=np.float32), 1.0
+    if mode not in BG_REGISTER_MODES:
+        raise ValueError(f'BG_REGISTER は {BG_REGISTER_MODES} のどれか: {mode!r}')
+    if bg_bgr.shape != raw_bgr.shape:
+        bg_bgr = cv2.resize(bg_bgr, (raw_bgr.shape[1], raw_bgr.shape[0]))
+    r = cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    g = cv2.cvtColor(bg_bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    if scale != 1.0:
+        r = cv2.resize(r, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        g = cv2.resize(g, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    sig = max(2.0, 8.0 * scale)
+    rh, gh = r - cv2.GaussianBlur(r, (0, 0), sig), g - cv2.GaussianBlur(g, (0, 0), sig)
+    W = np.eye(2, 3, dtype=np.float32)
+    if init is not None:
+        W = np.array(init, np.float32).reshape(2, 3).copy()
+        W[:, 2] *= scale
+        if mode == 'shift':
+            W[:, :2] = np.eye(2, dtype=np.float32)
+    fit = _ecc_register(r, g, rh, gh, W, mode, scale)
+    if fit is None and init is None:
+        (sx, sy), _ = cv2.phaseCorrelate(gh, rh, cv2.createHanningWindow((r.shape[1], r.shape[0]), cv2.CV_32F))
+        if 0.5 <= float(np.hypot(sx, sy)) <= BG_REGISTER_LIMITS['shift'] * scale:
+            W[:, 2] = (sx, sy)
+            fit = _ecc_register(r, g, rh, gh, W, mode, scale)
+    return fit
+
+
+def _ecc_register(r, g, rh, gh, W, mode, scale):
+    """fit_register の当てはめ 1回分 (縮小した画像 r, g と模様 rh, gh、行列 W から)。戻り値 (行列, 相関) または None"""
+    motion = cv2.MOTION_AFFINE if mode == 'affine' else cv2.MOTION_TRANSLATION
+    crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 50, 1e-4)   # 実測: 80 回・1e-5 と移動量の差 0.02 px 以内で 2倍速い
+    lim = BG_REGISTER_LIMITS
+    W = W.copy()
+    cc = 0.0
+    for _ in range(2):
+        d = r - cv2.warpAffine(g, W, (r.shape[1], r.shape[0]), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        dev = cv2.blur(np.abs(d - float(np.median(d))), (9, 9))
+        mask = (dev < BG_REGISTER_DEV).astype(np.uint8)
+        mask[:3] = 0
+        mask[-3:] = 0
+        mask[:, :3] = 0
+        mask[:, -3:] = 0
+        if mask.mean() < lim['min_frac']:
+            return None
+        try:
+            cc, W = cv2.findTransformECC(gh, rh, W, motion, crit, mask, 5)
+        except cv2.error:
+            return None
+    Wf = W.astype(np.float64)
+    Wf[:, 2] /= scale
+    if (not np.all(np.isfinite(Wf)) or cc < lim['min_cc'] or abs(Wf[0, 0] - 1) > lim['scale']
+            or abs(Wf[1, 1] - 1) > lim['scale'] or abs(Wf[0, 1]) > lim['shear'] or abs(Wf[1, 0]) > lim['shear']
+            or float(np.hypot(Wf[0, 2], Wf[1, 2])) > lim['shift']):
+        return None
+    return Wf.astype(np.float32), float(cc)
+
+
+def apply_register(bg_bgr, W, shape=None):
+    """背景画像を行列 W で動かす (shape = 元画像の (H, W) に大きさを合わせてから)。W が None なら動かさない"""
+    if shape is not None and bg_bgr.shape[:2] != tuple(shape[:2]):
+        bg_bgr = cv2.resize(bg_bgr, (int(shape[1]), int(shape[0])))
+    if W is None:
+        return bg_bgr
+    H, Wd = bg_bgr.shape[:2]
+    return cv2.warpAffine(bg_bgr, np.asarray(W, np.float32), (Wd, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
+
+
+def make_planes(raw_bgr, bg_bgr, preproc, bg_match=None, bg_register=None):
     """元画像 + 背景画像 -> {'B', 'D', 'DK', 'DB'} (どれも uint8 (H, W))
     DK / DB: 背景より暗くなった分 / 明るくなった分 (×Brightness)。
     鉄の流路の実測 (images/44, 気泡 1個): 気泡の中 (気体) は液体より約 40 階調暗い -> B では「白く塗りつぶした円」、DK でも中が白い。
     輪郭 (メニスカス) の明暗は向きで変わる: 光の来る側 (画像の上) は明るく (DB)、反対側は暗く (DK)、その外に約 10 px の影 (DK)。
     (透明な流路では界面はいつも暗く、液膜のむらが明るかった。raw/ の説明はそちらの話)
-    bg_match ('offset' / 'gain'): 先に背景画像の明るさを元画像に合わせる (match_background)。None なら raw/ と同じ"""
+    bg_register ('affine' / 'shift'): 先に背景画像の位置を元画像に合わせる (fit_register。合わなければ動かさない)。
+    bg_match ('offset' / 'gain'): 次に背景画像の明るさを元画像に合わせる (match_background)。両方 None なら raw/ と同じ"""
+    if bg_register is not None:
+        fit = fit_register(raw_bgr, bg_bgr, bg_register)
+        bg_bgr = apply_register(bg_bgr, fit[0] if fit else None, raw_bgr.shape)
     if bg_match is not None:
         bg_bgr = match_background(raw_bgr, bg_bgr, bg_match)[0]
     B, D = bin_diff(raw_bgr, bg_bgr, preproc)
@@ -1019,6 +1122,13 @@ class RawDetector:
         self.bg_match = inp.get("bg_match")          # 1_steel_train.py の BG_MATCH (記録が無ければ None = 合わせない)
         if self.bg_match not in BG_MATCH_MODES:
             raise ValueError(f"ckpt の input.bg_match が分かりません: {self.bg_match!r} (使えるのは {BG_MATCH_MODES})")
+        self.bg_register = inp.get("bg_register")    # 1_steel_train.py の BG_REGISTER (記録が無ければ None = 動かさない)
+        if self.bg_register not in BG_REGISTER_MODES:
+            raise ValueError(f"ckpt の input.bg_register が分かりません: {self.bg_register!r} (使えるのは {BG_REGISTER_MODES})")
+        self.reg_fits = []                           # フレームごとに使った位置合わせの行列 (qc_report に範囲を書く)
+        self.reg_rejected = 0                        # 位置合わせを信用しなかったフレームの数 (直前の行列を使った)
+        self._good_warp = None
+        self._reg_shape = None
         self.last_bg_fit = (1.0, 0.0)                # 最後のフレームで使った (a, b) (確認用)
         self.bg_fits = []                            # フレームごとに使った (a, b) (qc_report に範囲を書く)
         self.bg_rejected = 0                         # 当てはめを信用しなかったフレームの数 (直前の値を使った)
@@ -1040,6 +1150,7 @@ class RawDetector:
         self._resize_notice = False
         print(f"  U-Net: {ckpt_path}  (epoch {ck.get('epoch')}, device {self.dev}, 入力 {self.mode!r}, "
               f"前処理 {self.preproc}{'' if inp else ' (ckpt に記録なし)'}"
+              f"{', 背景の位置合わせ ' + repr(self.bg_register) if self.bg_register else ''}"
               f"{', 背景の明るさ合わせ ' + repr(self.bg_match) if self.bg_match else ''}"
               f"{', 事前マスク (TAU) あり' if self.uses_prior else ''}"
               f"{', トランスフォーマー ' + str(ctx.get('layers')) + '層' if ctx.get('layers') else ''}, "
@@ -1081,11 +1192,49 @@ class RawDetector:
         self.last_bg_fit = fit
         return fit
 
+    def register_fit(self, raw_bgr, bg_bgr):
+        """このフレームで使う位置合わせの行列 (bg_register が None なら None)。前のフレームの行列から当てはめ始める。
+        信用できない (気泡で模様がほとんど見えないなど) なら、ずれ 0 から当てはめ直し、それもだめなら直前に信用できた行列
+        (最初のフレームなら動かさない)"""
+        if self.bg_register is None:
+            return None
+        self._reg_shape = raw_bgr.shape[:2]
+        fit = fit_register(raw_bgr, bg_bgr, self.bg_register, init=self._good_warp)
+        if fit is None and self._good_warp is not None:
+            fit = fit_register(raw_bgr, bg_bgr, self.bg_register)
+        if fit is None:
+            self.reg_rejected += 1
+            if self.reg_rejected <= 3:
+                print("  ※ 背景の位置合わせ: このフレームは当てはめられない (模様の見える所が少ない / ずれが大きすぎる) ので、"
+                      + ("直前のフレームの値を使います" if self._good_warp is not None else "動かしません"))
+            W = self._good_warp
+        else:
+            W = self._good_warp = fit[0]
+        self.reg_fits.append(np.eye(2, 3, dtype=np.float32) if W is None else W)
+        return W
+
     def background_for(self, raw_bgr, bg_bgr):
-        """このフレーム用に明るさを合わせた背景画像 (bg_match が None なら背景画像そのまま)"""
+        """このフレーム用の背景画像: 位置を合わせ (bg_register)、明るさを合わせる (bg_match)。どちらも None なら背景画像そのまま"""
+        if self.bg_register is None and self.bg_match is None:
+            return bg_bgr
+        bg_bgr = apply_register(bg_bgr, self.register_fit(raw_bgr, bg_bgr), raw_bgr.shape)
         if self.bg_match is None:
             return bg_bgr
         return apply_background(bg_bgr, *self.background_fit(raw_bgr, bg_bgr), raw_bgr.shape)
+
+    def reg_summary(self):
+        """qc_report 用: 使った位置合わせの範囲 (画面中央での移動量 px、縦横の倍率) と、信用しなかったフレームの数"""
+        if not self.reg_fits:
+            return None
+        h, w = self._reg_shape or (0, 0)
+        c = np.array([w / 2.0, h / 2.0, 1.0])
+        A = np.array(self.reg_fits, np.float64)
+        sh = np.array([a @ c - c[:2] for a in A])
+        rd = lambda v, n=2: round(float(v), n)
+        return {"frames": len(A), "dx_min": rd(sh[:, 0].min()), "dx_max": rd(sh[:, 0].max()),
+                "dy_min": rd(sh[:, 1].min()), "dy_max": rd(sh[:, 1].max()),
+                "sx_min": rd(A[:, 0, 0].min(), 4), "sx_max": rd(A[:, 0, 0].max(), 4),
+                "sy_min": rd(A[:, 1, 1].min(), 4), "sy_max": rd(A[:, 1, 1].max(), 4), "rejected": int(self.reg_rejected)}
 
     def bg_fit_summary(self):
         """qc_report 用: 使った (a, b) の範囲と、信用しなかったフレームの数"""
@@ -1098,7 +1247,7 @@ class RawDetector:
     def prob_raw(self, raw_bgr, bg_bgr, prior=None, bg_ready=False):
         """元画像 (BGR) + 背景画像 (BGR) (+ 事前マスク (2, H, W)) -> 確率 (3, H, W)。
         bg_ready = True なら bg_bgr はもう明るさを合わせた背景 (background_for の結果) としてそのまま使う"""
-        if self.bg_match is not None and not bg_ready:
+        if (self.bg_match is not None or self.bg_register is not None) and not bg_ready:
             bg_bgr = self.background_for(raw_bgr, bg_bgr)
         planes = make_planes(raw_bgr, bg_bgr, self.preproc)
         self.last_planes = {k: planes[k] for k in PLANES[self.mode]}     # U-Net が実際に見た画像 (確認用)
@@ -1705,13 +1854,27 @@ class Detection:
     area_in_roi: float = 0.0  # ROIと重なる部分の面積 (統計用)
     in_roi: bool = True       # ROIに少しでもかかっているか (個数カウント用)
     nn_dist: float = math.inf  # 同じフレームで一番近い別の検出 (中心) までの距離 (px)。SPACING_GATE_FRAC 用 (トラッカーが設定)
+    trailing_x: float = math.nan  # 後端部 (流れの向きと反対側の端。CSV の速度で先端側が画面端で切れているときに使う)
+    trailing_y: float = math.nan
 
 
-def leading_edge_from_points(pts: np.ndarray, percentile: float = LEADING_EDGE_PERCENTILE):
-    """輪郭点のうち上側(yが小さい)percentile%の平均 = 先端部"""
+def flow_axis(direction=None):
+    """FLOW_DIRECTION -> (座標軸 0 = x / 1 = y, 符号 +1 / -1)"""
+    d = FLOW_DIRECTION if direction is None else direction
+    if d not in FLOW_AXES:
+        raise ValueError(f"FLOW_DIRECTION は {tuple(FLOW_AXES)} のどれか: {d!r}")
+    return FLOW_AXES[d]
+
+
+def leading_edge_from_points(pts: np.ndarray, percentile: float = LEADING_EDGE_PERCENTILE, direction=None,
+                             trailing: bool = False):
+    """輪郭点のうち流れの向きの端 percentile% の平均 = 先端部 (trailing = True なら反対側 = 後端部)。
+    FLOW_DIRECTION = "up" なら上側 (y が小さい) = 今までと同じ計算"""
+    axis, sign = flow_axis(direction)
     n = max(3, int(len(pts) * percentile / 100.0))
-    top = pts[np.argsort(pts[:, 1])[:n]]
-    return float(np.mean(top[:, 0])), float(np.mean(top[:, 1]))
+    key = pts[:, axis] * (float(sign) if trailing else -float(sign))
+    sel = pts[np.argsort(key)[:n]]
+    return float(np.mean(sel[:, 0])), float(np.mean(sel[:, 1]))
 
 
 def instances_to_detections(inst: np.ndarray, roi_bool: np.ndarray) -> List[Detection]:
@@ -1730,6 +1893,7 @@ def instances_to_detections(inst: np.ndarray, roi_bool: np.ndarray) -> List[Dete
                                  offset=(x0, y0))
         pts = np.vstack([c.reshape(-1, 2) for c in cs]).astype(np.float64)
         lx, ly = leading_edge_from_points(pts)
+        tx, ty = leading_edge_from_points(pts, trailing=True)
         per = float(sum(cv2.arcLength(c, True) for c in cs))
         a_roi = float(np.count_nonzero(m & roi_bool[y0:y1, x0:x1]))
         e = max(0, int(EDGE_TOUCH_PX))
@@ -1739,7 +1903,7 @@ def instances_to_detections(inst: np.ndarray, roi_bool: np.ndarray) -> List[Dete
             cx=float(xs.mean() + x0), cy=float(ys.mean() + y0),
             leading_x=lx, leading_y=ly, perimeter=per,
             touches_frame=any(touch), touch=touch,
-            area_in_roi=a_roi, in_roi=a_roi > 0,
+            area_in_roi=a_roi, in_roi=a_roi > 0, trailing_x=tx, trailing_y=ty,
         ))
     return dets
 
@@ -2605,7 +2769,23 @@ def save_piv_debug(out_dir: str, frame_idx: int, piv, seq: PIVSequence):
 # ==============================================================
 # 6. 速度計算(EMA)
 # ==============================================================
-def compute_velocity_ema(rows_by_frame: Dict[int, List[dict]], total_frames: int) -> Dict[int, List[dict]]:
+def _flow_refs(row: dict, det) -> Tuple[float, float, bool, bool]:
+    """CSV の速度に使う流れ方向の座標: (先端部, 後端部, 先端側が画面端で切れているか, 後端側が切れているか)。
+    det (この行の検出) が無ければ後端部は使えない (nan, 切れていない扱い)"""
+    axis, sign = flow_axis()
+    front = row["leading_x"] if axis == 0 else row["leading_y"]
+    if det is None:
+        return front, math.nan, False, False
+    back = det.trailing_x if axis == 0 else det.trailing_y
+    lo_cut, hi_cut = (det.touch[2], det.touch[3]) if axis == 0 else (det.touch[0], det.touch[1])
+    return (front, back, hi_cut, lo_cut) if sign > 0 else (front, back, lo_cut, hi_cut)
+
+
+def compute_velocity_ema(rows_by_frame: Dict[int, List[dict]], total_frames: int,
+                         detections_per_frame: Optional[List[List[Detection]]] = None) -> Dict[int, List[dict]]:
+    """CSV の速度 (row["vy"]。FLOW_DIRECTION の座標軸の速度 px/frame) = 先端部の座標の変化の EMA。
+    detections_per_frame があれば、先端側が画面端で切れた観測が絡むときは後端部の変化を使い、
+    両側とも切れていれば (画面をまたぐ大きいスラグ) 速度を更新しない"""
     track_history: Dict[int, List[Tuple[int, dict]]] = defaultdict(list)
     for f in range(total_frames):
         for row in rows_by_frame.get(f, []):
@@ -2613,23 +2793,38 @@ def compute_velocity_ema(rows_by_frame: Dict[int, List[dict]], total_frames: int
                 continue
             track_history[row["track_id"]].append((f, row))
 
+    def det_of(f, row):
+        if detections_per_frame is None or f >= len(detections_per_frame):
+            return None
+        ds = detections_per_frame[f]
+        return ds[row["det_index"]] if row["det_index"] < len(ds) else None
+
     for track_id, hist in track_history.items():
         hist.sort(key=lambda x: x[0])
         prev_vy = None       # 旧版は 0 から始めていたため、最初の数フレームの速度が小さく出ていた
-        prev_leading_y = None
+        prev_ref = None      # 前の観測の (先端部, 後端部, 先端側が切れているか, 後端側が切れているか)
         prev_frame = None
         for f, row in hist:
-            if prev_leading_y is None:
+            ref = _flow_refs(row, det_of(f, row))
+            if prev_ref is None:
                 row["vy"] = float("nan")
             elif row["event"] in ("merge", "split") or row.get("hold_v"):
                 row["vy"] = prev_vy if prev_vy is not None else float("nan")  # 合体/分裂直後は速度更新を保留
             else:
                 dt = max(f - prev_frame, 1)
-                raw_v = (row["leading_y"] - prev_leading_y) / dt
-                row["vy"] = raw_v if prev_vy is None else VELOCITY_EMA_ALPHA * prev_vy + (1 - VELOCITY_EMA_ALPHA) * raw_v
+                if not (ref[2] or prev_ref[2]):
+                    raw_v = (ref[0] - prev_ref[0]) / dt              # 先端部
+                elif not (ref[3] or prev_ref[3]) and ref[1] == ref[1] and prev_ref[1] == prev_ref[1]:
+                    raw_v = (ref[1] - prev_ref[1]) / dt              # 先端側が画面端で切れている -> 後端部
+                else:
+                    raw_v = None                                     # 両側とも切れている -> 更新しない
+                if raw_v is None:
+                    row["vy"] = prev_vy if prev_vy is not None else float("nan")
+                else:
+                    row["vy"] = raw_v if prev_vy is None else VELOCITY_EMA_ALPHA * prev_vy + (1 - VELOCITY_EMA_ALPHA) * raw_v
             if row["vy"] == row["vy"]:
                 prev_vy = row["vy"]
-            prev_leading_y = row["leading_y"]
+            prev_ref = ref
             prev_frame = f
     return rows_by_frame
 
@@ -2678,7 +2873,7 @@ def write_tracking_csv(csv_path: str, rows_by_frame: Dict[int, List[dict]], file
         w = csv.writer(f)
         w.writerow(["ファイル名", "フレーム", "トラックID", "イベント", "親トラックID",
                     "面積(px)", "ROI内面積(px)", "先端部X", "先端部Y", "中心X", "中心Y",
-                    "上昇速度(px/frame)", "周長(px)", "フレーム接触"])
+                    SPEED_COLUMN[FLOW_DIRECTION], "周長(px)", "フレーム接触"])
         for frame_idx, filename in enumerate(filenames):
             rows = rows_by_frame.get(frame_idx, [])
             dets = detections_per_frame[frame_idx] if frame_idx < len(detections_per_frame) else []
@@ -3219,8 +3414,8 @@ def run_detection_phase(cache_dir: str):
 
     for img_path in image_files:
         filename = os.path.basename(img_path)
-        bg_frame = bg_img           # このフレームの背景 (bg_match があれば明るさを合わせる。U-Net・確認画像・オーバーレイ共通)
-        if detector.bg_match is not None:
+        bg_frame = bg_img           # このフレームの背景 (位置・明るさを合わせる。U-Net・確認画像・オーバーレイ共通)
+        if detector.bg_match is not None or detector.bg_register is not None:
             raw0 = cv2.imread(img_path)
             if raw0 is not None:
                 bg_frame = detector.background_for(raw0, bg_img)
@@ -3292,6 +3487,10 @@ def run_detection_phase(cache_dir: str):
     DETECTION_STATS.clear()
     DETECTION_STATS["mode"] = UNET_INSTANCE_MODE
     DETECTION_STATS["input"] = {"mode": detector.mode, "preproc": list(detector.preproc)}
+    if detector.bg_register is not None:
+        DETECTION_STATS["input"]["bg_register"] = detector.bg_register
+        DETECTION_STATS["input"]["bg_reg_fit"] = detector.reg_summary()
+        print(f"  背景の位置合わせ ({detector.bg_register!r}): {DETECTION_STATS['input']['bg_reg_fit']}")
     if detector.bg_match is not None:
         DETECTION_STATS["input"]["bg_match"] = detector.bg_match
         DETECTION_STATS["input"]["bg_fit"] = detector.bg_fit_summary()
@@ -3339,7 +3538,7 @@ def used_params(roi_rect, preprocess_params) -> dict:
         "AREA_RELAX_RATIO": AREA_RELAX_RATIO, "AREA_RELAX_POS": AREA_RELAX_POS,
         "MAX_AGE": MAX_AGE, "COAST_GATE_GROWTH": COAST_GATE_GROWTH, "MIN_TRACK_AREA": MIN_TRACK_AREA,
         "MAX_AGE_NEW": MAX_AGE_NEW, "MAX_AGE_NEW_LARGE": MAX_AGE_NEW_LARGE, "LARGE_NEW_AREA": LARGE_NEW_AREA,
-        "EDGE_TOUCH_PX": EDGE_TOUCH_PX,
+        "EDGE_TOUCH_PX": EDGE_TOUCH_PX, "FLOW_DIRECTION": FLOW_DIRECTION,
         "SPACING_GATE_FRAC": SPACING_GATE_FRAC, "SPACING_GATE_MAX_AREA": SPACING_GATE_MAX_AREA,
         "BOOTSTRAP_CHAIN_FRAMES": BOOTSTRAP_CHAIN_FRAMES,
         "weights": {"pos": W_POS, "area": W_AREA, "overlap": W_OVERLAP, "shape": W_SHAPE,
@@ -3381,7 +3580,7 @@ def main_single():
     print("\n[LAPトラッカー] 実行中...")
     rows = run_laptrack(detections_per_frame, image_size,
                         piv_debug_dir=os.path.join(OUTPUT_FOLDER, "piv") if SAVE_PIV_DEBUG else None)
-    rows = compute_velocity_ema(rows, total_frames)
+    rows = compute_velocity_ema(rows, total_frames, detections_per_frame)
 
     tracking_csv_path = os.path.join(OUTPUT_FOLDER, "result_tracking.csv")
     area_csv_path = os.path.join(OUTPUT_FOLDER, "result_area_count.csv")
@@ -3721,14 +3920,19 @@ def main_tau():
     image_size = (h, w)
     roi_bool = make_roi_mask(h, w, roi_rect if ENABLE_ROI else None).astype(bool)
     names = [os.path.basename(p) for p in files]
-    fits = {}                   # フレーム番号 -> 背景の明るさ合わせの (a, b) (bg_match のとき。1回だけ当てはめる)
+    fits = {}                   # フレーム番号 -> (位置合わせの行列, 明るさ合わせの (a, b))。フレームごとに 1回だけ当てはめる
 
     def bg_of(f, raw=None):
-        if detector.bg_match is None:
+        if detector.bg_match is None and detector.bg_register is None:
             return bg_img
         if f not in fits:
-            fits[f] = detector.background_fit(cv2.imread(files[f]) if raw is None else raw, bg_img)
-        return apply_background(bg_img, *fits[f], image_size)
+            raw = cv2.imread(files[f]) if raw is None else raw
+            wr = detector.register_fit(raw, bg_img) if detector.bg_register is not None else None
+            ab = (detector.background_fit(raw, apply_register(bg_img, wr, image_size))
+                  if detector.bg_match is not None else (1.0, 0.0))
+            fits[f] = (wr, ab)
+        wr, ab = fits[f]
+        return apply_background(apply_register(bg_img, wr, image_size), *ab, image_size)
 
     def raw_of(f):              # U-Net の入力は元画像 + (明るさを合わせた) 背景から作る
         raw = cv2.imread(files[f])
@@ -3762,7 +3966,8 @@ def main_tau():
     # パスごとの CSV と比較
     pp = {"preprocess": {"noise_cut": tv, "brightness": bv, "median": mv}}
     tau_params = {"UNET_CKPT": UNET_CKPT, "input": {"mode": detector.mode, "preproc": list(detector.preproc), "bg_match": detector.bg_match,
-                            "bg_fit": detector.bg_fit_summary()}, "uses_prior": detector.uses_prior, "PRIOR_PASSES": PRIOR_PASSES,
+                            "bg_fit": detector.bg_fit_summary(), "bg_register": detector.bg_register,
+                            "bg_reg_fit": detector.reg_summary()}, "uses_prior": detector.uses_prior, "PRIOR_PASSES": PRIOR_PASSES,
                   "PRIOR_FROM": PRIOR_FROM, "PRIOR_MIN_HITS": PRIOR_MIN_HITS, "prior_edge_px": detector.edge_px,
                   "passes_run": len(results)}
     Q = load_qc_module() if SAVE_PASS_RESULTS else None
@@ -3770,7 +3975,7 @@ def main_tau():
     n = len(files)
     roi_q = tuple(roi_rect) if (ENABLE_ROI and roi_rect is not None) else None
     for dets, rows, st in results:
-        rows = compute_velocity_ema(rows, n)
+        rows = compute_velocity_ema(rows, n, dets)
         entry = {"pass": st["pass"], "detection": st}
         if SAVE_PASS_RESULTS:
             d = os.path.join(OUTPUT_FOLDER, "passes", f"pass{st['pass']}")
@@ -3822,6 +4027,7 @@ def main_tau():
 def main():
     """事前マスク (TAU) を入力するモデルで PRIOR_PASSES > 0 なら多パス (main_tau)、それ以外は 1回 (main_single)"""
     import torch
+    flow_axis()                 # FLOW_DIRECTION の綴りを最初に確認
     ck = torch.load(UNET_CKPT, map_location="cpu")
     _, prior, _ = ckpt_layout(ck, ck["state_dict"])
     if prior and PRIOR_PASSES > 0:

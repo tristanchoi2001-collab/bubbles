@@ -5,21 +5,24 @@
     python 1_steel_train.py
 
 steel/ は raw/ (commit bb568f7) から分けた固定コピー。raw/ と binarized/ をこの先 (parity 救済など) 直しても、ここは変わらない。
-tools/build_raw.py では作らない (直すときはこのファイルを直接直す)。raw/ との違いは次の 3つだけ:
-  - BG_MATCH: 背景画像の明るさを元画像に合わせてから B / DK / DB を作る (ckpt の input.bg_match に記録 -> 2_steel_track.py も同じ)
-  - 既定の DST / OUT の名前 (dataset_steel, runs/steel)
-  - 説明文
-鉄の流路の実測 (2026-10-22, 元画像 1枚に気泡 1個, 直径 約 115 px): 気泡の中は液体より約 40 階調暗い (ばらつき 3.2 の約 12倍)。
-透明な流路 (中は -5、巨大スラグは 0 前後) と違い、気泡の中そのものが手がかりになる -> 'bin+sign' の DK に中が出る。
-B (二値化) では気泡が「白く塗りつぶした円」になり、今までの二値化画像 (白い輪で中は黒) と見た目が違う。
-そのため OLD_BIN_SRC (透明な流路の二値化画像) は混ぜない方がよい (既定 None)。
+tools/build_raw.py では作らない (直すときはこのファイルを直接直す)。raw/ との違い:
+  - BG_REGISTER: 背景画像の位置を元画像に合わせてから B / DK / DB を作る (鉄ブロックの実測で約 1 px のずれと 0.4% の縦の倍率)。
+    BG_MATCH: 明るさも合わせる (鉄ブロックでは None)。どちらも ckpt の input に記録 -> 2_steel_track.py も同じように合わせる
+  - ORIGINAL_IMAGE_DIRS: Roboflow の書き出し (JPEG) の代わりに元の画像 (BMP など) を読む
+  - 既定値: CROP (672, 672), AUG_FLIP True, DST / OUT の名前 (dataset_steel, runs/steel)
+鉄ブロックの実測 (2026-10-23, 1920×1200 の BMP 4枚 + 背景):
+  - 気泡の中は液体より暗い。直径 100〜230 px の気泡は中心まで -25〜-45、大きい気泡・スラグは縁から 50〜100 px が -20〜-30 で、
+    中心は -5〜-10 まで薄くなる。照明の明るさ (背景 90〜180) には比例しない (差で扱えばよい)。
+  - 輪郭は明るい帯 (幅 20〜25 px、+30〜+85) と内側の暗い帯。B (二値化) では気泡が「白い輪 + 白っぽい中」になり、
+    今までの二値化画像 (白い輪で中は黒) と見た目が違う -> OLD_BIN_SRC (透明な流路の二値化画像) は混ぜない (既定 None)。
+  - 泡 (直径 5〜8 px) の集まりが多いフレームがある。
 
 元画像 (背景の残った画像) と背景画像から画像を作って U-Net に入れる:
   B  = 二値化画像 (今と同じ: 背景差分 -> Noise Cut 未満を 0 -> ×Brightness。白い輪郭)
   D  = 差分画像   (B から Noise Cut だけを外したもの)
   DK = 背景より暗くなった分 / DB = 明るくなった分 (D を向きで2つに分けたもの)
-       気液の界面 (メニスカス) は必ず暗い。大きい気泡の中の液膜のむら (乾いた所) は明るい。
-       B と D は絶対値なので両方とも「白」になり、むらを輪郭と間違える (実測: 界面 -40〜-100, むら +9〜+16)
+       鉄ブロックでは 気泡の中 = 暗い (DK)、輪郭 = 明るい帯 (DB) + その内側の暗い帯 (DK)。B と D は絶対値なので
+       どちらも「白」になるが、DK と DB なら分かれる (透明な流路では 界面 = 暗い、液膜のむら = 明るい だった)
 INPUT_MODE で入れ方を選ぶ (同じデータで学習して test で比べられる):
   'bin+sign' : B + DK + DB (5チャンネル)。おすすめ
   'bin+diff' : B + D (4チャンネル)
@@ -53,8 +56,17 @@ BACKGROUNDS = {                                 # 画像の元の名前の先頭
 DEFAULT_BACKGROUND = None     # BACKGROUNDS のどれにも当てはまらない画像の背景。None なら当てはまらない画像の一覧を出して止まる
 INPUT_MODE = 'bin+sign'       # 'bin+sign' (おすすめ) / 'bin+diff' / 'diff' / 'bin'
 PREPROC = (15, 4, 0)          # 前処理 (Noise Cut, Brightness, Median)。今の二値化と同じ値 (B はこの値で作る)
-BG_MATCH = 'offset'           # 背景画像の明るさを元画像に合わせる: 'offset' (おすすめ) / 'gain' (模様のはっきりした背景だけ) / None (raw/ と同じ)
-                              # 照明が撮影中に少し変わっても DB (明るくなった分) が液体全体に出ないようにする。ckpt に記録される
+ORIGINAL_IMAGE_DIRS = []      # Roboflow に上げる前の元の画像 (BMP など) があるフォルダのリスト。例 [r'C:\Users\Tristan\Desktop\steel\run1']
+                              # Roboflow の書き出しは JPEG に変わるので、圧縮のノイズが背景との差に混ざる。ここに元の画像があれば、
+                              # 元の名前 (Roboflow の名前から復元) で探してそちらを使う (書き出しと大きさ・中身が同じことを確認する)。
+                              # 空のリストなら書き出しの画像をそのまま使う
+ORIGINAL_MAX_DIFF = 6.0       # 書き出しの画像と元の画像の平均の差 (グレー階調) がこれ以下なら同じ画像とみなす (JPEG にしただけなら 1〜3)
+BG_REGISTER = 'affine'        # 背景画像の位置を毎回 元画像に合わせる: 'affine' (おすすめ。ずれ + 縦横の倍率) / 'shift' (平行移動だけ) / None。
+                              # 鉄ブロックの実測: 背景より約 1 px ずれ、気泡の多いフレームは縦の倍率も 0.4% 違った。合わせると
+                              # 溝の模様の残りが 3〜8 -> 2.4〜4.8 階調に減る。ckpt に記録され、2_steel_track.py も同じように合わせる
+BG_MATCH = None               # 背景画像の明るさを元画像に合わせる: None (鉄ブロックではこれ) / 'offset' / 'gain'。
+                              # 鉄ブロックの実測ではフレーム間の明るさの差は 1 階調以下で、'offset' は大きいスラグが画面の大半の
+                              # フレーム (image0000000) でスラグの中 (-6) を液体と取り違えた。照明が揺れる動画だけ 'offset' にする
 OLD_BIN_SRC = None            # 鉄の流路では None のまま (透明な流路の二値化画像は気泡の中が黒、鉄の流路は中が白で、見た目が違う)。
                               # 今までの二値化画像の Roboflow 書き出し (例 480枚。train/ valid/ test/ を含む)。None なら使わない。
                               #   train/ -> 学習に混ぜる
@@ -81,11 +93,12 @@ FINETUNE_FROM = r'best.pt'    # 開始モデル (今の best.pt / TAU の best.p
 LR      = 1e-4                # 学習率
 EPOCHS  = 80                  # epoch 数
 BS      = 4                   # VRAM が足りなければ 2
-CROP    = (1088, 416)         # (高さ, 幅)。32 の倍数。画像の中から無作為な位置で切り出す (画像が小さければ反射で足す)
+CROP    = (672, 672)          # (高さ, 幅)。32 の倍数。画像の中から無作為な位置で切り出す (画像が小さければ反射で足す)。
+                              # 鉄ブロックの画面は横長 (1200×1920) で気泡が横に流れるので、今までの (1088, 416) と同じ画素数の正方形
 EDGE_W  = 6.0                 # 境界クラスの損失の重み
 WORKERS = 0                   # Windows では 0 のまま
 SEED    = 0
-AUG_FLIP = False              # 左右反転
+AUG_FLIP = True               # 左右反転 (鉄ブロックは光が画面の上から当たるので、左右反転なら見え方が変わらない。上下反転はしない)
 AUG_ROTATE = False            # ±5° 回転
 COPY_PASTE = True             # 小さい気泡 (画像・ラベルごと) を空いた所に貼る (今の学習と同じ)
 CP_PROB = 0.5
@@ -255,13 +268,102 @@ def match_background(raw_bgr, bg_bgr, mode='offset'):
     return apply_background(bg_bgr, a, b, raw_bgr.shape), (a, b), ok
 
 
-def make_planes(raw_bgr, bg_bgr, preproc, bg_match=None):
+BG_REGISTER_MODES = (None, 'shift', 'affine')
+BG_REGISTER_SCALE = 0.5        # 位置合わせを当てはめる画像の縮小率 (実測: 0.5 でも 1.0 と同じ精度で 2〜7倍速い)
+BG_REGISTER_DEV = 8.0          # 元画像と背景画像の差 (9×9 平均) がこれより大きい画素 (気泡・輪郭・泡) は当てはめに使わない
+BG_REGISTER_LIMITS = {'scale': 0.02, 'shear': 0.01, 'shift': 15.0, 'min_cc': 0.5, 'min_frac': 0.05}
+                               # 信用する当てはめの範囲: 倍率 1±0.02、せん断 ±0.01、移動 15 px 以内、相関 0.5 以上、使える画素 5% 以上
+
+
+def fit_register(raw_bgr, bg_bgr, mode='affine', init=None, scale=BG_REGISTER_SCALE):
+    """背景画像を元画像に重ねる変換 (2×3 行列、元画像の画素座標) を求める。戻り値 (行列, 相関)、信用できなければ None。
+    鉄ブロックの実測 (2026-10-23, Background.bmp と image0000000/18/21/492): 背景より x に -0.75〜-1.0 px ずれ、
+    気泡の多いフレーム (18, 21) では縦の倍率も 0.9964〜0.9967 (画面の上下で 3〜4 px の差) だった。
+    'affine' で合わせると溝の模様の残り (局所のばらつき) が 3.3〜3.5 -> 2.4〜2.5、7.5〜8.0 -> 4.8 に下がった。
+    方法: 両方を scale に縮小して模様だけを残し (ぼかしとの差)、ECC で当てはめる。気泡・輪郭・泡で差の大きい所は
+    マスクで除き、合わせ直した差でマスクを作り直してもう 1回。'shift' は平行移動だけ。
+    init (前のフレームの行列) から始めると速い。init が無く、ずれ 0 から始めて当てはめられなかったときは、位相相関で
+    付けたずれの見当からもう 1回当てはめる (ずれが模様の細かさより大きいと、最初のマスクがほとんど空になるため)。
+    倍率・せん断・移動量が BG_REGISTER_LIMITS を超えたら None"""
+    if mode is None:
+        return np.eye(2, 3, dtype=np.float32), 1.0
+    if mode not in BG_REGISTER_MODES:
+        raise ValueError(f'BG_REGISTER は {BG_REGISTER_MODES} のどれか: {mode!r}')
+    if bg_bgr.shape != raw_bgr.shape:
+        bg_bgr = cv2.resize(bg_bgr, (raw_bgr.shape[1], raw_bgr.shape[0]))
+    r = cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    g = cv2.cvtColor(bg_bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    if scale != 1.0:
+        r = cv2.resize(r, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        g = cv2.resize(g, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    sig = max(2.0, 8.0 * scale)
+    rh, gh = r - cv2.GaussianBlur(r, (0, 0), sig), g - cv2.GaussianBlur(g, (0, 0), sig)
+    W = np.eye(2, 3, dtype=np.float32)
+    if init is not None:
+        W = np.array(init, np.float32).reshape(2, 3).copy()
+        W[:, 2] *= scale
+        if mode == 'shift':
+            W[:, :2] = np.eye(2, dtype=np.float32)
+    fit = _ecc_register(r, g, rh, gh, W, mode, scale)
+    if fit is None and init is None:
+        (sx, sy), _ = cv2.phaseCorrelate(gh, rh, cv2.createHanningWindow((r.shape[1], r.shape[0]), cv2.CV_32F))
+        if 0.5 <= float(np.hypot(sx, sy)) <= BG_REGISTER_LIMITS['shift'] * scale:
+            W[:, 2] = (sx, sy)
+            fit = _ecc_register(r, g, rh, gh, W, mode, scale)
+    return fit
+
+
+def _ecc_register(r, g, rh, gh, W, mode, scale):
+    """fit_register の当てはめ 1回分 (縮小した画像 r, g と模様 rh, gh、行列 W から)。戻り値 (行列, 相関) または None"""
+    motion = cv2.MOTION_AFFINE if mode == 'affine' else cv2.MOTION_TRANSLATION
+    crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 50, 1e-4)   # 実測: 80 回・1e-5 と移動量の差 0.02 px 以内で 2倍速い
+    lim = BG_REGISTER_LIMITS
+    W = W.copy()
+    cc = 0.0
+    for _ in range(2):
+        d = r - cv2.warpAffine(g, W, (r.shape[1], r.shape[0]), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        dev = cv2.blur(np.abs(d - float(np.median(d))), (9, 9))
+        mask = (dev < BG_REGISTER_DEV).astype(np.uint8)
+        mask[:3] = 0
+        mask[-3:] = 0
+        mask[:, :3] = 0
+        mask[:, -3:] = 0
+        if mask.mean() < lim['min_frac']:
+            return None
+        try:
+            cc, W = cv2.findTransformECC(gh, rh, W, motion, crit, mask, 5)
+        except cv2.error:
+            return None
+    Wf = W.astype(np.float64)
+    Wf[:, 2] /= scale
+    if (not np.all(np.isfinite(Wf)) or cc < lim['min_cc'] or abs(Wf[0, 0] - 1) > lim['scale']
+            or abs(Wf[1, 1] - 1) > lim['scale'] or abs(Wf[0, 1]) > lim['shear'] or abs(Wf[1, 0]) > lim['shear']
+            or float(np.hypot(Wf[0, 2], Wf[1, 2])) > lim['shift']):
+        return None
+    return Wf.astype(np.float32), float(cc)
+
+
+def apply_register(bg_bgr, W, shape=None):
+    """背景画像を行列 W で動かす (shape = 元画像の (H, W) に大きさを合わせてから)。W が None なら動かさない"""
+    if shape is not None and bg_bgr.shape[:2] != tuple(shape[:2]):
+        bg_bgr = cv2.resize(bg_bgr, (int(shape[1]), int(shape[0])))
+    if W is None:
+        return bg_bgr
+    H, Wd = bg_bgr.shape[:2]
+    return cv2.warpAffine(bg_bgr, np.asarray(W, np.float32), (Wd, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
+
+
+def make_planes(raw_bgr, bg_bgr, preproc, bg_match=None, bg_register=None):
     """元画像 + 背景画像 -> {'B', 'D', 'DK', 'DB'} (どれも uint8 (H, W))
     DK / DB: 背景より暗くなった分 / 明るくなった分 (×Brightness)。
     鉄の流路の実測 (images/44, 気泡 1個): 気泡の中 (気体) は液体より約 40 階調暗い -> B では「白く塗りつぶした円」、DK でも中が白い。
     輪郭 (メニスカス) の明暗は向きで変わる: 光の来る側 (画像の上) は明るく (DB)、反対側は暗く (DK)、その外に約 10 px の影 (DK)。
     (透明な流路では界面はいつも暗く、液膜のむらが明るかった。raw/ の説明はそちらの話)
-    bg_match ('offset' / 'gain'): 先に背景画像の明るさを元画像に合わせる (match_background)。None なら raw/ と同じ"""
+    bg_register ('affine' / 'shift'): 先に背景画像の位置を元画像に合わせる (fit_register。合わなければ動かさない)。
+    bg_match ('offset' / 'gain'): 次に背景画像の明るさを元画像に合わせる (match_background)。両方 None なら raw/ と同じ"""
+    if bg_register is not None:
+        fit = fit_register(raw_bgr, bg_bgr, bg_register)
+        bg_bgr = apply_register(bg_bgr, fit[0] if fit else None, raw_bgr.shape)
     if bg_match is not None:
         bg_bgr = match_background(raw_bgr, bg_bgr, bg_match)[0]
     B, D = bin_diff(raw_bgr, bg_bgr, preproc)
@@ -909,6 +1011,42 @@ def original_name(im):
     return f'{m.group(1)}.{m.group(2)}' if m else fn
 
 
+def index_originals(dirs):
+    """ORIGINAL_IMAGE_DIRS の画像の一覧: 名前 (小文字) -> パスのリスト、拡張子を除いた名前 (小文字) -> パスのリスト"""
+    by_name, by_stem = {}, {}
+    for d in dirs:
+        d = resolve(d)
+        if not d.is_dir():
+            raise FileNotFoundError(f'ORIGINAL_IMAGE_DIRS のフォルダがありません: {d}')
+        for p in d.iterdir():
+            if p.suffix.lower() in IMG_EXT:
+                by_name.setdefault(p.name.lower(), []).append(p)
+                by_stem.setdefault(p.stem.lower(), []).append(p)
+    return by_name, by_stem
+
+
+def find_original(name, exported, index):
+    """元の名前 name の画像を ORIGINAL_IMAGE_DIRS の一覧から探す。同じ名前が何個かあれば、書き出しの画像に一番近いもの。
+    大きさが違うもの・平均の差が ORIGINAL_MAX_DIFF を超えるもの (別の動画の同じ名前など) は使わない。
+    戻り値 (画像 BGR, パス, 平均の差)。見つからなければ (None, None, 一番近かった差 または None)"""
+    by_name, by_stem = index
+    cands = by_name.get(name.lower()) or by_stem.get(Path(name).stem.lower()) or []
+    ex = cv2.cvtColor(exported, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    best = (None, None, None)
+    for p in cands:
+        img = cv2.imread(str(p))
+        if img is None or img.shape[:2] != exported.shape[:2]:
+            continue
+        if img.ndim == 2:
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        dm = float(np.mean(np.abs(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32) - ex)))
+        if best[2] is None or dm < best[2]:
+            best = (img, p, dm)
+    if best[0] is None or best[2] > ORIGINAL_MAX_DIFF:
+        return None, None, best[2]
+    return best
+
+
 def background_for(name, backgrounds=None, default=None):
     """元の名前 -> 背景画像のパス (BACKGROUNDS の先頭が一番長く一致するもの)。無ければ default"""
     backgrounds = BACKGROUNDS if backgrounds is None else backgrounds
@@ -940,7 +1078,8 @@ def _save(dst, split, stem, pl, lbl, ins):
 def dataset_key(src, old_src, train_hw=None):
     """DST/meta.json に書く「何から作ったか」。REBUILD_DATASET = False のとき、今の設定と違えば作り直す"""
     k = {'layout': DATASET_LAYOUT, 'src': str(Path(src).resolve()),
-         'old_src': str(Path(old_src).resolve()) if old_src else None, 'preproc': list(PREPROC), 'bg_match': BG_MATCH}
+         'old_src': str(Path(old_src).resolve()) if old_src else None, 'preproc': list(PREPROC), 'bg_match': BG_MATCH,
+         'bg_register': BG_REGISTER}
     if train_hw is not None:
         k['train_hw'] = train_hw
     return k
@@ -981,12 +1120,25 @@ def build_dataset(src, dst, old_src=None):
                          '(このファイルの AUG_FLIP / AUG_ROTATE / COPY_PASTE を使う)')
     bg_cache, shapes = {}, Counter()
     stats = Counter()
+    orig_index = index_originals(ORIGINAL_IMAGE_DIRS) if ORIGINAL_IMAGE_DIRS else None
+    reg_log = []                # 位置合わせの (画面中央の dx, dy, 横の倍率, 縦の倍率) (最後に範囲を表示)
     for sdir, im, anns, bgp, name in plan:
         split = SPLIT_MAP[sdir.name]
         raw = cv2.imread(str(sdir / im['file_name']))
         if raw is None:
             print(f'    読み込み失敗 (飛ばします): {sdir / im["file_name"]}')
             continue
+        if orig_index is not None:             # Roboflow の JPEG の代わりに元の画像 (BMP など) を使う
+            orig, opath, odiff = find_original(name, raw, orig_index)
+            if orig is None:
+                stats['orig_missing'] += 1
+                if stats['orig_missing'] <= 5:
+                    print(f'    ※ {sdir.name}/{name}: ORIGINAL_IMAGE_DIRS に元の画像が見つからない'
+                          + (f' (同じ名前はあるが中身が違う: 平均の差 {odiff:.1f})' if odiff is not None else '')
+                          + ' ので、書き出しの画像を使います')
+            else:
+                raw = orig
+                stats['orig_used'] += 1
         if (cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY) < 15).mean() > 0.5:
             raise SystemExit(f'SRC の画像が二値化画像に見えます (黒い画素が半分以上): {sdir.name}/{im["file_name"]}\n'
                              '  SRC には背景の残った元画像の書き出しを、今までの二値化画像は OLD_BIN_SRC に指定してください')
@@ -998,7 +1150,20 @@ def build_dataset(src, dst, old_src=None):
         if raw.shape != bg_cache[bgp].shape:
             raise SystemExit(f'{sdir.name}/{name}: 画像の大きさ {raw.shape[:2]} が背景画像 {bg_cache[bgp].shape[:2]} と違います。'
                              'Roboflow で Resize を付けて書き出していませんか? (Resize 無しで書き出し直す / 背景画像を確認)')
-        bg_m, _, ok = match_background(raw, bg_cache[bgp], BG_MATCH)
+        bg_r = bg_cache[bgp]
+        if BG_REGISTER is not None:
+            fit = fit_register(raw, bg_r, BG_REGISTER)
+            if fit is None:
+                stats['reg_rejected'] += 1
+                if stats['reg_rejected'] <= 5:
+                    print(f'    ※ {sdir.name}/{name}: 背景の位置合わせが当てはめられない (模様の見える所が少ない / ずれが大きすぎる) '
+                          'ので動かしません')
+            else:
+                c = np.array([raw.shape[1] / 2.0, raw.shape[0] / 2.0, 1.0])   # 画面中央のずれ (2_steel_track.py の qc_report と同じ)
+                dx, dy = fit[0].astype(np.float64) @ c - c[:2]
+                reg_log.append((float(dx), float(dy), float(fit[0][0, 0]), float(fit[0][1, 1])))
+            bg_r = apply_register(bg_r, fit[0] if fit else None, raw.shape)
+        bg_m, _, ok = match_background(raw, bg_r, BG_MATCH)
         if not ok:
             stats['bg_rejected'] += 1
             if stats['bg_rejected'] <= 5:
@@ -1033,6 +1198,17 @@ def build_dataset(src, dst, old_src=None):
         print(f'  valid が無いので train の {stats["val"]}枚を val に分けました')
     for split in ('train', 'val', 'test'):
         print(f'  [{split}] 画像 {stats[split]}枚  気泡 {stats[split + "_bubbles"]}個')
+    if orig_index is not None:
+        print(f'  元の画像 (ORIGINAL_IMAGE_DIRS) を使った画像 {stats["orig_used"]}枚 / 見つからず書き出しを使った画像 '
+              f'{stats["orig_missing"]}枚')
+    if BG_REGISTER is not None:
+        if reg_log:
+            a = np.array(reg_log)
+            print(f'  背景の位置合わせ ({BG_REGISTER!r}): {len(a)}枚  画面中央のずれ x {a[:, 0].min():+.2f}〜{a[:, 0].max():+.2f} px, '
+                  f'y {a[:, 1].min():+.2f}〜{a[:, 1].max():+.2f} px, 縦の倍率 {a[:, 3].min():.4f}〜{a[:, 3].max():.4f}'
+                  + (f'  (当てはめられず動かさなかった画像 {stats["reg_rejected"]}枚)' if stats['reg_rejected'] else ''))
+        elif stats['reg_rejected']:
+            print(f'  ※ 背景の位置合わせはどの画像でも当てはめられませんでした ({stats["reg_rejected"]}枚)')
     if not stats['test']:
         print('  ※ 新しい画像の test がありません。元画像での比較 [3] ができないので、Roboflow で test を分けてください')
     if old_src:
@@ -1328,7 +1504,7 @@ def train(root, out, dev, train_hw):
     meta = {'encoder': encoder, 'classes': 3, 'mean': MEAN, 'std': STD,
             'in_channels': input_channels(INPUT_MODE, USE_PRIOR),
             'input': {'mode': INPUT_MODE, 'preproc': list(PREPROC), 'prior': bool(USE_PRIOR), 'prior_edge_px': PRIOR_EDGE_PX,
-                      'bg_match': BG_MATCH},
+                      'bg_match': BG_MATCH, 'bg_register': BG_REGISTER},
             'ctx': {'layers': CTX_LAYERS, 'heads': heads} if CTX_LAYERS else None,
             'prior_aug': prior_aug().as_dict() if USE_PRIOR else None, 'prior_edge_px': PRIOR_EDGE_PX,
             'train_hw': train_hw, 'edge_px': EDGE_PX, 'edge_w': EDGE_W, 'crop': list(CROP), 'seed': SEED,
@@ -1520,14 +1696,17 @@ def main():
     dst = resolve(DST)
     if BG_MATCH not in BG_MATCH_MODES:
         raise ValueError(f'BG_MATCH は {BG_MATCH_MODES} のどれか: {BG_MATCH!r}')
+    if BG_REGISTER not in BG_REGISTER_MODES:
+        raise ValueError(f'BG_REGISTER は {BG_REGISTER_MODES} のどれか: {BG_REGISTER!r}')
     print('\n[1] データセットの変換 (B = 二値化, D = 差分, DK / DB = 暗く / 明るくなった分'
-          + (f', 背景の明るさ合わせ {BG_MATCH!r})' if BG_MATCH else ')'))
+          + (f', 背景の位置合わせ {BG_REGISTER!r}' if BG_REGISTER else '')
+          + (f', 背景の明るさ合わせ {BG_MATCH!r}' if BG_MATCH else '') + ')')
     src, old_src = resolve(SRC), (resolve(OLD_BIN_SRC) if OLD_BIN_SRC else None)
     meta = json.loads((dst / 'meta.json').read_text(encoding='utf-8')) if (dst / 'meta.json').exists() else None
-    same = meta is not None and {k: meta.get(k) for k in ('layout', 'src', 'old_src', 'preproc', 'bg_match')} == dataset_key(src, old_src)
-    if REBUILD_DATASET or not same:     # SRC / OLD_BIN_SRC / PREPROC / BG_MATCH / 作り方の版 のどれかが変わったら作り直す
+    same = meta is not None and {k: meta.get(k) for k in ('layout', 'src', 'old_src', 'preproc', 'bg_match', 'bg_register')} == dataset_key(src, old_src)
+    if REBUILD_DATASET or not same:     # SRC / OLD_BIN_SRC / PREPROC / BG_MATCH / BG_REGISTER / 作り方の版 のどれかが変わったら作り直す
         if not REBUILD_DATASET and meta is not None:
-            print('  変換済みのデータセットが今の設定 (SRC / OLD_BIN_SRC / PREPROC / BG_MATCH) と違うので作り直します')
+            print('  変換済みのデータセットが今の設定 (SRC / OLD_BIN_SRC / PREPROC / BG_MATCH / BG_REGISTER) と違うので作り直します')
         train_hw = build_dataset(src, dst, old_src)
     else:
         train_hw = meta['train_hw']
