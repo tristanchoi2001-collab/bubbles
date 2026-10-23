@@ -27,6 +27,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 UA = "bubbles-research/0.1 (literature check; no contact address)"
 
+# 사람이 확인한 예외: DOI가 맞지만 Crossref 서지(연도·저자)가 TSV와 다른 이유가 분명한 것
+ACCEPT = {
+    "10.1615/0-8493-9925-4.70": "Crossref 연도 2023은 Begell 디지털화 연도. 학회 발표는 1988-07",
+    "10.2172/60784": "OSTI 보고서라 Crossref 저자가 기관(LBL). 실제 저자 Zimmerman & Bodvarsson",
+}
+
 
 def fold(s):
     s = unicodedata.normalize("NFKD", s or "")
@@ -194,6 +200,9 @@ def main():
             except ValueError:
                 pass
         probs = sorted(set(probs))
+        if probs and d in ACCEPT:
+            probs = []
+            levels = (levels + "; " if levels else "") + "확인된 예외: " + ACCEPT[d]
         st = "OK" if not probs else "WARN"
         title = clean((m.get("title") or [""])[0])
         check.append([d, st, cfa, str(cy or ""), title[:120],

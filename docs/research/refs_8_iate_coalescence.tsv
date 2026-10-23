@@ -1,0 +1,40 @@
+doi	first_author	year	short_title	level	note
+10.1016/j.nucengdes.2003.10.008	Sun	2004	Modeling of bubble coalescence and disintegration in confined upward two-phase flow	C	NED 230(1-3):3-26. 200x10 mm, two-group IATE confined; source-term forms via Chen 2021 Table 5 (2nd-hand)
+10.1016/j.nucengdes.2003.10.014	Sun	2004	Model evaluation of two-group IATE for confined upward flow	C	NED 230(1-3):27-47
+10.1016/s0029-5493(02)00289-3	Kim	2003	Interfacial area transport and evaluation of source and sink terms for confined air-water bubbly flow	C	NED 219(1):61-75
+10.1016/s0894-1777(02)00152-8	Kim	2002	Interfacial structures of confined air-water two-phase bubbly flow	C	ETFS 26(5):461-472
+10.1016/j.ijheatfluidflow.2012.04.007	Shen	2012	One-dimensional interfacial area transport, vertical upward bubbly flow, narrow rectangular channel	C	IJHFF 36:72-82
+10.1016/j.ijheatfluidflow.2013.06.010	Shen	2013	One-group IATE and its sink and source terms in narrow rectangular channel	C	IJHFF 44:312-326
+10.1016/j.cherd.2022.10.039	Liu	2023	1D bubbly flow interfacial area transport in horizontal narrow rectangular channel	C	CHERD 189:30-45 (Crossref year 2023; S2 lists 2022 online)
+10.1016/j.pnucene.2023.104644	Cheng	2023	Interfacial parameters in a narrow rectangular channel under different flow regimes	C	PNE 159:104644
+10.1115/1.2819517	Wilmarth	1997	Interfacial area concentration and void fraction, narrow rectangular vertical channels	C+A	JFE 119(4):916-922. gaps 1 and 2 mm, CCD image processing
+10.1016/j.ijmultiphaseflow.2016.04.011	Fu	2016	Robust image processing technique for bubbly flow in a narrow rectangular channel	C	IJMF 84:217-228
+10.1016/j.ijmultiphaseflow.2023.104428	Yang	2023	Unified two-component IAC model for narrow channel two-phase flow	C	IJMF 163:104428
+10.1016/s0017-9310(97)00167-1	Wu	1998	One-group interfacial area transport in vertical bubbly flow	C	IJHMT 41(8-9):1103-1112; authors Wu Q, Kim S, Ishii M, Beus SG; coefficients via Chen 2021 Table 4
+10.1016/s0017-9310(01)00327-1	Hibiki	2002	Development of one-group IATE in bubbly flow systems	C	IJHMT 45(11):2351-2372; coefficients via Chen 2021 Table 4
+10.1016/s0029-5493(00)00286-7	Hibiki	2000	Two-group IATE at bubbly-to-slug flow transition	C	NED 202(1):39-76 (seed list said IJHMT; actual journal NED)
+10.1016/s0017-9310(99)00325-7	Hibiki	2000	One-group interfacial area transport of bubbly flows in vertical round tubes	C	IJHMT 43(15):2711-2726
+10.1007/978-1-4419-7985-8	Ishii	2011	Thermo-Fluid Dynamics of Two-Phase Flow (2nd ed.)	C	Springer book; ch.10 IAT 217-242, ch.11 constitutive 243-313
+10.13182/nse01-69	Ishii	2004	Development of one-group and two-group IATE	C	NSE 146(3):257-273
+10.1016/j.nucengdes.2020.111019	Kim	2021	Progress in two-phase flow modeling: Interfacial area transport	C	NED 373:111019
+10.3390/e23091106	Chen	2021	IATE for bubble coalescence and breakup: developments and comparisons	C+F	Entropy 23(9):1106; full text via Europe PMC PMC8465106 (MDPI 403)
+10.1002/aic.690361004	Prince	1990	Bubble coalescence and break-up in air-sparged bubble columns	C+A	AIChE J 36(10):1485-1499; events measured by tracer-gas mixing
+10.1016/j.ces.2009.04.026	Liao	2009	Review: breakup models in turbulent dispersions	C	CES 64(15):3389-3406
+10.1016/j.ces.2010.02.020	Liao	2010	Review: coalescence mechanisms and models	C	CES 65(10):2851-2864
+10.1002/aic.690481103	Lehr	2002	Bubble-size distributions and flow fields in bubble columns	C+A	AIChE J 48(11):2426-2443; high-speed video observation per Scholar snippet
+10.1016/j.ijheatmasstransfer.2022.123244	Zhang	2022	Prediction of sliding bubble coalescence rate, subcooled flow boiling, narrow rectangular channel	C+A	IJHMT 196:123244; abstract from SSRN preprint 10.2139/ssrn.4113805
+10.3389/fenrg.2020.00096	Ren	2020	Visualization experiment of bubble coalescence in a narrow vertical rectangular channel	C+F	Front Energy Res 8; 700x40x2 mm, 4300 fps
+10.1002/cjce.5450810309	Laari	2003	Experimental determination of bubble coalescence and break-up rates in a bubble column	C+A	CJChE 81(3-4):395-401; inverse PBM from photographic BSD
+10.1016/j.expthermflusci.2015.10.003	Karn	2016	Bubble coalescence and breakup in turbulent bubbly wake of a ventilated hydrofoil	C	ETFS 70:397-407
+10.1038/s41598-022-05252-5	Ohashi	2022	Coalescence of two growing bubbles in a Hele-Shaw cell	C+A	Sci Rep 12; Ca_f=(eta Rdot/sigma)(R/D)^2
+10.1073/pnas.1017112108	Yokota	2011	Dimensional crossover in coalescence of viscous drops confined between two plates	C+A	PNAS 108(16):6395-6398
+10.1016/j.cis.2017.07.021	Okumura	2018	Viscous dynamics of drops and bubbles in Hele-Shaw cells	C	ACIS 255:64-75
+10.1103/physrevlett.106.068301	Biance	2011	Topological rearrangements and liquid fraction control foam stability	C	PRL 106(6):068301
+10.1103/physrevlett.98.244501	Ritacco	2007	Lifetime of bubble rafts: cooperativity and avalanches	C	PRL 98(24):244501
+10.1103/physrevlett.97.226101	Durand	2006	Relaxation time of the T1 process in a 2D foam	C	PRL 97(22):226101
+10.1103/physrevlett.100.024501	Bremond	2008	Decompressing emulsion droplets favors coalescence	C	PRL 100(2):024501
+10.1016/j.physrep.2012.02.003	Beatus	2012	The physics of 2D microfluidic droplet ensembles	C	Phys Rep 516(3):103-145
+10.1007/s00348-005-0068-7	Ouellette	2006	Quantitative study of 3D Lagrangian particle tracking algorithms	C	Exp Fluids 40(2):301-313 (Crossref date 2005 online)
+10.1038/nmeth.1237	Jaqaman	2008	Robust single-particle tracking in live-cell time-lapse sequences	C	Nat Methods 5(8):695-702; merge/split in LAP
+10.1038/nmeth.2808	Chenouard	2014	Objective comparison of particle tracking methods	C	Nat Methods 11(3):281-289
+10.1093/oxfordjournals.aje.a112510	Rogan	1978	Estimating prevalence from the results of a screening test	C	Am J Epidemiol 107(1):71-76

@@ -73,3 +73,19 @@ doi	first_author	year	short_title	level	note
 10.1017/jfm.2018.213	Gvozdic	2018	Heat transport in homogeneous bubbly flow	C	JFM 845:226-244
 10.1016/j.ijheatmasstransfer.2011.01.010	Ozer	2011	(dup check)	C	see above
 10.1016/0017-9310(69)90153-7	Ishibashi	1969	Saturated boiling HT in narrow spaces	C	IJHMT 12(8):863-893 (topic 2 overlap)
+10.1299/kikaib.57.3499	Monde	1991	Measurement of liquid film thickness during pass of bubble in a vertical rectangular channel	C+F	Trans JSME B 57(542):3499–3504; md 표에서 추가(lit_4_heat_transfer.md #5)
+10.1115/icmm2004-2383	Yang	2004	Flow boiling heat transfer and flow pattern in rectangular channel of mini-gap	C+A	ASME ICMM2004-2383, 573–580; md 표에서 추가(lit_4_heat_transfer.md #10)
+10.1115/imece2012-86669	Alam	2012	Experimental study and high speed visualization of flow boiling characteristics in silicon microgap heat sink; Experimental investigation an	C+A	IMECE2012-86669; IJHMT 55(25-26):7623–7634; md 표에서 추가(lit_4_heat_transfer.md #11)
+10.1115/1.2909076	Narayanan	2008	Two-phase convective heat transfer in miniature pipes under normal and microgravity conditions	C+A	J Heat Transfer 130(7):074502; md 표에서 추가(lit_4_heat_transfer.md #13)
+10.1115/icmm2004-2369	Dupont	2004	Evaporation in microchannels: influence of the channel diameter on heat transfer	C+A	ASME ICMM2004-2369, 461–468; md 표에서 추가(lit_4_heat_transfer.md #18)
+10.1016/j.ijheatmasstransfer.2019.05.089	Jain	2019	Modeling of pressure drop and heat transfer for flow boiling in a mini/micro-channel of rectangular cross-section	C+F	IJHMT 140:1029–1054 (arXiv:1902.00264); md 표에서 추가(lit_4_heat_transfer.md #19)
+10.1016/j.ijmultiphaseflow.2009.06.005	Harirchian	2009	The critical role of channel cross-sectional area in microchannel flow boiling heat transfer; Flow regime-based modeling of heat transfer an	C	IJMF 35(10):904–913; IJHMT 55(4):1246–1260; md 표에서 추가(lit_4_heat_transfer.md #26)
+10.1016/s0301-9322(01)00054-4	Lee	2001	Heat transfer correlation for boiling flows in small rectangular horizontal channels with low aspect ratios	C	IJMF 27(12):2043–2062; md 표에서 추가(lit_4_heat_transfer.md #27)
+10.1115/icnmm2007-30216	Bar-Cohen	2007	Modeling and prediction of two-phase refrigerant flow regimes and heat transfer characteristics in microgap channels; Two-phase thermal tran	C+A	ASME ICNMM2007-30216; Microgravity Sci Technol 24(1):1–15; md 표에서 추가(lit_4_heat_transfer.md #28)
+10.1590/s1678-58782005000100004	Ghajar	2004	Non-boiling heat transfer in gas-liquid flow in pipes – a tutorial	C+F	ENCIT 2004 CIT04-IL10 (abcm.org.br 공개); J Braz Soc Mech Sci Eng 27(1):46–73; md 표에서 추가(lit_4_heat_transfer.md #45)
+10.1016/j.ijmultiphaseflow.2006.01.002	Kim	2006	A general heat transfer correlation for non-boiling gas–liquid flow with different flow patterns in horizontal pipes; Validation of a genera	C	IJMF 32(4):447–465; ASME HT2007-32219; md 표에서 추가(lit_4_heat_transfer.md #47)
+10.1115/imece2018-86589	Shah	2018	General correlation for heat transfer during two-component gas-liquid flow in horizontal pipes	C	ASME IMECE2018-86589 (vertical: -86590). Shah 1981 AIChE Symp Ser 77(208):140-151은 DOI 없음; lit_4 #48
+10.1016/j.ijheatfluidflow.2013.12.001	Mehta	2014	Measurement of local heat transfer coefficient during gas–liquid Taylor bubble train flow by infra-red thermography	C	IJHFF 45:41–52; md 표에서 추가(lit_4_heat_transfer.md #60)
+10.1016/j.ijheatmasstransfer.2017.06.009	Kitagawa	2017	Effect of heated wall inclination on natural convection heat transfer in water with near-wall injection of millimeter-sized bubbles	C+A	IJHMT 113:1200–1211; md 표에서 추가(lit_4_heat_transfer.md #61)
+10.1115/interpack2009-89238	Sheehan	2009	Thermal imaging of two-phase cooled microgap channel wall	C+A	ASME InterPACK2009-89238, 491–499; md 표에서 추가(lit_4_heat_transfer.md #68)
+10.1016/j.ijmultiphaseflow.2011.11.012	Kim	2012	Measurement of two-phase flow and heat transfer parameters using infrared thermometry	C	IJMF 40:56–67; md 표에서 추가(lit_4_heat_transfer.md #69)
