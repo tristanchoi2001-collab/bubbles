@@ -50,7 +50,7 @@
 | # | 저자(연도) | 제목 | 학술지 권(호):쪽 | DOI | 조건 | 핵심 결과(숫자) | 관련성 | 확인 수준 |
 |---|---|---|---|---|---|---|---|---|
 | F1 | Cantat, Kern, Delannay (2004) | Dissipation in foam flowing through narrow channels | EPL 65(5):726-732 | 10.1209/epl/i2003-10169-0 | 2D 폼, 좁은 채널 | 압력 ∝ 속도^(2/3), Plateau border가 벽을 미끄러지는 소산. 길이당 힘 ληvCa^(−1/3)|u·n|, λ ≈ 10(측정)(F2 경유) | **"계면 길이 × 길이당 힘"의 가장 가까운 선례**(폼) | C (본문은 F2·P2 경유) |
-| F2 | Cantat, Delannay (2005) | Dissipative flows of 2D foams | Eur Phys J E 18 | 10.1140/epje/i2004-10154-5 | 이론·수치, 2D 폼 | Plateau border 길이당 힘 f = −λη_w vCa^(−1/3)|u_v·n|, λ ~ 10, 지수 −1/3~−1/2 범위 보고 | 길이당 마찰 + 방향 인자의 모델 사례 | C+F (HAL hal-00007608), DOI는 HAL 기재(Crossref 미대조) |
+| F2 | Cantat, Delannay (2005) | Dissipative flows of 2D foams | Eur Phys J E 18(1):55-67 | 10.1140/epje/i2004-10154-5 | 이론·수치, 2D 폼 | Plateau border 길이당 힘 f = −λη_w vCa^(−1/3)|u_v·n|, λ ~ 10, 지수 −1/3~−1/2 범위 보고 | 길이당 마찰 + 방향 인자의 모델 사례 | C+F (HAL hal-00007608 프리프린트) |
 | F3 | Terriac, Etrillard, Cantat (2006) | Viscous force exerted on a foam at a solid boundary: influence of the liquid fraction and of the bubble size | EPL 74(5):909-915 | 10.1209/epl/i2005-10583-2 | mm 채널(1 cm², 0.12 cm²)의 기포 열, V 10⁻⁴~5×10⁻³ m/s, Re ≲ 10 | ΔP = Σ(Plateau border 길이 × f_v), 막 수를 세어 씀. f_v ∝ Ca^0.56±0.02(2/3 아님), 막 간격 L에 따라 2.5배 변화 → 메니스커스만의 소산 모델과 모순 | 영상 계수(막 수)를 압력 강하 입력으로 쓴 선례. 지수 < 2/3 경고 | C+F (HAL hal-00096588) |
 | F4 | Raufaste, Foulon, Dollet (2009) | Dissipation in quasi-two-dimensional flowing foams | Phys Fluids 21(5):053102 | 10.1063/1.3142502 | 준2D 폼, Hele-Shaw, 이동 계면 | 기존 모델이 소산을 체계적으로 과소평가. 불일치 인자 ξ = 1.4(R_P/A^0.5)^(−0.5). P2 정리: f = 5.13γCa^(2/3)(√A_c/r_m)^0.48, 속도만 맞추면 Ca^0.58 | 실제 계수가 이론보다 큼 | C+A |
 | F5 | Kern, Weaire, Martin, Hutzler, Cox (2004) | Two-dimensional viscous froth model for foam dynamics | Phys Rev E 70(4):041411 | 10.1103/physreve.70.041411 | 모델 | (원문 미확인) 막 길이당 비선형 항력으로 2D 폼 동역학 | 길이당 항력 모델의 원형 | C |
@@ -80,7 +80,7 @@
 | T16 | Heil (2001) | Finite Reynolds number effects in the Bretherton problem | Phys Fluids 13(9):2517-2521 | 10.1063/1.1389861 | 2D 채널, 0.05 < Ca < 5, 0 < Re < 280 | 유한 Re에서 기포 앞 와류가 압력 상승을 눈에 띄게 키움 | 관성 보정 방향(증가) | C+A |
 | T17 | de Lózar, Juel, Hazel (2008) | The steady propagation of an air finger into a rectangular tube | J Fluid Mech 614:173-195 | 10.1017/s0022112008003455 | 직사각 관, 종횡비 α | α ≥ 8이면 준2차원. 가로 중력 Bo > 1이면 기포가 아래 벽에서 떨어짐 | 수평 3·7 mm(Bo_H 1.2·6.6)에서 아래 벽 메니스커스 없음 | C+A |
 | T18 | Hazel, Heil (2002) | The steady propagation of a semi-infinite bubble into a tube of elliptical or rectangular cross-section | J Fluid Mech 470:91-114 | 10.1017/s0022112002001830 | 수치 | 직사각 관에서 낮은 Ca는 Wong 외와 일치, 큰 Ca는 Wong 외가 과소 | 직사각 보정 | C+A |
-| T19 | Botticini 외 (2026) | Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle | Phys Rev Fluids 11:073601 | 10.1103/7z3l-zpzy (arXiv 기재, Crossref 미대조) | 이론, 모세관 다발 | 기포 수가 적으면 지수 2/3에서 2/3~1로 전환 | 지수 해석 | U (arXiv 2510.12588 초록) |
+| T19 | Botticini 외 (2026) | Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle | Phys Rev Fluids 11(7):073601 | 10.1103/7z3l-zpzy | 이론, 모세관 다발 | 기포 수가 적으면 지수 2/3에서 2/3~1로 전환 | 지수 해석 | C+A (arXiv 2510.12588 초록) |
 | T20 | Fries, Trachsel, von Rohr (2008) | Segmented gas-liquid flow characterization in rectangular microchannels | Int J Multiphase Flow 34(12):1108-1118 | 10.1016/j.ijmultiphaseflow.2008.07.002 | 직사각 미세유로 | (원문 미확인) 슬러그 흐름 특성과 압력 강하 | 직사각 Taylor 흐름 | C |
 | T21 | Abadie 외 (2012) | Hydrodynamics of gas-liquid Taylor flow in rectangular microchannels | Microfluid Nanofluid 12(1-4):355-369 | 10.1007/s10404-011-0880-8 | 직사각 미세유로 | (원문 미확인) | 직사각 Taylor 흐름 | C |
 
@@ -200,7 +200,7 @@
 
 ### 4.1 검색 기록
 - Crossref(query.bibliographic, 행 5~6, mailto 없음)
-  - 서지 대조: 이 문서의 모든 DOI(K14, T19 제외).
+  - 서지 대조: 이 문서의 모든 DOI. K14(10.7538/…)만 Crossref에 없다(중국 DOI 등록처로 추정, U).
   - 새로움 검색 8건, 모두 관련 없음 또는 아래 후보만:
     "pressure drop bubbles Hele-Shaw cell meniscus friction"(6건, 채널 ΔP 없음), "pressure drop two-dimensional bubbly flow Hele-Shaw channel"(6, 없음), "pressure drop confined bubbles shallow wide microchannel lubrication film"(6, 없음), "interfacial perimeter pressure drop two-phase flow narrow gap image"(6, 없음), "bubble train pressure drop Hele-Shaw channel capillary number two-thirds"(6, Lawless 외 2024 PRF 등, ΔP 없음), "friction of confined bubbles in a Hele-Shaw cell pressure drop flow rate"(6, 없음), "pancake bubbles pressure drop quasi two-dimensional flow"(6, 없음), "two-phase flow narrow rectangular channel pressure drop model bubble length film thickness"(6, K17·K13 발견).
   - 그룹 검색: "Booth Griffiths Howell bubble Hele-Shaw"(6건 → P1, P3, P17과 같은 그룹 2024~2026 논문 3편), Hele-Shaw 속도 실험(P8, P10, P11, P12), 슬릿 미세유로(K15, K16, Chinnov 그룹 5건).
@@ -211,7 +211,7 @@
   4. "Hele-Shaw" bubbles "pressure drop" "bubble velocity" Bretherton "thin film" experiment channel multiple bubbles: 27건. 상위 10건(Booth 2025 racing, Hilgenfeldt 외 2008 폼 리뷰, Schwartz 외 1986, Booth 학위논문, Ratulowski 1988, Park 1994, Balestra 2018, Booth 2025 계면활성제, Lu & Chang 1988, Ronshin & Chinnov 2019) 중 **여러 기포의 운동학으로 유로 ΔP를 예측한 것 없음**.
   5. "narrow rectangular channel" "bubble velocity" "pressure drop" "image processing" "interfacial area"/"bubble number density": 14건. Yan 외 2014(Prog Nucl Energy 73:64, 10.1016/j.pnucene.2014.01.003)와 Wang 외 2017(학회)이 영상 기포 변수와 ΔP를 같은 실험에서 쟀다(검색 요약 기준). 영상 변수를 ΔP 모델 입력으로 쓴 증거는 없음.
 - WebSearch(standard, 7회): Lee & Lee 계수(2회, 없음), Kim & Mudawar 계수·PDF(2회, PDF 위치만, 서버 503), Walsh 초록(UL 저장소), Booth 학위논문 위치(ORA), Liu 2022 초록(못 찾음).
-- 전문 확인: Booth 학위논문 전체에서 "pressure drop" 35회 = 모두 메니스커스 단위. "resistance", "permeab", "pumping", "pressure gradient"(채널 단위)는 0회. → 이 그룹은 유로 압력 강하를 다루지 않았다.
+- 전문 확인: Booth 학위논문 전체에서 "pressure drop" 35회 = 모두 메니스커스 단위. "resistance", "hydraulic", "pumping", "pressure gradient"는 0회, "permeab"는 "impermeable wall"(경계조건)뿐. → 이 그룹은 유로 압력 강하를 다루지 않았다.
 
 ### 4.2 판단
 1. 미세유로 액적 저항 추출(조정자 질문 1)

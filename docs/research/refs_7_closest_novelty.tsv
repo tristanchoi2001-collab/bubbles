@@ -11,7 +11,7 @@ doi	first_author	year	short_title	level	note
 10.1016/0017-9310(88)90004-x	Fujita	1988	Nucleate boiling and CHF in narrow space between rectangular surfaces	C+A	IJHMT 31(2):229-239. 포화수, 갭 5/2/0.6/0.15 mm, 기울기 변화. 초록(CoLab)
 10.1299/jsmeb1988.31.3_513	Fujita	1988	Heat transfer in nucleate boiling within a vertical narrow space	C	JSME Int J Ser II 31(3):513-519. 갭 5→0.15 mm 4단계(J-STAGE 검색 요약)
 10.1016/j.expthermflusci.2011.02.006	Cardoso	2011	FC72 and FC87 nucleate boiling inside a narrow horizontal space	C+F	ETFS 35(6):1038-1045. 공개 PDF 일부 확인: 갭 0.1~1, 13 mm, FC72 Lc 0.73 mm, 위 향 가열 원판 12 mm
-10.3389/fmech.2017.00016	Shinmoto	2017	Boiling of immiscible liquids flowing in narrow rectangular heated channels	C+F	Front Mech Eng 3:16. 본문 HTML(앞부분) 확인: 수평, 아래 벽 가열(Al 블록+카트리지 히터), 위 유리판 너머 고속 촬영(≤1000 fps), 30×175 mm, H=2/1/0.5 mm, FC72·물. CHF 수치는 본문. ΔP 측정 미확인
+10.3389/fmech.2017.00016	Shinmoto	2017	Boiling of immiscible liquids flowing in narrow rectangular heated channels	C+F	Front Mech Eng 3:16. 본문 HTML 확인: 수평, 아래 벽 가열(Al 블록 7개, 깊이 1.5/8.5/15.5 mm 열전대로 1D 외삽), 가열 구간 ΔP(Validyne P55D), 위 유리판 너머 고속 촬영(≤1000 fps, 정성), 30×175 mm, H=2/1/0.5 mm, FC72·물·혼합
 10.3390/en12173368	Klugmann	2019	Flow boiling in minigap in the reversed two-phase thermosiphon loop	C+A	Energies 12(17):3368. 갭 1/2/3 mm, 물·에탄올, 가시화+압력. 본문은 403
 10.1016/0017-9310(92)90190-4	Willingham	1992	Channel height effects on forced-convection boiling and CHF, discrete heat sources	C	IJHMT 35(8):1865-1880. FC-72, 채널 높이 2/5/10 mm(검색 요약). Purdue PDF 503
 10.1016/j.ijmultiphaseflow.2015.11.006	Chinnov	2016	Two-phase flow patterns in short horizontal rectangular microchannels	C+A	IJMF 80:57-68. 높이 100~500 µm, 폭 9~40 mm, 수평. 초록(CoLab)

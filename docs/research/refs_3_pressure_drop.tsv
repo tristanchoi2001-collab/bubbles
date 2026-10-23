@@ -1,23 +1,81 @@
 doi	first_author	year	short_title	level	note
-10.1016/0017-9310(67)90047-6	Chisholm	1967	A theoretical basis for the Lockhart-Martinelli correlation	C	IJHMT 10(12):1767-1778
-10.1016/0301-9322(96)00010-9	Mishima	1996	Air-water two-phase flow in small diameter vertical tubes	C	IJMF 22(4):703-712
-10.1016/s0301-9322(00)00050-1	Lee	2001	Pressure drop correlations, horizontal rectangular channels with small heights	C	IJMF 27(5):783-796; Crossref author 'Ju Lee, Yong Lee' (Han Ju Lee, Sang Yong Lee)
-10.1016/j.ijmultiphaseflow.2008.08.003	Sun	2009	Evaluation of pressure drop prediction methods in mini-channels	C	IJMF 35(1):47-54
-10.1016/j.ijheatmasstransfer.2009.09.011	Zhang	2010	Correlations of two-phase frictional pressure drop and void fraction in mini-channel	C	IJHMT 53(1-3):453-465
-10.1016/j.ijheatmasstransfer.2010.02.029	Li	2010	General correlation for adiabatic two-phase pressure drop in micro/mini-channels	C	IJHMT 53(13-14):2732-2739
-10.1016/j.ijheatmasstransfer.2012.02.047	Kim	2012	Universal approach, adiabatic and condensing mini/micro-channel dP	C	IJHMT 55(11-12):3246-3261
-10.1016/j.ijheatmasstransfer.2012.11.045	Kim	2013	Universal approach, saturated flow boiling dP	C	IJHMT 58(1-2):718-734
-10.1017/s0022112061000160	Bretherton	1961	The motion of long bubbles in tubes	C+A	JFM 10(2):166-188
-10.1002/aic.10495	Kreutzer	2005	Inertial and interfacial effects on pressure drop of Taylor flow	C+A	AIChE J 51(9):2428-2440
-10.1016/j.ijmultiphaseflow.2009.06.007	Walsh	2009	Pressure drop in two phase slug/bubble flows in mini scale capillaries	C	IJMF 35(10):879-884
-10.1007/s10404-009-0448-z	Warnier	2010	Pressure drop of gas-liquid Taylor flow in round micro-capillaries	C	Microfluid Nanofluid 8(1):33-; Crossref online 2009, issue 2010
-10.1016/j.ijmultiphaseflow.2008.07.002	Fries	2008	Segmented gas-liquid flow characterization in rectangular microchannels	C	IJMF 34(12):1108-1118
-10.1039/b706549c	Fuerstman	2007	The pressure drop along rectangular microchannels containing bubbles	C	Lab Chip 7(11):1479-
-10.1209/epl/i2003-10169-0	Cantat	2004	Dissipation in foam flowing through narrow channels	C	EPL 65(5):726-732
-10.1063/1.4793544	Cantat	2013	Liquid meniscus friction on a wet plate: bubbles, lamellae, foams	C+A	PoF 25(3):031303
-10.1063/1.3142502	Raufaste	2009	Dissipation in quasi-two-dimensional flowing foams	C+A	PoF 21(5):053102; authors Raufaste, Foulon, Dollet (not Cantat)
-10.1063/1.1289396	Aussillous	2000	Quick deposition of a fluid on the wall of a tube	C+A	PoF 12(10):2367-2371
-10.1017/s0022112084000367	Park	1984	Two-phase displacement in Hele Shaw cells: theory	C+A	JFM 139:291-308
-10.1016/j.ijheatmasstransfer.2011.09.024	Harirchian	2012	Flow regime-based modeling of heat transfer and dP in microchannel flow boiling	C	IJHMT 55(4):1246-1260
-10.1115/1.1428327	Garimella	2002	Intermittent-flow dP model, circular microchannels	C+A	J Fluids Eng 124(1):205-214; Crossref published 2001 (online); erratum 10.1115/1.1770773
-10.1115/1.1601258	Garimella	2003	Intermittent-flow dP model, noncircular microchannels	C+A	J Fluids Eng 125(5):887-894; erratum 10.1115/1.1770782
+10.1017/jfm.2022.1008	Booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	C+F	[P1] JFM 954:A21; beta1 3.88, beta2 -1.13, delta = 1.12 Ca^(1/3)/eps; OA (Cambridge)
+10.1063/1.4793544	Cantat	2013	Liquid meniscus friction on a wet plate: bubbles, lamellae, foams	C+F	[P2] PoF 25(3):031303; arXiv 1305.0569; xi 4.94 / 6.22 / 6.82, zeta 0.94
+10.1017/jfm.2025.10951	Booth	2025	The motion of a surfactant-laden bubble in a channel or a Hele-Shaw cell	C+A	[P3] JFM 1025:A12; meniscus pressure drop up to 4^(2/3)
+-	Booth	2024	The motion of bubbles in Hele-Shaw cells (DPhil thesis)	C+F	[P4] Univ. Oxford; https://ora.ox.ac.uk/objects/uuid:2712a3fb-d5de-4899-8051-a9f42695b393 ; no DOI
+10.1017/s0022112084000367	Park	1984	Two-phase displacement in Hele Shaw cells: theory	C+A	[P5] JFM 139:291-308
+10.1063/1.866105	Reinelt	1987	Thin film variations and transverse curvature, fingers in a Hele-Shaw cell	C+A	[P6] PoF 30(9):2617-2623
+10.1063/1.857610	Burgess	1990	Analysis of the boundary conditions for a Hele-Shaw bubble	C+A	[P7] PoF A 2(7):1105-1117
+10.1103/physrevfluids.4.113602	Reichert	2019	Predicting droplet velocity in a Hele-Shaw cell	C	[P8] PRFluids 4(11):113602; content via Booth thesis
+10.1017/jfm.2018.457	Reichert	2018	Topography of the lubrication film under a pancake droplet	C+A	[P9] JFM 850:708-732
+10.1017/jfm.2025.167	Baue	2025	Droplet velocity, low and high soluble surfactants, Hele-Shaw cell	C+A	[P10] JFM 1009:A23; first author Baué
+10.1063/1.868059	Park	1994	The influence of surfactant on the bubble motion in Hele-Shaw cells	C+A	[P11] PoF 6(10):3267-3275
+10.1063/1.869113	Maruvada	1996	Retarded motion of bubbles in Hele-Shaw cells	C+A	[P12] PoF 8(12):3229-3233
+10.1063/1.866566	Kopf-Sill	1988	Bubble motion in a Hele-Shaw cell	C+A	[P13] PoF 31(1):18-26
+10.1017/s002211208600109x	Maxworthy	1986	Bubble formation, motion and interaction in a Hele-Shaw cell	C+A	[P13 note] JFM 173:95-114
+10.1093/qjmam/12.3.265	Taylor	1959	A note on the motion of bubbles in a Hele-Shaw cell and porous medium	C	[P14] QJMAM 12(3):265-279
+10.1017/jfm.2016.357	Zhu	2016	A pancake droplet translating in a Hele-Shaw cell	C+A	[P15] JFM 798:955-969
+10.1063/1.4952398	Ling	2016	Droplet migration in a Hele-Shaw cell: effect of the lubrication film	C+A	[P16] PoF 28(6):062001
+10.1098/rsos.252426	Booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	C+A	[P17] R Soc Open Sci 13(3):252426
+10.1103/physrevfluids.9.123603	Wu	2024	Motion and deformation of a bubble in a Hele-Shaw cell	C	[P17 note] PRFluids 9(12):123603
+10.1017/jfm.2025.322	Booth	2025	Bubble racing in a Hele-Shaw cell	C+A	[P17 note] JFM 1010:A19
+10.1098/rspa.2024.0613	Booth	2025	The motion of a bubble in a non-uniform Hele-Shaw flow	C+A	[P17 note] Proc R Soc A 481(2311):20240613
+10.1016/j.physrep.2012.02.003	Beatus	2012	The physics of 2D microfluidic droplet ensembles	C	[P18] Phys Rep 516(3):103-145; full text not read
+10.1016/j.cis.2017.07.021	Okumura	2018	Viscous dynamics of drops and bubbles in Hele-Shaw cells	C+F	[P19] Adv Colloid Interface Sci 255:64-75; arXiv 1707.06049
+10.1039/c0sm01535k	Eri	2011	Viscous drag friction acting on a fluid drop confined in between two plates	C	[P19 note] Soft Matter 7(12):5648
+10.1038/srep31395	Yahashi	2016	Scaling crossover in thin-film drag dynamics of fluid drops in the Hele-Shaw cell	C+A	[P20] Sci Rep 6:31395
+10.1063/1.4878095	Gallaire	2014	Marangoni induced force on a drop in a Hele Shaw cell	C+A	[P21] PoF 26(6):062105
+10.1209/epl/i2002-00204-2	Aussillous	2002	Bubbles creeping in a viscous liquid along a slightly inclined plane	C	[P22] EPL 59(3):370-376; content not read
+10.1209/epl/i2003-10169-0	Cantat	2004	Dissipation in foam flowing through narrow channels	C	[F1] EPL 65(5):726-732; content via F2 and P2; HAL hal-01123933 (no file)
+10.1140/epje/i2004-10154-5	Cantat	2005	Dissipative flows of 2D foams	C+F	[F2] Eur Phys J E 18(1):55-67; read preprint hal-00007608 / arXiv cond-mat/0507498
+10.1209/epl/i2005-10583-2	Terriac	2006	Viscous force exerted on a foam at a solid boundary	C+F	[F3] EPL 74(5):909-915; HAL hal-00096588; f_v ~ Ca^0.56
+10.1063/1.3142502	Raufaste	2009	Dissipation in quasi-two-dimensional flowing foams	C+A	[F4] PoF 21(5):053102; authors Raufaste, Foulon, Dollet
+10.1103/physreve.70.041411	Kern	2004	Two-dimensional viscous froth model for foam dynamics	C	[F5] PRE 70(4):041411
+10.1016/j.colsurfa.2005.02.038	Denkov	2005	Wall slip and viscous dissipation in sheared foams: effect of surface mobility	C	[F6] Colloids Surf A 263(1-3):129-145
+10.1016/j.colsurfa.2006.04.028	Denkov	2006	Foam-wall friction: effect of air volume fraction, immobile surface	C	[F6 note] Colloids Surf A 282-283:329-347
+10.1017/s0022112010000935	Dollet	2010	Deformation of soap films pushed through tubes at high velocity	C+A	[F7] JFM 652:529-539
+10.2118/12129-pa	Hirasaki	1985	Mechanisms of foam flow in porous media: apparent viscosity in smooth capillaries	C+A	[F8] SPE J 25(02):176-190
+10.1016/0009-2509(95)00199-f	Kovscek	1995	Mechanistic population balance model for foam flow in Boise sandstone	C	[F8 note] Chem Eng Sci 50(23):3783-3799
+10.1039/b903276b	Marmottant	2009	Microfluidics with foams	C	[F9] Soft Matter 5(18):3385
+10.1017/s0022112061000160	Bretherton	1961	The motion of long bubbles in tubes	C+A	[T1] JFM 10(2):166-188
+10.1063/1.857530	Ratulowski	1989	Transport of gas bubbles in capillaries	C+A	[T2] PoF A 1(10):1642-1655; per-bubble dP in train = isolated
+10.1017/s0022112090001306	Ratulowski	1990	Marangoni effects of trace impurities, long gas bubbles in capillaries	C+A	[T3] JFM 210:303-328; film up to 4^(2/3)
+10.1017/s0022112095001455	Wong	1995	Long bubbles in polygonal capillaries. Part 2. Drag, fluid pressure and fluid flow	C+A	[T4] JFM 292:95-110; Part 1 10.1017/s0022112095001443
+10.1063/1.1289396	Aussillous	2000	Quick deposition of a fluid on the wall of a tube	C+A	[T5] PoF 12(10):2367-2371
+10.1002/aic.10495	Kreutzer	2005	Inertial and interfacial effects on pressure drop of Taylor flow in capillaries	C+A	[T6] AIChE J 51(9):2428-2440; a = 0.17/0.07 via T7
+10.1007/s10404-009-0448-z	Warnier	2010	Pressure drop of gas-liquid Taylor flow in round micro-capillaries	C+F	[T7] Microfluid Nanofluid 8(1):33-45; Crossref online 2009; OA Springer
+10.1016/j.ijmultiphaseflow.2009.06.007	Walsh	2009	Pressure drop in two phase slug/bubble flows in mini scale capillaries	C+A	[T8] IJMF 35(10):879-884; abstract via UL repository
+10.1039/b706549c	Fuerstman	2007	The pressure drop along rectangular microchannels containing bubbles	C+A	[T9] Lab Chip 7(11):1479-1489; abstract via Europe PMC
+10.1039/b815002h	Vanapalli	2009	Hydrodynamic resistance of single confined moving drops in rectangular microchannels	C+A	[T10] Lab Chip 9(7):982-990
+10.1063/1.3109686	Labrot	2009	Extracting the hydrodynamic resistance of droplets from their behavior in networks	C+F	[T11] Biomicrofluidics 3(1):012804; PMC2717590
+10.1103/physreve.80.016317	Sessoms	2009	Droplet motion in microfluidic networks: interactions and pressure-drop measurements	C+A	[T12] PRE 80(1):016317
+10.1039/c1lc20534j	Jakiela	2011	Speed of flow of individual droplets in microfluidic channels	C+A	[T13] Lab Chip 11(21):3603
+10.1115/1.1428327	Garimella	2002	Intermittent-flow dP model, circular microchannels	C+A	[T14] J Fluids Eng 124(1):205-214; Crossref published 2001 (online); erratum 10.1115/1.1770773
+10.1115/1.1601258	Garimella	2003	Intermittent-flow dP model, noncircular microchannels	C+A	[T15] J Fluids Eng 125(5):887-894; erratum 10.1115/1.1770782
+10.1063/1.1389861	Heil	2001	Finite Reynolds number effects in the Bretherton problem	C+A	[T16] PoF 13(9):2517-2521
+10.1017/s0022112008003455	de Lozar	2008	The steady propagation of an air finger into a rectangular tube	C+A	[T17] JFM 614:173-195; first author de Lózar
+10.1017/s0022112002001830	Hazel	2002	Semi-infinite bubble into a tube of elliptical or rectangular cross-section	C+A	[T18] JFM 470:91-114
+10.1103/7z3l-zpzy	Botticini	2026	Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle	C+A	[T19] PRFluids 11(7):073601; abstract via arXiv 2510.12588
+10.1016/j.ijmultiphaseflow.2008.07.002	Fries	2008	Segmented gas-liquid flow characterization in rectangular microchannels	C	[T20] IJMF 34(12):1108-1118
+10.1007/s10404-011-0880-8	Abadie	2012	Hydrodynamics of gas-liquid Taylor flow in rectangular microchannels	C	[T21] Microfluid Nanofluid 12(1-4):355-369; Crossref online 2011
+10.1016/0017-9310(67)90047-6	Chisholm	1967	A theoretical basis for the Lockhart-Martinelli correlation	C	[K1] IJHMT 10(12):1767-1778
+10.1016/0301-9322(96)00010-9	Mishima	1996	Air-water two-phase flow in small diameter vertical tubes	C	[K2] IJMF 22(4):703-712; C = 21(1-exp(-319 D[m])) via Ali, Palm, Maqbool 2009 (Brunel MNF2009, bura.brunel.ac.uk/bitstream/2438/6880)
+10.1016/s0301-9322(00)00050-1	Lee	2001	Pressure drop correlations, horizontal rectangular channels with small heights	C	[K3] IJMF 27(5):783-796; Crossref author 'Ju Lee, Yong Lee'; coefficients not verified
+10.1016/j.ijmultiphaseflow.2008.08.003	Sun	2009	Evaluation of pressure drop prediction methods in mini-channels	C	[K4] IJMF 35(1):47-54
+10.1016/j.ijheatmasstransfer.2009.09.011	Zhang	2010	Correlations of two-phase frictional pressure drop and void fraction in mini-channel	C	[K5] IJHMT 53(1-3):453-465
+10.1016/j.ijheatmasstransfer.2010.02.029	Li	2010	General correlation for adiabatic two-phase pressure drop in micro/mini-channels	C	[K6] IJHMT 53(13-14):2732-2739
+10.1016/j.ijheatmasstransfer.2012.02.047	Kim	2012	Universal approach, adiabatic and condensing mini/micro-channel dP	C	[K7] IJHMT 55(11-12):3246-3261; author PDF engineering.purdue.edu/mudawar/files/articles-all/2012/2012-08.pdf (503)
+10.1016/j.ijheatmasstransfer.2012.11.045	Kim	2013	Universal approach, saturated flow boiling dP	C	[K7 note] IJHMT 58(1-2):718-734
+10.1002/cjce.5450710502	Ali	1993	Adiabatic two-phase flow in narrow channels between two flat plates	C	[K8] Can J Chem Eng 71(5):657-666
+10.1299/kikaib.58.401	Moriyama	1992	Two-phase flow in extremely narrow channels: frictional pressure drop and void fraction	C+A	[K9] Trans JSME B 58(546):401-407; J-STAGE
+10.1016/j.expthermflusci.2005.03.010	Ide	2005	Holdup and frictional pressure drop, capillary rectangular channel	C	[K10] ETFS 29(7):833-841; ICMM2004 version 10.1115/icmm2004-2358 (C+A)
+10.1016/s0301-9322(02)00037-x	Kawahara	2002	Two-phase flow pattern, void fraction and pressure drop in a microchannel	C	[K11] IJMF 28(9):1411-1435
+10.1016/j.ijmultiphaseflow.2004.05.002	Chung	2004	Effect of channel diameter on adiabatic two-phase flow in microchannels	C	[K12] IJMF 30(7-8):735-761; related ICMM2004 10.1115/icmm2004-2359 (C+A)
+10.1115/icone21-16562	Huang	2013	Two-phase frictional pressure drop in rectangular narrow channel	C+A	[K13] ICONE21 V004T09A101
+10.7538/yzk.2013.47.05.0740	Jin	2013	Resistance characteristic and calculating method of two-phase flow in rectangular channel	U	[K14] Atomic Energy Sci Technol 47(5):740 (journal web page); DOI not found in Crossref (2026-10-23)
+10.1007/s12217-019-09747-1	Ronshin	2019	Adiabatic gas-liquid flow regimes and pressure drop in slit microchannel	C	[K15] Microgravity Sci Technol 31(5):693-707
+10.1016/j.expthermflusci.2019.01.022	Ronshin	2019	Two-phase flow patterns in a slit microchannel	C+A	[K16] ETFS 103:262-273
+10.1016/j.cherd.2022.04.010	Liu	2022	Slug length, film thickness and pressure drop, horizontal narrow rectangular channel	C	[K17] Chem Eng Res Des 182:502-516; title only
+10.1016/j.ijheatmasstransfer.2011.09.024	Harirchian	2012	Flow regime-based modeling of heat transfer and dP in microchannel flow boiling	C	[K18] IJHMT 55(4):1246-1260; Purdue e-Pubs 403
+10.1080/01457630500523980	English	2006	Effect of surfactants on air-water two-phase flow in minichannels	C	[K19] Heat Transfer Eng 27(4):99-109
+10.1016/j.pnucene.2014.01.003	Yan	2014	Interfacial parameter distribution, bubbly flow, narrow rectangular channel, rolling	C	[4.1 note] Prog Nucl Energy 73:64-74; content from Scholar snippet
