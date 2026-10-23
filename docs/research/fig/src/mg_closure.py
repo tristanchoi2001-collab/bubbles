@@ -8,7 +8,13 @@ Darcy(깊이 평균) 흐름 u = K·G, K = H^2/12, G = -dP/dx / mu.
   beta = j_G/j = sum a_k V_k / j = (alpha + S)/(1 + S)  ->  S = (beta - alpha)/(1 - beta)
   phi_L^2 = [(12 mu j/H^2)(1 - S)/(1 + S)] / [12 mu j_L/H^2] = (1 + alpha - 2 beta)/((1 - alpha)(1 - beta))
   E = phi_L^2 - 1 = (2 alpha - beta - alpha beta)/((1 - alpha)(1 - beta))
--> 크기 분포와 무관하게 alpha(영상)와 beta(유량계)만으로 E가 정해진다. 1차(묽은) 근사는 (2 alpha - beta)/(1 - beta).
+-> 원형·갭을 채운 기포·Darcy·평균장(alpha 1차 엄밀) 안에서는 alpha(영상)와 beta(유량계)만으로 E가 정해진다.
+   같은 식: E = 2 alpha/(1 - alpha) - beta/(1 - beta) = alpha/(1 - alpha) * (2 - s), s = V/U_m, U_m = j(1 - beta)/(1 - alpha).
+   엄밀한 alpha 1차는 2 alpha - beta. (2 alpha - beta)/(1 - beta)는 'U = j 묽은 근사'(estimates 5.2절)다.
+가장자리 쐐기의 액체는 기포와 같이 V로 움직이고 액체 유량계에 잡힌다(독립 검증 2026-10-23).
+  phi_L^2 = (1 + (c - 1) alpha - c beta_f)/((1 - alpha)(1 - beta)),  beta = j_G/j(유량계), beta_f = sum(A_b V_b)/(A j)(발자국 유량),
+  beta_f ~ beta * alpha_p/alpha_vol, alpha_vol/alpha_p = 1 - 0.43 H/d.  c = 1 + b/a(흐름 방향 장축 a), 원형 c = 2.
+  beta_f = beta이면 E = c alpha/(1 - alpha) - (c - 1) beta/(1 - beta) = (c - 1) alpha/(1 - alpha) (s_TS - s), s_TS = c/(c - 1).
 민감도: dE/dalpha = 2/(1 - alpha)^2, dE/dbeta = -1/(1 - beta)^2.
 선행: Bławzdziewicz & Wajnryb 2008 Phys. Fluids 20:093303 (평행 벽 사이 입자 현탁액의 Clausius–Mossotti 투과율).
 
@@ -46,7 +52,18 @@ def E_mg(alpha, beta):
 
 
 def E_dilute(alpha, beta):
+    """U = j 묽은 근사(estimates 5.2절). 엄밀한 alpha 1차는 2 alpha - beta."""
     return (2 * alpha - beta) / (1 - beta)
+
+
+def E_general(alpha, beta_f, beta_m, c=2.0):
+    """분자 beta_f(발자국 유량 분율), 분모 beta_m(유량계), 모양 c = 1 + b/a."""
+    return (1 + (c - 1) * alpha - c * beta_f) / ((1 - alpha) * (1 - beta_m)) - 1
+
+
+def beta_meter(beta_f, dH):
+    """팬케이크 가장자리 반원 쐐기: alpha_vol/alpha_p = 1 - 0.43 H/d (0.43 = 2 - pi/2)."""
+    return beta_f * (1 - (2 - math.pi / 2) / dH)
 
 
 def check_algebra():
@@ -69,19 +86,36 @@ def check_algebra():
         beta = 2 * alpha / (1 + alpha)
         assert abs(E_mg(alpha, beta)) < 1e-12
         assert abs(E_mg(alpha, 0) - 2 * alpha / (1 - alpha)) < 1e-12
-    print("대수 검산 통과: 단분산 = alpha·beta 식, 다분산도 같은 식, Taylor–Saffman E = 0, 멈춘 기포 2a/(1-a)")
+    # 4) 일반식: beta_f = beta_m, c = 2이면 E_mg와 같다. 다른 꼴 2a/(1-a) - b/(1-b)
+    for alpha, beta in [(0.1, 0.05), (0.3, 0.42), (0.2, 0.25)]:
+        assert abs(E_general(alpha, beta, beta, 2.0) - E_mg(alpha, beta)) < 1e-12
+        assert abs(E_mg(alpha, beta) - (2 * alpha / (1 - alpha) - beta / (1 - beta))) < 1e-12
+    # 5) 모양: E = c a/(1-a) - (c-1) b/(1-b) = (c-1) a/(1-a) (s_TS - s), 마찰 없는 같은 모양(s = c/(c-1))이면 0
+    for alpha, s_, c in [(0.3, 1.4, 1.5), (0.2, 0.7, 2.0), (0.25, 3.0, 1.5)]:
+        Um_over_j = 1 / (1 - alpha + alpha * s_)          # beta = alpha s Um/j, Um = j(1-beta)/(1-alpha)
+        beta = alpha * s_ * Um_over_j
+        e1 = E_general(alpha, beta, beta, c)
+        e2 = c * alpha / (1 - alpha) - (c - 1) * beta / (1 - beta)
+        e3 = (c - 1) * alpha / (1 - alpha) * (c / (c - 1) - s_)
+        assert abs(e1 - e2) < 1e-12 and abs(e1 - e3) < 1e-12
+    assert abs(E_general(0.3, 0.3 * 3.0 / (1 - 0.3 + 0.3 * 3.0), 0.3 * 3.0 / (1 - 0.3 + 0.3 * 3.0), 1.5)) < 1e-12
+    print("대수 검산 통과: 단분산 = alpha·beta 식, 다분산도 같은 식, Taylor–Saffman E = 0, 멈춘 기포 2a/(1-a), "
+          "일반식(모양 c, beta_f/beta_m 분리)과 s 꼴 일치, 마찰 없는 타원도 E = 0")
 
 
 def table():
     # 측정 오차 가정: alpha 상대 5 %(경계 ±1 px, 부피 환산), beta 상대 2 %(유량계 둘), 측정 E 절대 0.02(차압계·j_L)
+    # 원형 팬케이크. beta_f = alpha V/j(모델), 유량계 beta = beta_f (1 - 0.43 H/d), E는 분리식.
+    # "O" = 기포 기여(E > 0)를 3 sigma로 검출. 유효 매질과 U = j판을 가려내는 것은 아님.
     ra, rb, dEm = 0.05, 0.02, 0.02
-    print("| c | d/H | α | j (m/s) | C0 = V/j | β | E 유효 매질 | E 묽은 근사 | 예측 오차 ±δE | 판별 (E > 3σ) |")
+    print("| c | d/H | α | j (m/s) | V/j | β(유량계) | E 유효 매질 | E 묽은 근사 | 예측 오차 ±δE | 검출 (E > 3σ) |")
     print("|---|---|---|---|---|---|---|---|---|---|")
     for c, dH, alpha in itertools.product((5.01, 12.63), (3, 10, 30), (0.1, 0.2, 0.3)):
         cells = []
         for j in (0.05, 0.2, 1.0):
-            L, V, beta = solve(alpha, j, dH, c)
-            E = E_mg(alpha, beta)
+            L, V, beta_f = solve(alpha, j, dH, c)
+            beta = beta_meter(beta_f, dH)
+            E = E_general(alpha, beta_f, beta)
             Ed = E_dilute(alpha, beta)
             dE_pred = math.hypot(2 / (1 - alpha) ** 2 * ra * alpha, 1 / (1 - beta) ** 2 * rb * beta)
             sigma = math.hypot(dE_pred, dEm)

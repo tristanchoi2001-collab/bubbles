@@ -34,22 +34,21 @@ def three_sigma(alpha, beta):
     return 3 * math.hypot(d, DEM)
 
 
+def point(a, j, dH, c):
+    """원형 팬케이크: 발자국 유량 beta_f(모델), 유량계 beta = beta_f(1 - 0.43 H/d), 분리식 E."""
+    _, _, bf = mg.solve(a, j, dH, c)
+    bm = mg.beta_meter(bf, dH)
+    return mg.E_general(a, bf, bm), bm
+
+
 def curve_alpha(dH, c, j, alphas):
-    E, B = [], []
-    for a in alphas:
-        _, _, b = mg.solve(a, j, dH, c)
-        E.append(mg.E_mg(a, b))
-        B.append(b)
-    return np.array(E), np.array(B)
+    out = [point(a, j, dH, c) for a in alphas]
+    return np.array([o[0] for o in out]), np.array([o[1] for o in out])
 
 
 def curve_j(dH, c, a, js):
-    E, B = [], []
-    for j in js:
-        _, _, b = mg.solve(a, j, dH, c)
-        E.append(mg.E_mg(a, b))
-        B.append(b)
-    return np.array(E), np.array(B)
+    out = [point(a, j, dH, c) for j in js]
+    return np.array([o[0] for o in out]), np.array([o[1] for o in out])
 
 
 fig, axs = plt.subplots(1, 2, figsize=(12.0, 4.6), gridspec_kw={"wspace": 0.22})
@@ -57,10 +56,11 @@ fig, axs = plt.subplots(1, 2, figsize=(12.0, 4.6), gridspec_kw={"wspace": 0.22})
 # (a) E vs alpha, j = 0.2 m/s
 ax = axs[0]
 al = np.linspace(0.02, 0.35, 60)
-_, Bref = curve_alpha(10, 5.01, 0.2, al)
-band = np.array([three_sigma(a, b) for a, b in zip(al, Bref)])
-ax.fill_between(al, 0, band, color=BAND, lw=0, zorder=1)
-ax.text(0.205, 0.035, "within 3σ of measurement:\nnot testable", fontsize=8.5, color=INK2, ha="left", va="center")
+alb = np.linspace(0.02, 0.40, 70)   # 측정 오차 띠는 축 끝까지
+_, Bref = curve_alpha(10, 5.01, 0.2, alb)
+band = np.array([three_sigma(a, b) for a, b in zip(alb, Bref)])
+ax.fill_between(alb, 0, band, color=BAND, lw=0, zorder=1)
+ax.text(0.205, 0.035, "within 3σ of measurement:\nbubble effect not detectable", fontsize=8.5, color=INK2, ha="left", va="center")
 for dH, col in SERIES:
     E5, _ = curve_alpha(dH, 5.01, 0.2, al)
     E12, _ = curve_alpha(dH, 12.63, 0.2, al)
@@ -98,11 +98,12 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 handles = [Line2D([0], [0], color=INK2, lw=2, label="clean interface (c = 5.01)"),
            Line2D([0], [0], color=INK2, lw=2, ls=(0, (4, 3)), label="rigid interface (c = 12.63)"),
-           Patch(color=BAND, label="not testable (< 3σ)")]
+           Patch(color=BAND, label="bubble effect not detectable (< 3σ)")]
 fig.legend(handles=handles, loc="upper center", ncol=3, frameon=False, fontsize=9, bbox_to_anchor=(0.5, 1.0))
-fig.suptitle("Effective-medium closure: φ_L² − 1 = (2α − β − αβ)/((1 − α)(1 − β)), β = j_G/j — needs only images + flowmeters",
+fig.suptitle("Effective-medium closure for gap-spanning pancakes: φ_L² − 1 = 2α/(1 − α) − β/(1 − β), β = j_G/j",
              fontsize=11, color=INK, y=1.07)
-fig.text(0.5, -0.04, "Synthetic data: bubble mobility from Booth et al. 2023 (pancakes, Darcy). σ: α ±5 %, β ±2 %, measured φ_L² ±0.02. "
-         "Same d/H gives the same curve in any gap.", fontsize=8, color=INK2, ha="center")
+fig.text(0.5, -0.06, "Synthetic data: mobility from Booth et al. 2023 (circular pancakes, Darcy, mean field); rim-wedge liquid counted with the bubble. "
+         "σ: α ±5 %, β ±2 %, measured φ_L² ±0.02\n(= 13 Pa at 0.3 mm, 1.2 Pa at 1 mm over 0.1 m at j_L = 0.05 m/s). "
+         "Inertia grows with H at fixed d/H, so curves are not gap-independent in practice.", fontsize=8, color=INK2, ha="center")
 fig.savefig(OUT, dpi=170, bbox_inches="tight")
 print("saved", os.path.abspath(OUT))
