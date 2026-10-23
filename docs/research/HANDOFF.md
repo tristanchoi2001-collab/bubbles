@@ -106,3 +106,8 @@ curl -sS -m 20 -o /dev/null -w "%{http_code}\n" "https://api.crossref.org/works?
 - 브랜치는 `claude/tracker2-bubble-tracking-ffz50u`. fetch해서 이 브랜치에 커밋하고, 푸시 전에 `git pull --rebase`.
   - 이전 세션도 같은 브랜치의 발표 파일을 고칠 수 있다. 연구 파일(`docs/research*`, `docs/refs_microgap.bib`)만 고치면 충돌이 없다.
 - 보고서는 한국어로, 짧은 문장으로 쓴다. 저장소 규칙은 루트의 CLAUDE.md를 따른다.
+
+> **사용자 답변 (2026-10-23 밤)**
+> 1. 흐름 양식은 유량 조건에 따라 다르다. 기체 유량이 크면 거대한 기포, 작으면 팬케이크 기포가 생긴다.
+> 2. 채널은 수평. 기체와 액체 유량은 L/min 단위로 잴 수 있다.
+> 3. 철 블록 시험 영상(기포 안 −25~−45, 거대 슬러그 중심 ≈ 0)의 갭은 1 mm.
