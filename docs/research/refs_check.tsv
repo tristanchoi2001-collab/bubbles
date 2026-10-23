@@ -288,9 +288,9 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/s0022112095001455	OK	wong	1995	The motion of long bubbles in polygonal capillaries. Part 2. Drag, fluid pressure and fluid flow	Journal of Fluid Mechanics	3_pressure_drop,check
 10.1021/ie200610k	OK	leung	2012	Effect of Flow Characteristics on Taylor Flow Heat Transfer	Industrial & Engineering Chemistry Research	4_heat_transfer,check
 10.1021/ie50498a055	OK	danckwerts	1951	Significance of Liquid-Film Coefficients in Gas Absorption	Industrial & Engineering Chemistry	4_heat_transfer,check
-10.1029/2004wr003837	OK	chen	2006	Two‐phase flow in rough‐walled fractures: Experiments and a flow structure model	Water Resources Research	0_estimates
-10.1029/93wr01529	OK	fourar	1993	Two‐phase flow in smooth and rough fractures: Measurement and correlation by porous‐medium and pipe flow models	Water Resources Research	0_estimates
-10.1029/95wr00171	OK	persoff	1995	Two‐Phase Flow Visualization and Relative Permeability Measurement in Natural Rough‐Walled Rock Fractures	Water Resources Research	0_estimates
+10.1029/2004wr003837	OK	chen	2006	Two‐phase flow in rough‐walled fractures: Experiments and a flow structure model	Water Resources Research	0_estimates,check
+10.1029/93wr01529	OK	fourar	1993	Two‐phase flow in smooth and rough fractures: Measurement and correlation by porous‐medium and pipe flow models	Water Resources Research	0_estimates,check
+10.1029/95wr00171	OK	persoff	1995	Two‐Phase Flow Visualization and Relative Permeability Measurement in Natural Rough‐Walled Rock Fractures	Water Resources Research	0_estimates,check
 10.1038/nmeth.1237	OK	jaqaman	2008	Robust single-particle tracking in live-cell time-lapse sequences	Nature Methods	5_ai_image,8_iate_coalescence,check
 10.1038/s41467-022-35084-w	OK	xie	2022	Data-driven discovery of dimensionless numbers and governing laws from scarce measurements	Nature Communications	5_ai_image,check
 10.1038/s41467-023-37899-7	OK	zhang	2023	A unifying criterion of the boiling crisis	Nature Communications	5_ai_image,check
@@ -316,7 +316,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1063/1.1289396	OK	aussillous	2000	Quick deposition of a fluid on the wall of a tube	Physics of Fluids	0_estimates,3_pressure_drop,6_measurement,check
 10.1063/1.1389861	OK	heil	2001	Finite Reynolds number effects in the Bretherton problem	Physics of Fluids	3_pressure_drop,check
 10.1063/1.1813871	OK	cubaud	2004	Transport of bubbles in square microchannels	Physics of Fluids	1_adiabatic_gap,check
-10.1063/1.2976306	OK	bławzdziewicz	2008	An analysis of the far-field response to external forcing of a suspension in the Stokes flow in a parallel-wall channel	Physics of Fluids	0_estimates
+10.1063/1.2976306	OK	bławzdziewicz	2008	An analysis of the far-field response to external forcing of a suspension in the Stokes flow in a parallel-wall channel	Physics of Fluids	0_estimates,check
 10.1063/1.3109686	OK	labrot	2009	Extracting the hydrodynamic resistance of droplets from their behavior in microchannel networks	Biomicrofluidics	3_pressure_drop,7_closest_novelty,check
 10.1063/1.3142502	OK	raufaste	2009	Dissipation in quasi-two-dimensional flowing foams	Physics of Fluids	3_pressure_drop,5_ai_image,7_closest_novelty,check
 10.1063/1.4793544	OK	cantat	2013	Liquid meniscus friction on a wet plate: Bubbles, lamellae, and foams	Physics of Fluids	0_estimates,3_pressure_drop,7_closest_novelty,check
@@ -352,6 +352,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1098/rsos.252426	OK	booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	Royal Society Open Science	3_pressure_drop,check
 10.1098/rspa.2024.0613	OK	booth	2025	The motion of a bubble in a non-uniform Hele-Shaw flow	Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences	3_pressure_drop,check
 10.1103/7z3l-zpzy	OK	botticini	2026	Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle	Physical Review Fluids	3_pressure_drop,check
+10.1103/physreva.35.2221	OK	jensen	1987	Effect of gravity on the Saffman-Taylor meniscus: Theory and experiment	Physical Review A	0_estimates
 10.1103/physrevb.9.5056	OK	johnson	1974	Optical constants of transition metals: Ti, V, Cr, Mn, Fe, Co, Ni, and Pd	Physical Review B	6_measurement,check
 10.1103/physreve.70.041411	OK	kern	2004	Two-dimensional viscous froth model for foam dynamics	Physical Review E	3_pressure_drop,check
 10.1103/physreve.73.011505	OK	cantat	2006	Experimental evidence of flow destabilization in a two-dimensional bidisperse foam	Physical Review E	1_adiabatic_gap,check
@@ -444,7 +445,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1615/multscientechn.2026063937	OK	kurimoto	2026	BREAKUP OF SINGLE PLANAR BUBBLES RISING THROUGH STAGNANT LIQUIDS	Multiphase Science and Technology	8_iate_coalescence,check
 10.2118/12129-pa	OK	hirasaki	1985	Mechanisms of Foam Flow in Porous Media: Apparent Viscosity in Smooth Capillaries	Society of Petroleum Engineers Journal	3_pressure_drop,check
 10.2139/ssrn.5914773	OK	kharangate	2025	Applying Computer Vision to Flow Boiling Analysis: Feature Extraction and Data-Driven Heat Transfer Coefficient Predicti		0_estimates,5_ai_image,check
-10.2139/ssrn.6505385	OK	kharangate	2026	Large-Scale Vision-Based Characterization of Flow Regimes and Interfacial Distributions for Heat Transfer Prediction in 		0_estimates
+10.2139/ssrn.6505385	OK	kharangate	2026	Large-Scale Vision-Based Characterization of Flow Regimes and Interfacial Distributions for Heat Transfer Prediction in 		0_estimates,check
 10.2139/ssrn.6753968	OK	liu	2026	Void Fraction of Subcooled Flow Boiling within Horizontal Narrow Channel Measured by Capacitance Sensor		2_boiling_gap,6_measurement,7_closest_novelty,check
 10.2139/ssrn.7225772	OK	daoud	2026	Experimental Investigation of Bubble Dynamics in Confined Pool Boiling Using Machine-Learning-Based Tracking		2_boiling_gap,5_ai_image,check
 10.2172/5349611	OK	bentley	1992	Phase distribution measurements in narrow rectangular channels using image-processing techniques		1_adiabatic_gap,check

@@ -78,7 +78,7 @@
 | T14 | Garimella, Killion, Coleman (2002) | An experimentally validated model for two-phase pressure drop in the intermittent flow regime for circular microchannels | J Fluids Eng 124(1):205-214 | 10.1115/1.1428327 | R134a 응축, D 0.5~4.91 mm, G 150~750 | 단위 셀(슬러그 + 기포 + 막) 모델, 단위 셀 길이는 슬러그 Re 상관식, ±13.4% | 슬러그 빈도를 **상관식으로** 넣음(영상 입력과 구별) | C+A |
 | T15 | Garimella, Killion, Coleman (2003) | ... noncircular microchannels | J Fluids Eng 125(5):887-894 | 10.1115/1.1601258 | D_h 0.42~0.84 mm, 여러 단면 | 90%가 ±28%, 평균 오차 16.5% | 비원형 확장 | C+A |
 | T16 | Heil (2001) | Finite Reynolds number effects in the Bretherton problem | Phys Fluids 13(9):2517-2521 | 10.1063/1.1389861 | 2D 채널, 0.05 < Ca < 5, 0 < Re < 280 | 유한 Re에서 기포 앞 와류가 압력 상승을 눈에 띄게 키움 | 관성 보정 방향(증가) | C+A |
-| T17 | de Lózar, Juel, Hazel (2008) | The steady propagation of an air finger into a rectangular tube | J Fluid Mech 614:173-195 | 10.1017/s0022112008003455 | 직사각 관, 종횡비 α | α ≥ 8이면 준2차원. 가로 중력 Bo > 1이면 기포가 아래 벽에서 떨어짐 | 수평 3·7 mm(Bo_H 1.2·6.6)에서 아래 벽 메니스커스 없음 | C+A |
+| T17 | de Lózar, Juel, Hazel (2008) | The steady propagation of an air finger into a rectangular tube | J Fluid Mech 614:173-195 | 10.1017/s0022112008003455 | 직사각 관, 종횡비 α | α ≥ 8이면 준2차원. 가로 중력 Bo > 1이면 기포가 아래 벽에서 떨어짐 | (주 세션 정정 2026-10-23: 원문의 Bo = ρgb²/σ는 반높이 b = H/2 기준이다. 우리 갭은 Bo_b = 0.003/0.016/0.034/0.30/1.65 → **7 mm만** > 1. 경계 H = 2Lc. 처음 판의 "3 mm(Bo_H 1.2)도 떨어짐"은 정의 차이) | C+F |
 | T18 | Hazel, Heil (2002) | The steady propagation of a semi-infinite bubble into a tube of elliptical or rectangular cross-section | J Fluid Mech 470:91-114 | 10.1017/s0022112002001830 | 수치 | 직사각 관에서 낮은 Ca는 Wong 외와 일치, 큰 Ca는 Wong 외가 과소 | 직사각 보정 | C+A |
 | T19 | Botticini 외 (2026) | Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle | Phys Rev Fluids 11(7):073601 | 10.1103/7z3l-zpzy | 이론, 모세관 다발 | 기포 수가 적으면 지수 2/3에서 2/3~1로 전환 | 지수 해석 | C+A (arXiv 2510.12588 초록) |
 | T20 | Fries, Trachsel, von Rohr (2008) | Segmented gas-liquid flow characterization in rectangular microchannels | Int J Multiphase Flow 34(12):1108-1118 | 10.1016/j.ijmultiphaseflow.2008.07.002 | 직사각 미세유로 | (원문 미확인) 슬러그 흐름 특성과 압력 강하 | 직사각 Taylor 흐름 | C |
@@ -154,7 +154,7 @@
    - Ca: Bretherton 상수는 Ca < 5×10⁻³에서 10% 이내 [T1]. 우리 Ca_V = 1.6×10⁻⁴~2.3×10⁻²(6장 표). j ≈ 1 m/s는 한계를 넘는다 → 두꺼운 막 보정 1/(1 + 3.34Ca^(2/3)) [T5, T7]. 힘의 Ca^(2/3) 스케일은 We ≈ 10, 수 m/s까지 성립한 보고가 있다 [P2, F7].
    - 관성: Darcy(Hele-Shaw) 가정은 Re_H·H/d ≪ 1이 필요하다. 0.3 mm는 0.4~170, 1 mm는 1.4~560, 3 mm는 4~1700(6장). 유한 Re는 기포 앞 압력 상승을 키운다 [T16]. Taylor 흐름에서는 Re ≫ 1이면 계면 항이 (Re/Ca)^(1/3) 꼴(속도에 선형)로 바뀐다 [T6]. 이 꼴과 Bretherton의 비는 (0.15~0.37)·Re^(1/3) ≈ 0.7~3.7(Re 100~1000, 계산).
    - 젖음 막: 막이 끊기면 접촉선 마찰(접촉각 이력)이 지배한다 [P19]. δ < 1(작은 기포·낮은 Ca)은 막이 매우 얇아 실험에서 보통 계면활성제를 넣는다 [P1]. 철 바닥의 젖음성 확인이 필요하다.
-   - 기포가 갭을 채우지 않는 경우(3·7 mm의 작은 기포): 두 벽 메니스커스가 없다. 수평이면 위 덮개 밑에서 한쪽 벽만 미끄러진다 [P22]. 가로 중력 Bo > 1이면 아래 벽에서 떨어진다 [T17]. Bo_H = ρgH²/σ = 0.012 / 0.066 / 0.13 / 1.2 / 6.6. → 3·7 mm에서는 이 항을 "위 벽만, 갭보다 큰 기포만"으로 제한한다.
+   - 기포가 갭을 채우지 않는 경우(3·7 mm의 작은 기포): 두 벽 메니스커스가 없다. 수평이면 위 덮개 밑에서 한쪽 벽만 미끄러진다 [P22]. 가로 중력 Bo > 1이면 아래 벽에서 떨어진다 [T17]. Bo_H = ρgH²/σ = 0.012 / 0.066 / 0.13 / 1.2 / 6.6(주 세션 정정: T17의 Bo는 반높이 기준이라 Bo_b = Bo_H/4 = 0.003~0.30, 7 mm 1.65 → 떨어지는 것은 7 mm의 큰 기포). → 3 mm는 갭보다 작은 기포만 "위 벽만", 7 mm는 큰 기포도 "위 벽만"으로 제한한다.
    - 넓은 유로의 우회 흐름: 액체가 기포 옆으로 돌아간다. 이것이 기포 속도를 힘 균형으로 정하는 이유다(1차원 관과 다름) [P1]. 다각형 관의 모서리 우회는 낮은 유량에서 압력 구배를 선형으로 만든다 [T4]. 옆벽 근처에서는 기포 속도가 δ에 따라 빨라지거나 느려진다 [P1].
    - 비원형 기포: 뒤쪽 계수는 앞쪽이 깐 막에 따라 달라진다(F(cosθ+/cosθ−)) [P1, P7]. 슬러그 옆면은 Ca^(4/5) 막 [P7].
 4. **같은 것을 누가 했나**
@@ -252,7 +252,7 @@
 | 기포 속도 | Ub^(2/3) = δ(2 − Ub), Ub = V/U | δ = 1.12Ca_U^(1/3)/(H/d), 원형 유지 조건 δ ≪ ε^(−1/3) | P1, P4 | C+F |
 | 운동학 폐합 | −dP/dx = (12μ/H²)[j_L + α(2U − V̄)], U ≈ j_L/(1−α) | Hele-Shaw, 묽은 근사 | 3.1 유도 | 유도(검토 필요) |
 | Taylor 흐름 관성형 | f = (16/Re)[1 + a(D/L_s)(Re/Ca)^0.33] | a 0.07(깨끗) / 0.17(실험), Ca 3×10⁻³~4×10⁻², Re 150~1400 | T6, T7 | C+F(T7) |
-| 적용 한계 | Ca < 5×10⁻³(10%), We ≲ 10, Re_H·H/d ≪ 1, d/H ≳ 2, Bo_H < 1(대칭 막) | | T1, P2, F7, T17 | C+A~C+F |
+| 적용 한계 | Ca < 5×10⁻³(10%), We ≲ 10, Re_H·H/d ≪ 1, d/H ≳ 2, Bo_b = ρg(H/2)²/σ ≪ 1(대칭 막. 주 세션 정정: 3 mm는 0.30이라 바닥 막이 두껍고, 7 mm 1.65는 떨어짐) | | T1, P2, F7, T17 | C+A~C+F |
 | Mishima-Hibiki C | C = 21(1 − e^(−0.319D_h[mm])) | 0.3/0.7/1/3/7 mm(D_h = 2H): 3.6/7.3/9.6/18.3/20.9 | K2 | C(2차) |
 
 ### 6.2 결과: 원형 팬케이크, 깨끗한 계면(β1 3.88, β2 1.13), 힘 분해

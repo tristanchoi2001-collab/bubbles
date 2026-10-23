@@ -10,7 +10,8 @@
    - 수평 채널 + 아래 가열이면 기포가 가열면에 닿는 정도가 갭에 따라 바뀐다.
      - 0.3·0.7 mm: Co = Lc/H = 9.1, 3.9. 갭보다 큰 기포는 모두 팬케이크다. 가열면과 기포 사이의 액막은 1.5~23 µm다.
      - 1 mm: 1 mm보다 큰 기포는 모두 양쪽 벽에 닿는다. 가열면과 기포 사이에는 5~30 µm 액막만 있다.
-     - 3 mm: 3 mm보다 큰 기포만 닿는다. 작은 기포는 위 덮개 밑에 뜬다. 단 이것은 정지 상태 추정이다. 움직이는 기포는 Bo_H = ρgH²/σ ≈ 1.2라 아래 벽에서 떨어질 수 있다(de Lózar 외 2008, 직사각 관의 공기 손가락, `lit_3` T17) → 3 mm는 전이 구간으로 보고 접촉을 직접 잰다.
+     - 3 mm: 3 mm보다 큰 기포만 닿는다. 작은 기포는 위 덮개 밑에 뜬다. 큰 기포도 바닥 막이 위 막보다 두꺼워진다 → 전이 구간이다.
+     - 문헌 근거(2026-10-23 밤 확인): Bo_b = ρg(H/2)²/σ = 0.003 / 0.016 / 0.034 / 0.30 / 1.65(0.3 / 0.7 / 1 / 3 / 7 mm). Bo_b > 1이면 큰 기포가 아래 벽에서 떨어질 수 있다(정적 이론·실험 Jensen et al. 1987 PRA 35:2221, 동적 계산 de Lózar et al. 2008 JFM 614:173, 원문). Bo_b = 1 ↔ H = 2Lc라서 아래 웅덩이 두께 논리와 같은 경계다. 독립 검토가 Bo를 갭 전체 H로 계산해 "3 mm(1.2)도 떨어진다"고 본 것은 정의 차이(4배)였다.
      - 7 mm: 부력이 지배하는 기포는 가열면에 닿지 못한다. 큰 기포도 위 덮개 밑 웅덩이가 되고, 그 밑에 액층이 1.5 mm 이상 남는다.
    - → "가열면에 닿는 기포의 면적 비율"이 갭에 따라 거의 1(0.3·0.7·1 mm) → 일부(3 mm) → 0(7 mm)이 된다. 열전달 해석의 축으로 쓸 수 있다. 2Lc 웅덩이 두께로 접촉을 가르는 것은 이 문서의 추정이고, 수평 납작 유로에서 잰 문헌은 찾지 못했다(`lit_1` 168행).
    - 이전 그림 `fig09_gap_confinement.png`는 7 mm 기포를 갭 가운데 그렸다. 수평 채널이면 위 덮개 밑으로 고쳐야 한다 → 고친 그림 `fig/fig_r1_gap_regimes_horizontal.png`.
@@ -284,4 +285,5 @@ Aussillous & Quéré(2000) 식 h/b = 1.34Ca^(2/3)/(1 + 3.35Ca^(2/3)), b = H/2 (�
 | Fourar & Bories (1995) Experimental study of air-water two-phase flow through a fracture (narrow channel). IJMF 21(4):621–637 | 10.1016/0301-9322(95)00005-i | C (검색 요약) |
 | Persoff & Pruess (1995) Two-phase flow visualization and relative permeability measurement in natural rough-walled rock fractures. WRR 31(5):1175–1186 | 10.1029/95wr00171 | C+A (OSTI 초록) |
 | Chen & Horne (2006) Two-phase flow in rough-walled fractures: experiments and a flow structure model. WRR 42(3) | 10.1029/2004wr003837 | C (검색 요약) |
-| de Lózar, Juel & Hazel (2008) The steady propagation of an air finger into a rectangular tube. JFM 614:173–195 | 10.1017/s0022112008003455 | C+A (주제 3, 독립 검토) |
+| de Lózar, Juel & Hazel (2008) The steady propagation of an air finger into a rectangular tube. JFM 614:173–195 | 10.1017/s0022112008003455 | C+F (맨체스터 공개본: Bo = ρgb²/σ, b = 반높이) |
+| Jensen, Libchaber, Pelcé & Zocchi (1987) Effect of gravity on the Saffman-Taylor meniscus: theory and experiment. PRA 35:2221–2227 | 10.1103/physreva.35.2221 | C (de Lózar 2008의 서술: Bo > 1이면 정적 계면이 아래 벽에서 떨어질 수 있음) |
