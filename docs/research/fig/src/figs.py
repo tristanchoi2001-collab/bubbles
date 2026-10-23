@@ -56,7 +56,7 @@ X=np.logspace(np.log10(0.05),np.log10(10),300)
 fig,ax=plt.subplots(figsize=(6.6,4.2))
 ax.axvspan(0.04,3.8,color="#000000",alpha=0.04,lw=0)
 ax.text(0.40,0.08,"typical pancakes in 0.3-3 mm gaps\n(d/H 3-100, U 0.05-1 m/s)",fontsize=8.5,color=INK2,ha="center")
-for c,col,lab in ((5.0,S1,"clean interface (c = 5)"),(12.6,S2,"rigid interface (c = 12.6)")):
+for c,col,lab in ((5.01,S1,"clean interface (c = 5.01)"),(12.63,S2,"rigid interface (c = 12.63)")):
     y=2/(1+0.1785*c*X)
     ax.plot(X,y,color=col,lw=2,label=lab,solid_capstyle="round")
     ax.text(X[-1]*1.05,y[-1],lab.split(" (")[0],fontsize=8.5,color=INK2,va="center")
@@ -64,7 +64,8 @@ ax.axhline(2,color=MUTED,lw=1); ax.text(0.052,2.03,"no film friction: 2x mean fl
 ax.axhline(1,color=MUTED,lw=1); ax.text(0.052,1.03,"bubble = mean flow",fontsize=8,color=INK2)
 ax.set_xscale("log"); ax.set_xlim(0.05,25); ax.set_ylim(0,2.2)
 ax.set_xlabel("X = (H/d) Ca^(-1/3)"); ax.set_ylabel("C0 = V_bubble / j")
-ax.set_title("Predicted pancake-bubble velocity (Darcy-Bretherton estimate, to be calibrated)",fontsize=10,color=INK,loc="left")
+ax.set_title("Pancake-bubble velocity, Hele-Shaw model of Booth, Griffiths & Howell (2023)",fontsize=10,color=INK,loc="left")
+ax.text(0.052,0.02,"to be calibrated with tracked velocities (water-air, Re_H > 1)",fontsize=7.5,color=MUTED)
 ax.legend(frameon=False,fontsize=8.5,loc="lower left",bbox_to_anchor=(0.0,0.17))
 fig.savefig(OUT+"fig_r2_c0_model.png",dpi=170,bbox_inches="tight"); plt.close(fig)
 
