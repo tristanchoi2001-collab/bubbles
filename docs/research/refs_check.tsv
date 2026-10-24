@@ -251,7 +251,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.nucengdes.2016.10.044	OK	fu	2016	Experimental study of bubbly flow using image processing techniques	Nuclear Engineering and Design	1_adiabatic_gap,check
 10.1016/j.nucengdes.2022.111725	OK	zhang	2022	Bubble size distribution for bubbly-to-slug transition flow in narrow rectangular channel	Nuclear Engineering and Design	9_data,check
 10.1016/j.patter.2023.100804	OK	kapoor	2023	Leakage and the reproducibility crisis in machine-learning-based science	Patterns	5_ai_image,check
-10.1016/j.physrep.2012.02.003	OK	beatus	2012	The physics of 2D microfluidic droplet ensembles	Physics Reports	3_pressure_drop,check
+10.1016/j.physrep.2012.02.003	OK	beatus	2012	The physics of 2D microfluidic droplet ensembles	Physics Reports	0_estimates,3_pressure_drop,check
 10.1016/j.pnucene.2014.01.003	OK	yan	2014	Investigation of the interfacial parameter distribution in a bubbly flow in a narrow rectangular channel under inclined 	Progress in Nuclear Energy	3_pressure_drop,check
 10.1016/j.pnucene.2020.103601	OK	zhang	2021	Experimental investigation on flow regimes and transitions of steam-water two-phase flow in narrow rectangular horizonta	Progress in Nuclear Energy	7_closest_novelty,9_data,check
 10.1016/j.pnucene.2021.103750	OK	yuan	2021	Air-water two-phase flow regime and transition criteria in vertical upward narrow rectangular channels	Progress in Nuclear Energy	1_adiabatic_gap,check
