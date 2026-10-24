@@ -19,3 +19,4 @@ doi	first_author	year	short_title	level	note
 10.1038/s41598-026-35147-8	Sha	2026	Machine learning-based heat flux estimation from high-speed video during saturated pool boiling over vertical tube	C	Sci Rep 16:9038; 영상 ML 열유속, 평균 오차 약 6%(검색 요약)
 10.3795/ksme-b.2006.30.11.1035	Huh	2006	Two-phase pressure drop in a horizontal rectangular microchannel	C	KSME B 30(11):1035; 한국어 보충 검색
 10.1039/b510841a	Garstecki	2006	Formation of droplets and bubbles in a microfluidic T-junction: scaling and mechanism of break-up	C	design_predictions 4장 입구 지배 전이 가설(압착 영역 L/W = 1 + a Q_G/Q_L)
+10.15377/2409-5826.2018.05.5	Wang	2018	An evaluation of correlations for predicting pressure drop of air-water flow in narrow rectangular duct	C+F	J Adv Therm Sci Res 5:34-43 (오픈액세스 PDF 읽음). 수직 40 × 1.6 mm 공기-물 ΔP와 상관식 평가. 표 1에 Lee & Lee 2001 C 상관식 계수(층류-층류 A 6.833e-8, q -1.317, r 0.719, s 0.557; 층류-난류 A 6.185e-2, s 0.726; 난류-층류 A 3.627, s 0.174; 난류-난류 A 0(오식으로 보임), s 0.451). 추정 5.4절의 L-M 연결에 씀

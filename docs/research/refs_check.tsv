@@ -527,6 +527,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.14278/rodare.827	OK	liu	2021	Data for: Experimental studies on bubble aspect ratio and corresponding correlations under bubble swarm condition		9_data,check
 10.14279/depositonce-17868	OK	buscher	2023	Supplementary measurement values and processed images to: Visualization, measurement, and modelling of adiabatic gas-liq		11_ideas2,check
 10.1515/tp-2026-0081	OK	dunlap	2026	Open datasets and machine learning for two-phase heat transfer: a review following a spatial-temporal taxonomy	Transport Phenomena	11_ideas2,5_ai_image,check
+10.15377/2409-5826.2018.05.5	OK	guangfei wang	2018	An Evaluation of Correlations for Predicting Pressure Drop of Air-Water Flow in Narrow Rectangular Duct	Journal of Advanced Thermal Science Research	0_estimates
 10.1590/s1678-58782005000100004	OK	ghajar	2005	Non-boiling heat transfer in gas-liquid flow in pipes: a tutorial	Journal of the Brazilian Society of Mechanical Sciences and Engineering	4_heat_transfer,check
 10.1615/0-8493-9925-4.70	OK	mishima	2023	A STUDY OF AIR-WATER FLOW IN A NARROW RECTANGULAR DUCT USING AN IMAGE PROCESSING TECHNIQUE	Proceeding of Dynamics of Two-Phase Flows	6_measurement,check
 10.1615/ihtc15.fbl.009930	OK	kawanami	2014	Experimental Investigations of Flow Boiling Heat Transfer and Flow Behaviors in Microgap Channel	Proceedings of the 15th International Heat Transfer Conference	9_data,check
