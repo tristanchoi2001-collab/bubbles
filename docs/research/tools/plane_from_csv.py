@@ -19,6 +19,9 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
     wall_lo_px, wall_hi_px  (선택) 두 측벽의 가로 좌표(화소, 영상 밖이어도 됨). 흐름이 up/down이면 X, right/left면 Y.
                   비우면 모든 프레임의 기포 가로 끝(중심 ± 등가 반경)의 최소·최대로 추정하고 경고한다.
     q_radius_px   (선택) 배치 계수 Q를 더하는 흐름 방향 반폭 L(화소). 비우면 min(채널 폭, 시야 길이/3)
+    masks_dir     (선택) 추적 프로그램의 SAVE_INSTANCE_MASKS 출력 폴더(OUTPUT_FOLDER/instances, 프레임마다 <파일 이름>.npz의
+                  라벨 지도 inst). 있으면 기포 윤곽마다 경계요소법으로 C_A(I81)를 구해 b/a 추정기 대신 쓴다.
+                  CSV 기포와는 중심 3 px·면적 비 0.8~1.25로 짝짓는다. ca_max_bubbles(기본 2000)개까지만 표본으로 계산한다.
 
 계산 (모두 "갭을 채운 기포", 즉 등가직경 d > 2H만 쓴다)
     α        프레임마다 Σ ROI内面積 / ROI 면적의 평균
@@ -33,8 +36,10 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
              원 합 = Lorentz 기준). 측벽(불투과)의 거울상(같은 부호, 두 벽이라 2W 주기)과 기포 자신의 거울상을 넣고,
              흐름 방향 띠 |Δs| ≤ L에서 더한 뒤 연속체 보정으로 원 합으로 바꾼다(layout_q 설명). 띠가 시야 밖으로 나가지 않는
              기포만 대상으로 하고 면적 가중 평균한다. 진단용 Q_noimg = 거울상 없는 반경 L의 원 합(고른 배치에서 0과 α 사이).
-    예측 기울기  slope = b/a − 2Q/(1 − α), y_layout = 1 + (b/a)x + 2λQ/(1 − α − λQ)(λ = s̄ − 1 = −x),
-             y_track_layout = ΣA_i[1 + ((b/a)_i − 2Q_i/(1 − α))(1 − s_i)]/ΣA_i(Q_i를 구한 기포만)
+    C_A      (masks_dir가 있을 때) 윤곽 → marching squares → 푸리에 평활 → 경계요소(added_mass_bem.py)의 면적 가중 평균.
+             b/a 추정기(A/(πa²))는 D형·총알 모양에서 C_A를 17~40% 작게 낸다(독립 검토 4). 짝지은 같은 기포들의 두 값을 함께 낸다.
+    예측 기울기  slope = C_A − 2Q/(1 − α)(C_A가 없으면 b/a), y_layout = 1 + C_A·x + 2λQ/(1 − α − λQ)(λ = s̄ − 1 = −x),
+             y_track_layout = ΣA_i[1 + (C_i − 2Q_i/(1 − α))(1 − s_i)]/ΣA_i(Q_i를 구한 기포만. C_i = 그 기포의 C_A, 없으면 b/a)
 쐐기 보정(β_f)은 넣지 않았다. Q는 쌍극자 수준(원 등가)이라 간격 < 2.5a의 줄에서는 몇 % 다를 수 있다.
 숫자를 논문에 쓰기 전에 윤곽 규약(I48)과 기체 유량 폐합으로 α를 점검한다.
     python plane_from_csv.py --selftest-q   # 직사각 격자·한 줄·무작위 배치로 Q 계산 점검
@@ -47,9 +52,12 @@ from collections import defaultdict
 
 import numpy as np
 
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 WATER = (1.0e-3, 998.0)
 COLS = ["name", "H_mm", "jL", "jG", "dp_tp", "dp_l", "tracking_csv", "roi_area_px", "px_mm", "fps", "flow", "mu", "rho", "T_tp", "T_l",
-        "wall_lo_px", "wall_hi_px", "q_radius_px"]
+        "wall_lo_px", "wall_hi_px", "q_radius_px", "masks_dir", "ca_max_bubbles"]
 
 
 def mu_water(t_c):
@@ -141,6 +149,50 @@ def _selftest_q():
           f"거울상 없는 원 합 {qn.mean():.4f}(띠 효과로 0과 α 사이)")
 
 
+def contour_added_mass(per_bubble, pb_meta, masks_dir, flow, max_bubbles=2000, seed=0):
+    """masks_dir의 라벨 지도에서 CSV 기포와 짝지은 윤곽의 C_A(I81). 반환: {per_bubble 번호: C_A}."""
+    from added_mass_bem import added_mass_from_mask
+    by_file = defaultdict(list)
+    for k, (fname, cx, cy) in enumerate(pb_meta):
+        if fname and cx == cx and cy == cy:
+            by_file[os.path.splitext(fname)[0]].append(k)
+    files = sorted(by_file)
+    rng = np.random.default_rng(seed)
+    rng.shuffle(files)
+    out, n_try = {}, 0
+    for stem in files:
+        path = os.path.join(masks_dir, stem + ".npz")
+        if not os.path.exists(path):
+            continue
+        inst = np.load(path)["inst"]
+        lab = inst.ravel().astype(np.int64)
+        cnt = np.bincount(lab)
+        yy, xx = np.indices(inst.shape)
+        sx = np.bincount(lab, weights=xx.ravel())
+        sy = np.bincount(lab, weights=yy.ravel())
+        ids = np.nonzero(cnt)[0]
+        ids = ids[ids > 0]
+        if not len(ids):
+            continue
+        cxs, cys = sx[ids] / cnt[ids], sy[ids] / cnt[ids]
+        for k in by_file[stem]:
+            A_csv = per_bubble[k][0]
+            _, cx, cy = pb_meta[k]
+            d2 = (cxs - cx) ** 2 + (cys - cy) ** 2
+            j = int(np.argmin(d2))
+            if d2[j] > 9.0 or not 0.8 <= cnt[ids[j]] / A_csv <= 1.25:
+                continue
+            ys, xs = np.nonzero(inst == ids[j])
+            crop = inst[ys.min():ys.max() + 1, xs.min():xs.max() + 1] == ids[j]
+            ca = added_mass_from_mask(crop, flow=flow)
+            if ca == ca:
+                out[k] = ca
+            n_try += 1
+        if n_try >= max_bubbles:
+            break
+    return out
+
+
 def analyse_point(p):
     H = _f(p["H_mm"]) * 1e-3
     jl, jg = _f(p["jL"]), _f(p["jG"])
@@ -165,6 +217,7 @@ def analyse_point(p):
     alpha_t, flux_t = [], []
     w_area = w_ba = w_u = w_d = w_w = 0.0
     per_bubble = []                                         # (A, b/a, u) — 기포마다의 예측 y_track용
+    pb_meta = []                                            # (파일 이름, 중심 X, 중심 Y) — 윤곽 C_A 짝짓기용
     cross = "X" if ax == "Y" else "Y"
     frame_bub = {}                                          # 프레임 → [(s, c, a², target, per_bubble 번호 또는 −1)]
     frame_alpha = {}
@@ -202,6 +255,7 @@ def analyse_point(p):
             w_d += A_px * d
             w_w += A_px * 2 * A_px / (math.pi * a_px) * px
             per_bubble.append((A_px, ba, u))
+            pb_meta.append((r.get("ファイル名", ""), _f(r.get("中心X")), _f(r.get("中心Y"))))
             if k_fb >= 0:
                 fb[k_fb][4] = len(per_bubble) - 1
         alpha_t.append(a_sum / roi)
@@ -256,16 +310,29 @@ def analyse_point(p):
     # 기포마다: s_i = u_i/U_m(U_m = jL/(1 − α)), y_track = ΣA_i[1 + (b/a)_i(1 − s_i)]/ΣA_i (유량계 없이, 모양–이동도 상관 포함)
     y_track = (sum(A * (1 + ba_i * (1 - u / u_l)) for A, ba_i, u in per_bubble) / sum(A for A, _, _ in per_bubble)
                if per_bubble else float("nan"))
-    # 배치를 넣은 예측(I74): 기울기 b/a − 2Q/(1 − α), 평균 꼴은 λ = −x로 2λQ/(1 − α − λQ)
-    slope = ba - 2 * Q / (1 - alpha)
-    y_layout = 1 + ba * x + 2 * (-x) * Q / (1 - alpha + x * Q)
-    qb = [(per_bubble[k], q) for k, q in q_of.items()]
-    y_track_layout = (sum(A * (1 + (ba_i - 2 * q / (1 - alpha)) * (1 - u / u_l)) for (A, ba_i, u), q in qb) / sum(A for (A, _, _), _ in qb)
+    # 윤곽 C_A(I81): masks_dir가 있으면 경계요소로, 같은 기포들의 b/a 추정기 값과 함께
+    ca_of = {}
+    mdir = (p.get("masks_dir") or "").strip()
+    if mdir:
+        mx = int(_f(p.get("ca_max_bubbles"), 2000))
+        ca_of = contour_added_mass(per_bubble, pb_meta, mdir, (p.get("flow") or "up").strip(), max_bubbles=mx)
+        if not ca_of:
+            print(f"  [{p['name']}] 경고: {mdir}에서 CSV 기포와 짝지은 윤곽이 없다(파일 이름·좌표 확인).")
+    wsum = sum(per_bubble[k][0] for k in ca_of)
+    C_A = sum(per_bubble[k][0] * c for k, c in ca_of.items()) / wsum if ca_of else float("nan")
+    ba_m = sum(per_bubble[k][0] * per_bubble[k][1] for k in ca_of) / wsum if ca_of else float("nan")
+    shape = C_A if C_A == C_A else ba
+    # 배치를 넣은 예측(I74): 기울기 C_A − 2Q/(1 − α), 평균 꼴은 λ = −x로 2λQ/(1 − α − λQ)
+    slope = shape - 2 * Q / (1 - alpha)
+    y_layout = 1 + shape * x + 2 * (-x) * Q / (1 - alpha + x * Q)
+    qb = [(per_bubble[k], ca_of.get(k, per_bubble[k][1]), q) for k, q in q_of.items()]
+    y_track_layout = (sum(A * (1 + (c_i - 2 * q / (1 - alpha)) * (1 - u / u_l)) for (A, _, u), c_i, q in qb) / sum(A for (A, _, _), _, _ in qb)
                       if qb else float("nan"))
     return {
         "name": p["name"], "H_mm": H * 1e3, "alpha": alpha, "B": B, "B_f": B_f, "s_bar": s_bar, "s_bar_T": s_bar_t,
         "E": E, "x": x, "y": y, "b_over_a": ba,
         "y_circle": 1 + x, "y_shape": 1 + ba * x, "y_track": y_track, "y_separated": 1.0, "y_homogeneous": 1 - x,
+        "C_A": C_A, "b_over_a_matched": ba_m, "C_A_bubbles": len(ca_of), "y_shape_CA": 1 + C_A * x,
         "Q": Q, "Q_noimg": Q_noimg, "Q_bubbles": len(q_rows["img"]), "slope_pred": slope, "y_layout": y_layout,
         "y_track_layout": y_track_layout,
         "u_bubble": u_b, "d_bar_mm": d_bar * 1e3, "Re_B": re_b, "Lambda": lam, "frames": len(alpha_t),
@@ -303,7 +370,8 @@ def plot(results, path):
 
 def make_demo(out):
     """원형이 아닌 기포(b/a 1.5)가 s 1.5로 움직이는 합성 자료 3점. 계산이 입력을 되돌려 주는지 본다.
-    기포는 겹치지 않게 고르게 놓아 배치 계수 Q ≈ 0이다(합성 E에는 배치 효과를 넣지 않았다)."""
+    기포는 겹치지 않게 고르게 놓아 배치 계수 Q ≈ 0이다(합성 E에는 배치 효과를 넣지 않았다).
+    처음 6프레임은 라벨 지도(masks_k/f<프레임>.npz)도 써서 윤곽 C_A 경로를 점검한다(타원이라 C_A = b/a)."""
     rng = np.random.default_rng(1)
     os.makedirs(out, exist_ok=True)
     H, px, fps, W, Hpx = 0.3e-3, 0.02e-3, 500.0, 1000, 1000
@@ -312,10 +380,13 @@ def make_demo(out):
         rows = []
         u_l = jl / (1 - alpha_t)
         v_px = s_t * u_l / (px * fps)
+        mdir = os.path.join(out, f"masks_{k}")
+        os.makedirs(mdir, exist_ok=True)
         for f in range(60):
             area_sum = 0.0
             tid = 0
             placed = np.empty((0, 3))                       # 겹치지 않게(배치 계수 Q가 0 근처가 되도록) 놓는다
+            inst = np.zeros((Hpx, W), np.int32) if f < 6 else None
             while area_sum < alpha_t * W * Hpx:
                 a = rng.uniform(15, 30)                     # 흐름 방향 반축(px) → d > 2H(= 30 px)
                 b = ba_t * a
@@ -325,12 +396,21 @@ def make_demo(out):
                 if len(placed) and np.any(np.hypot(placed[:, 0] - cx, placed[:, 1] - cy) < placed[:, 2] + rmax):
                     continue
                 placed = np.vstack([placed, (cx, cy, rmax)])
+                if inst is not None:                        # 흐름(위) 방향 반축 a는 y, 가로 반축 b는 x
+                    x0, x1 = int(max(cx - b - 1, 0)), int(min(cx + b + 2, W))
+                    y0, y1 = int(max(cy - a - 1, 0)), int(min(cy + a + 2, Hpx))
+                    yy, xx = np.mgrid[y0:y1, x0:x1]
+                    m = ((xx - cx) / b) ** 2 + ((yy - cy) / a) ** 2 <= 1.0
+                    inst[y0:y1, x0:x1][m] = tid + 1
+                    A = float(m.sum())
                 rows.append({"ファイル名": f"f{f}.png", "フレーム": f, "トラックID": tid, "イベント": "", "親トラックID": "",
                              "面積(px)": f"{A:.0f}", "ROI内面積(px)": f"{A:.0f}", "先端部X": f"{cx:.2f}", "先端部Y": f"{cy - a:.2f}",
                              "中心X": f"{cx:.2f}", "中心Y": f"{cy:.2f}", "上昇速度(px/frame)": f"{-v_px:.3f}",
                              "周長(px)": "", "フレーム接触": "0"})
                 area_sum += A
                 tid += 1
+            if inst is not None:
+                np.savez_compressed(os.path.join(mdir, f"f{f}.npz"), inst=inst)
         path = os.path.join(out, f"demo_tracking_{k}.csv")
         with open(path, "w", encoding="utf-8-sig", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
@@ -338,7 +418,8 @@ def make_demo(out):
         jg = s_t * alpha_t / (1 - alpha_t) * jl
         E = alpha_t / (1 - alpha_t) + ba_t * alpha_t * (1 - s_t) / (1 - alpha_t)
         pts.append({"name": f"demo{k} (b/a {ba_t}, s {s_t})", "H_mm": 0.3, "jL": jl, "jG": jg, "dp_tp": 100 * (1 + E), "dp_l": 100,
-                    "tracking_csv": path, "roi_area_px": W * Hpx, "px_mm": px * 1e3, "fps": fps, "flow": "up", "mu": "", "rho": ""})
+                    "tracking_csv": path, "roi_area_px": W * Hpx, "px_mm": px * 1e3, "fps": fps, "flow": "up", "mu": "", "rho": "",
+                    "wall_lo_px": 0, "wall_hi_px": W, "masks_dir": mdir})
     pfile = os.path.join(out, "demo_points.csv")
     with open(pfile, "w", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=COLS)
@@ -371,6 +452,8 @@ def main():
     for r in res:
         print(f"{r['name']}: α {r['alpha']:.3f}, b/a {r['b_over_a']:.2f}, s̄ {r['s_bar']:.2f} (추적 {r['s_bar_T']:.2f}), "
               f"x {r['x']:.2f}, y {r['y']:.2f} (원형 {r['y_circle']:.2f}, 모양 {r['y_shape']:.2f}, 기포별 {r['y_track']:.2f}), Re_B {r['Re_B']:.2f}, Λ {r['Lambda']:.3f}")
+        if r["C_A_bubbles"]:
+            print(f"    윤곽 C_A {r['C_A']:.2f}(같은 {r['C_A_bubbles']}개 기포의 b/a 추정기 {r['b_over_a_matched']:.2f})")
         print(f"    배치 Q {r['Q']:.3f}(거울상 없음 {r['Q_noimg']:.3f}, 기포 {r['Q_bubbles']}개), 예측 기울기 {r['slope_pred']:.2f}, "
               f"배치 넣은 예측 y {r['y_layout']:.2f}(기포별 {r['y_track_layout']:.2f})")
 

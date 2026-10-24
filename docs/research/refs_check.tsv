@@ -60,9 +60,9 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/0098-1354(94)00062-s	OK	sathyagal	1995	Solution of inverse problems in population balances-II. Particle break-up	Computers & Chemical Engineering	11_ideas2,check
 10.1016/0169-5983(95)00053-g	OK	chen	1995	Experimental study of plane turbulent wakes in a shallow water layer	Fluid Dynamics Research	12_ideas3,check
 10.1016/0255-2701(89)90007-x	OK	drahos	1989	Diagnostics of gas—liquid flow patterns in chemical engineering systems	Chemical Engineering and Processing: Process Intensification	6_measurement,check
-10.1016/0301-9322(75)90015-4	OK	jones	1975	The interrelation between void fraction fluctuations and flow patterns in two-phase flow	International Journal of Multiphase Flow	1_adiabatic_gap,check
+10.1016/0301-9322(75)90015-4	OK	jones	1975	The interrelation between void fraction fluctuations and flow patterns in two-phase flow	International Journal of Multiphase Flow	13_plane,1_adiabatic_gap,check
 10.1016/0301-9322(81)90003-3	OK	sato	1981	Momentum and heat transfer in two-phase bubble flow—I. Theory	International Journal of Multiphase Flow	4_heat_transfer,check
-10.1016/0301-9322(82)90009-x	OK	beattie	1982	A simple two-phase frictional pressure drop calculation method	International Journal of Multiphase Flow	13_plane
+10.1016/0301-9322(82)90009-x	OK	beattie	1982	A simple two-phase frictional pressure drop calculation method	International Journal of Multiphase Flow	13_plane,check
 10.1016/0301-9322(82)90068-4	OK	sadatomi	1982	Two-phase flow in vertical noncircular channels	International Journal of Multiphase Flow	1_adiabatic_gap,9_data,check
 10.1016/0301-9322(84)90007-7	OK	matsui	1984	Identification of flow regimes in vertical gas-liquid two-phase flow using differential pressure fluctuations	International Journal of Multiphase Flow	10_ideas,6_measurement,check
 10.1016/0301-9322(89)90042-6	OK	monde	1989	Enhancement of heat transfer due to bubbles passing through a narrow vertical rectangular channel	International Journal of Multiphase Flow	4_heat_transfer,check
@@ -362,7 +362,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1038/s41598-026-35147-8	OK	sha	2026	Machine learning-based heat flux estimation from high-speed video during saturated pool boiling over vertical tube	Scientific Reports	0_estimates,check
 10.1038/s43588-022-00355-5	OK	bakarji	2022	Dimensionally consistent learning with Buckingham Pi	Nature Computational Science	5_ai_image,check
 10.1038/srep31395	OK	yahashi	2016	Scaling crossover in thin-film drag dynamics of fluid drops in the Hele-Shaw cell	Scientific Reports	3_pressure_drop,check
-10.1039/b510841a	OK	garstecki	2006	Formation of droplets and bubbles in a microfluidic T-junction—scaling and mechanism of break-up	Lab on a Chip	0_estimates,10_ideas,check
+10.1039/b510841a	OK	garstecki	2006	Formation of droplets and bubbles in a microfluidic T-junction—scaling and mechanism of break-up	Lab on a Chip	0_estimates,10_ideas,13_plane,check
 10.1039/b513524a	OK	gervais	2006	Flow-induced deformation of shallow microfluidic channels	Lab on a Chip	6_measurement,check
 10.1039/b706549c	OK	fuerstman	2007	The pressure drop along rectangular microchannels containing bubbles	Lab on a Chip	10_ideas,12_ideas3,3_pressure_drop,5_ai_image,7_closest_novelty,check
 10.1039/b813061b	OK	hardy	2009	The deformation of flexible PDMS microchannels under a pressure driven flow	Lab Chip	6_measurement,check

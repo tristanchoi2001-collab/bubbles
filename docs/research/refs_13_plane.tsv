@@ -11,3 +11,5 @@ doi	first_author	year	short_title	level	note
 10.1063/1.346276	Kim	1990	Determination of the effective conductivity of heterogeneous media by Brownian motion simulation	C	I82. J Appl Phys 68:3892-3903. 2차원 무작위 원판·3차원 구의 유효 전도도(평균장 한계 기준선, 원문 미확인)
 10.1098/rspa.2024.0613	Booth	2025	The motion of a bubble in a non-uniform Hele-Shaw flow	C+A	I74·I82. Proc R Soc A 481. 순간 기포 속도 = 기포 중심의 배경 유속으로 정한 균일 흐름 결과(국소장 응답), T자·주입원·장애물 응용
 10.1016/0301-9322(82)90009-X	Beattie	1982	A simple two-phase frictional pressure drop calculation method	C	Sadatomi 1992 표 3에서 분리류 모델과 함께 평균 오차가 가장 작은 균질류 점도식(판별 평면에서 E/B = 2.5/(1 + B), 독립 검토 3의 표현). IJMF 8:83-87
+10.1039/b510841a	Garstecki	2006	Formation of droplets and bubbles in a microfluidic T-junction—scaling and mechanism of break-up	C	I79(독립 검토 4 제안). Lab Chip 6:437. T자 짜내기 영역 L/w = 1 + α·Q_G/Q_L(검토자 기억, 원문 미확인). 작은 팬케이크 발생 후보
+10.1016/0301-9322(75)90015-4	Jones	1975	The interrelation between void fraction fluctuations and flow patterns in two-phase flow	C	독립 검토 4: 수직 좁은 직사각 유로 기공률 측정의 더 이른 선례 후보(원문 미확인). IJMF 2:273-306

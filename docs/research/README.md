@@ -38,7 +38,7 @@
    - 7 mm는 Darcy 영역이 아니다 → 웅덩이 효과는 관성 손실이고, 같은 웅덩이 비율에서 E가 유량과 함께 커진다(팬케이크와 반대, I66).
 
 ## 기존 0.3·0.7 mm 자료로 바로 해 볼 첫 단계 (2026-10-24)
-1. 운전점마다 한 줄씩 `points.csv`를 만든다: name, H_mm(단상 ΔP로 정한 유효 갭), jL, jG(m/s), dp_tp, dp_l(같은 탭·같은 j_L의 단상 ΔP, Pa), tracking_csv(result_tracking.csv 경로), roi_area_px, px_mm, fps, flow(투명 채널은 up), (선택) T_tp·T_l(두 측정 때 수온 °C — 1 K 차이가 E 0.024라 꼭 적는다), wall_lo_px·wall_hi_px(두 측벽의 가로 좌표, 배치 Q의 거울상에 필요. 비우면 기포 끝으로 추정).
+1. 운전점마다 한 줄씩 `points.csv`를 만든다: name, H_mm(단상 ΔP로 정한 유효 갭), jL, jG(m/s), dp_tp, dp_l(같은 탭·같은 j_L의 단상 ΔP, Pa), tracking_csv(result_tracking.csv 경로), roi_area_px, px_mm, fps, flow(투명 채널은 up), (선택) T_tp·T_l(두 측정 때 수온 °C — 1 K 차이가 E 0.024라 꼭 적는다), wall_lo_px·wall_hi_px(두 측벽의 가로 좌표, 배치 Q의 거울상에 필요. 비우면 기포 끝으로 추정), masks_dir(추적 때 `SAVE_INSTANCE_MASKS = True`로 저장한 `OUTPUT_FOLDER/instances` 폴더. 있으면 윤곽마다 경계요소 C_A를 구해 기울기에 쓴다 — b/a 추정기는 D형 기포에서 C_A를 17~40% 작게 낸다).
 2. `python docs/research/tools/plane_from_csv.py points.csv --out plane_out` → `plane_out/plane.png`(판별 평면), `plane_points.csv`(α, b/a, s̄, s̄_T, x, y, 예측 y, 배치 Q·예측 기울기 b/a − 2Q/(1 − α), Re_B, Λ). 처음에는 `--demo`와 `--selftest-q`(격자·무작위 배치에서 Q 점검)로 동작을 확인한다.
 3. 읽는 법: 점이 y ≈ 1이면 분리류(쌍극자 없음), 영상 b/a로 그린 직선 y = 1 + (b/a)x 근처면 폐합 성립, y ≈ 0이면 마찰이 거의 없는 납작한 기포(Moriyama형), y ≫ 1이면 입구·탭·단상 기준의 배율 문제(Fourar 1993 자료는 k_rL 배율 하나로 설명됨)나 관성(Λ 확인). 기울기가 b/a 예측과 다르면 배치 Q(I74)를 먼저 확인한다. 예상 위치는 설계 17장 "첫 그림에서 점이 놓일 곳".
 4. 그다음: 같은 유량에서 주입기만 바꾼 점(I54·I79)으로 기울기를 본다. 예측 기울기는 점마다 b/a와 Q로 다르므로, 주입기끼리 Q가 비슷한지 먼저 확인한다.
@@ -60,8 +60,8 @@
 | `intro_draft_paper1.md` | 논문 1 서론 초안(영문 5문단 + 심사자 관점 요지): 선행 인정 → 빈칸 → 모양 가족 폐합·판별 평면 |
 | `data_paper_plan.md` | 데이터 논문 설계(담을 것, 지금 CSV로 바로 계산되는 양, 분할·과제, 용량) |
 | `fig/`, `fig/src/` | 그림 r1~r11과 생성 스크립트 |
-| `tools/plane_from_csv.py` | 운전점 표(유량·차압·화소 크기·측벽 위치) + 추적 CSV → α, 종횡비 b/a, s̄(유량계·추적), 배치 계수 Q(측벽 거울상, I74), 예측 기울기, Re_B, Λ, 판별 평면 좌표와 그림. `--demo`, `--selftest-q`로 점검 |
-| `tools/added_mass_bem.py` | 기포 윤곽 → 2차원 부가질량 계수 C_A(폐합 모양 인자 c = 1 + C_A, I81). 원·타원 이론과 일치 |
+| `tools/plane_from_csv.py` | 운전점 표(유량·차압·화소 크기·측벽 위치·마스크 폴더) + 추적 CSV → α, 종횡비 b/a, 윤곽 C_A(경계요소, I81), s̄(유량계·추적), 배치 계수 Q(측벽 거울상, I74), 예측 기울기, Re_B, Λ, 판별 평면 좌표와 그림. `--demo`, `--selftest-q`로 점검 |
+| `tools/added_mass_bem.py` | 기포 윤곽 또는 마스크 → 2차원 부가질량 계수 C_A(폐합 모양 인자 c = 1 + C_A, I81). 원·타원·45° 타원 이론과 일치. 마스크는 marching squares + 푸리에 평활(화소 원판 R ≥ 10 px에서 0.4% 안), 흐름 방향 회전(flow) |
 | `../refs_microgap.bib`, `refs_check.tsv`, `make_bib.py` | 참고문헌(Crossref·DataCite·doi.org 대조) |
 | `PROGRESS.md` | 작업 기록, 비용 규칙, 접속 상태 |
 
