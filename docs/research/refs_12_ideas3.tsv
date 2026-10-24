@@ -1,0 +1,51 @@
+doi	first_author	year	short_title	level	note
+10.1039/c7sm01478c	Franco-Gómez	2017	Bubble propagation on a rail: a concept for sorting bubbles by size	C+F	I51. Soft Matter 13(46):8684-8697. arXiv 1712.01623 원문. H 1 mm, W 30 mm, 레일 높이 24 µm(2.4%)·폭 6.9/10.7 mm, 실리콘유 50 mPa·s, Q=μU/σ 약 4e-3~2e-2에서 레일 위/옆 선택·크기별 분리
+10.1103/physrevlett.107.124501	Dangla	2011	Trapping microfluidic drops in wells of surface energy	C+F	I51·I45. PRL 107(12):124501. HAL hal-00998003 원문. 멈춘 액적 압력 항력 F=24πμUR²/h(점성 항력은 R/h배 작음), 고정력=표면에너지 변화/구멍 지름, 구멍 지름≤2h면 깊이 무관 S(b), Ca*∝S(b)h²/R², 고정력 100~1000 nN
+10.1039/c0lc00104j	Abbyad	2011	Rails and anchors: guiding and trapping droplet microreactors in two dimensions	C+F	I51. Lab Chip 11(5):813-821. HAL hal-00804598 원문. 채널 높이 35/50 µm, 구멍 지름 50~100 µm·깊이=채널 높이, 임계 유량 Q_c가 액적 반지름과 함께 감소, 레일 50×50 µm
+10.1073/pnas.1209186110	Dangla	2013	Droplet microfluidics driven by gradients of confinement	C+A	I51. PNAS 110(3):853-858. Europe PMC 초록. 높이 변화(갇힘 기울기)로 액적 생성·자기 추진
+10.1017/jfm.2020.844	Gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	C+A	I51. JFM 914:A34. S2 초록: 깊이 섭동 채널의 기포 분열·집합·합체. 장치 수치(갭 1.00 mm, 폭 40 mm, 폭 10 mm·두께 24 µm 테이프 레일)는 검색 요약 기준
+10.1103/physrevfluids.9.093605	Lawless	2024	Stable bubble formations in a depth-perturbed Hele-Shaw channel	C+A	I51. PRF 9(9):093605. lit_8 D2와 같음
+10.11395/jjsem.8.s152	Kumagai	2008	Effects of channel gap and channel attitude on flow pattern of air-water two-phase flow in rectangular millimeter-scale channels	U	I32·I56. JaLC DOI(Crossref 미등록). J. JSEM 8(Special Issue):152-157. HUSCAP hdl 2115/75037로 서지 확인. 원문 내용(5·10 mm 분열, 1 mm 막 파열·채널링)은 microgap_data_catalog T1
+10.1080/00221681003726262	Pozos	2010	Experimental investigation of air pockets in pumping pipeline systems	C	I32. J. Hydraul. Res. 48(2):269-273. 검색 요약: 높은 곳의 큰 공기주머니가 유효 단면을 줄여 손실 증가, 주머니 밑 흐름을 점변류로 다룸
+-	Escarameia	2004	Experimental and numerical studies on movement of air in water pipelines (HR Wallingford SR 661)	U	I32. 보고서, DOI 없음. https://eprints.hrwallingford.com/538/ 목차 수준(공기주머니 이동 임계 유속, 도수에 의한 공기 배출, 공기주머니 손실 절). 연도는 검색 요약 기준
+10.1021/i160056a011	Dukler	1975	A model for gas-liquid slug flow in horizontal and near horizontal tubes	C	I32. Ind. Eng. Chem. Fundam. 14(4):337-347. 제목 수준
+10.1016/0894-1777(92)90055-a	Wambsganss	1992	Frictional pressure gradients in two-phase flow in a small horizontal rectangular channel	C	I32. Exp. Therm. Fluid Sci. 5(1):40-56. 제목 수준
+10.1017/s0022112068000133	Benjamin	1968	Gravity currents and related phenomena	C	I32. JFM 31(2):209-248. 제목 수준(수평 관 기포 앞부분 이론의 고전)
+10.1007/978-0-387-21656-0	de Gennes	2004	Capillarity and wetting phenomena	C	I32. 교과서(Springer). 큰 웅덩이 두께 2Lc·sin(θ/2)
+10.1017/s0022112008003029	Elbing	2008	Bubble-induced skin-friction drag reduction and the abrupt transition to air-layer drag reduction	C	I32. JFM 612:201-236. 제목 수준(위 벽 기체층이 벽 마찰을 없애는 반대 효과의 근거)
+10.1016/0169-5983(95)00053-g	Chen	1995	Experimental study of plane turbulent wakes in a shallow water layer	C	I32·N1. Fluid Dyn. Res. 16(1):11-41. 제목 수준(얕은 흐름 후류의 바닥 마찰 대 관성)
+10.1103/physrevfluids.10.023301	Raufaste	2025	Friction-induced bubble edge curvature in flowing two-dimensional confined foams	C	I45. PRF 10(2):023301. idea_checks I3에서 C+F(기포 가장자리 곡률로 마찰)
+10.1103/physreve.78.051504	Krishan	2008	Viscous shear banding in foam	C	I45. PRE 78(5):051504. 검색 요약: 2D 거품에서 기포 속도를 모델에 맞춰 막 항력 추정
+10.1103/physrevfluids.5.093301	Shmakova	2020	Quasi-two-dimensional foam flow through and around a permeable obstacle	C	I45. PRF 5(9):093301. 검색 요약: Hele-Shaw 거품의 영상 상관 속도장·타원 맞춤 변형장
+10.1039/b918933e	Chan	2010	Dynamic interactions between deformable drops in the Hele–Shaw geometry	C+A	I45. Soft Matter 6(8):1809. S2 초록: Hele-Shaw 액적 충돌 모델, 간격을 재면 시간에 따른 액적 사이 힘을 추론할 수 있다
+10.1088/0957-0233/24/3/032001	van Oudheusden	2013	PIV-based pressure measurement	C	I45. Meas. Sci. Technol. 24(3):032001. 리뷰, 제목 수준
+10.1038/nmat3025	Tambe	2011	Collective cell guidance by cooperative intercellular forces	C	I45. Nat. Mater. 10(6):469-475. 단층 응력 현미경(발상 유사물), 제목 수준
+10.1016/j.jcis.2019.09.072	Roman	2020	Pore-scale visualization and characterization of viscous dissipation in porous media	C+A	I45. J. Colloid Interface Sci. 558:269-279. S2 초록: 갇힌 물방울 안 속도장(micro-PIV)으로 점성 소산 4영역
+-	(APS March Meeting)	2019	Experimental pressure analysis techniques in the viscous fingering instability	U	I45. 학회 초록, DOI 없음. https://meetings-archive.aps.org/mar/2019/p48/14 검색 요약: 염료 고리로 국소 흐름을 보고 Darcy로 압력 구배 지도
+10.1017/jfm.2022.1008	Booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	C	I45·I53. JFM 954:A21. 이동도 식 s^(2/3)=δ(2−s), δ=1.12Ca^(1/3)d/H → 마찰 F/(σd)=8.4Ca_b^(2/3). 주제 3에서 C+F
+10.1103/physrevlett.115.064501	Huerre	2015	Droplets in microchannels: dynamical properties of the lubrication film	C+A	I52·I56. PRL 115(6):064501. lit_1 D8. 막 지형 catamaran(옆이 얇음), 낮은 Ca에서 분리압 지배
+10.1039/c5lc01417d	Huerre	2016	Absolute 3D reconstruction of thin films topography in microfluidic channels by interference reflection microscopy	C	I52. Lab Chip 16(5):911-916. 제목 수준(HAL hal-03152580 공개본 있음)
+10.1017/jfm.2018.457	Reichert	2018	Topography of the lubrication film under a pancake droplet travelling in a Hele-Shaw cell	C+A	I52. JFM 850:708-732. lit_1 D11
+10.1017/jfm.2019.453	Shukla	2019	Film thickness distribution in gravity-driven pancake-shaped droplets rising in a Hele-Shaw cell	C+F	I52. JFM 874:1021-1040. arXiv 1906.07118 원문. 수직 Hele-Shaw 갭 4.59~4.8 mm, Ca 0.03~0.35, 막 6~30 µm를 공초점 색수차 영상으로 측정
+10.1063/1.5051057	Atasi	2018	How to measure the thickness of a lubrication film in a pancake bubble with a single snapshot?	C+A	I52·N5·I27. APL 113(17):173701. S2 초록: 명시야 영상의 눈부심 고리 위치로 막 두께(광선 추적 상관식), 멈춘 기포는 채널 깊이. PDF(oatao) 접속 실패
+10.1016/j.ijheatmasstransfer.2008.11.020	Utaka	2009	Configuration of the micro-layer and characteristics of heat transfer in a narrow gap mini/micro-channel boiling system	C	I52. IJHMT 52(9-10):2205-2214. 레이저 소광법(lit_4 #22). 검색 요약: 갭 0.5/0.3/0.15 mm
+10.1016/j.ijheatmasstransfer.2015.01.013	Zhang	2015	Characteristics of a liquid microlayer formed by a confined vapor bubble in micro gap boiling between two parallel plates	C	I52. IJHMT 84:475-485. lit_4 #21(석영판 갭 0.15/0.30/0.50 mm, 레이저 소광)
+10.1115/1.2824026	Moriyama	1996	Thickness of the liquid film formed by a growing bubble in a narrow gap between two horizontal plates	C+A	I52. J. Heat Transfer 118(1):132-139. lit_2 #28·lit_4 #20(수평 두 판 0.1~0.4 mm)
+10.1016/j.ijheatfluidflow.2009.02.019	Han	2009	Measurement of the liquid film thickness in micro tube slug flow	C	I52. IJHFF 30(5):842-853. lit_4 #23(레이저 초점 변위계, 관경 0.3~1.3 mm)
+10.1016/0009-2509(77)80222-4	Sriram	1977	Dynamic gas disengagement: a new technique for assessing the behaviour of bubble columns	C	I53·N2. Chem. Eng. Sci. 32(6):571-580. 제목 수준(기체를 끊고 이탈 곡선으로 기공률 구조 분석)
+10.1002/aic.690350606	Patel	1989	Holdup and interfacial area measurements using dynamic gas disengagement	C+A	I53·N2. AIChE J. 35(6):931-942. Crossref 초록: 일정 속도 이탈/상호작용 이탈 두 극단으로 오차 범위, 다봉 분포 일반식, 공기-수돗물 0.05·0.23 m 기포탑
+10.1039/b706549c	Fuerstman	2007	The pressure drop along rectangular microchannels containing bubbles	C+A	I53·I54. Lab Chip 7(11):1479. Europe PMC 초록: ΔP는 채널 안 기포 수가 지배, 중간 계면활성제 농도에서는 기포 총길이(모서리 gutter 흐름)
+10.1103/physrevlett.100.044501	Schindler	2008	Droplet traffic in microfluidic networks: a simple model for understanding and designing	C	I53. PRL 100(4):044501. 제목 수준(액적 = 선형 저항기)
+10.1002/aic.10495	Kreutzer	2005	Inertial and interfacial effects on pressure drop of Taylor flow in capillaries	C	I53·I54. AIChE J. 51(9):2428-2440. refs_0와 같음
+10.1016/0009-2509(89)85008-0	Taitel	1989	Simplified transient solution and simulation of two-phase flow in pipelines	C	I53. Chem. Eng. Sci. 44(6):1353-1359. 제목 수준
+10.2118/1204-pa	Bernard	1965	Effect of foam on trapped gas saturation and on permeability of porous media to water	C+A	I54. SPE J. 5(4):295-300. Crossref 초록: 같은 포화도에서 물 투과도는 거품 유무와 같음, 거품은 갇힌 기체 포화도를 늘려 투과도를 낮춤. Crossref 저자 Bernard, Jacobs(2인)
+10.1115/1.3089543	Kawaji	2009	The effects of inlet geometry and gas-liquid mixing on two-phase flow in microchannels	C	I54. J. Fluids Eng. 131(4). 제목 수준 + 관련 AIChE 2006 발표 검색 요약(100 µm 채널에서 주입부가 기공률에 강한 영향, 미니채널은 약함)
+10.1063/1.2976306	Bławzdziewicz	2008	An analysis of the far-field response to external forcing of a suspension in the Stokes flow in a parallel-wall channel	C	I54. Phys. Fluids 20(9):093303. estimates 5.4와 같음
+10.1209/epl/i2001-00356-y	Aradian	2001	"Marginal pinching" in soap films	C+F	I56. EPL 55(6):834-840. arXiv cond-mat/0105318 원문. 굳은 표면(Poiseuille) 윤활 막, 플라토 경계 옆 목: 두께∝t^-1/2, 폭∝t^-1/4, 영향 거리∝t^1/4, t_relax=3r⁴/(V*e0³), V*=γ/η
+10.1017/s095679250500625x	Howell	2005	On the absence of marginal pinching in thin free films	C	I56. Eur. J. Appl. Math. 16(5):569-582(Howell, Stone). 검색 요약: 양면 미끄러운 자유막에는 목이 생기지 않음
+10.1021/acs.langmuir.7b03839	Khodaparast	2018	Dewetting of thin liquid films surrounding air bubbles in microchannels	C+A	I56. Langmuir 34(4):1363-1370. Europe PMC 초록: 모서리 쪽 국소 최소 두께 약 100 nm 이하에서 부분 젖음 막이 깨짐, L_w∝Ca^α(1.7<α<2, 1e-5<Ca<1e-2), 젖음성으로 최대 10배
+10.1039/c0sm00812e	Chan	2011	Film drainage and coalescence between deformable drops and bubbles	C	I56. Soft Matter 7(6):2235-2264. 리뷰, 제목 수준
+10.1021/j100807a513	Frankel	1962	On the "dimpling" during the approach of two interfaces	C	I56. J. Phys. Chem. 66(1):190-191. 제목 수준
+10.1615/ihtc12.1010	Malayeri	2002	Prediction of void fraction in air/water two-phase flows at elevated temperatures	C	I57. Proc. IHTC-12. 제목 수준(DLR elib 기록, 원문 없음, 증발 처리 미확인)
+10.1016/s0255-2701(02)00208-8	Malayeri	2003	Neural network analysis of void fraction in air/water two-phase flows at elevated temperatures	C	I57. Chem. Eng. Process. 42(8-9):587-597. 제목 수준
+10.1016/j.flowmeasinst.2021.102080	Tait	2022	Determination of void fraction in wet-gas vertical flows via differential pressure measurement	C	I57. Flow Meas. Instrum. 83:102080. 제목 수준(차압으로 상 분율 추정의 계량 선례)
