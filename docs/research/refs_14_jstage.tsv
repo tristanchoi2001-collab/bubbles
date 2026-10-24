@@ -8,3 +8,6 @@ doi	first_author	year	short_title	level	note
 10.1016/s0017-9310(99)00297-5	Bao	2000	An experimental study of gas-liquid flow in a narrow conduit	C	논문 2 배경. IJHMT 43:2313-2324. 좁은 관의 공기-물 비비등 흐름·열전달(원문 미확인)
 10.1016/s0301-9322(02)00010-1	Vlasogiannis	2002	Air-water two-phase flow and heat transfer in a plate heat exchanger	C	논문 2 배경. IJMF 28:757-772. 판형 열교환기(좁은 주름 유로) 공기-물 혼합 냉측 열전달(원문 미확인, 저유량에서 공기 주입 효과가 크다는 2차 언급)
 10.1080/01457630118144	Tribbe	2001	Gas/liquid flow in plate-and-frame heat exchangers - Part I: pressure drop measurements	C	판형 열교환기 기액 ΔP(Part II는 10.1080/01457630150215686, 이상류 배율·양식)
+10.1299/kikaib.78.1572	Zhang	2012	Formation characteristics of thin liquid film between flattened bubble and heating surface in mini-gap boiling	C+A	I77·I52·논문 2. Trans JSME B 78:1572. 갭 0.5/0.3/0.15 mm, 물·톨루엔·HFE7200, 레이저 소광으로 마이크로층 두께, 처음 두께는 갭과 기포 앞끝 속도로 정해짐(Ca·Bo 상관식)
+10.5098/hmt.v3.1.3003	Zhang	2012	Characteristics of microlayer formation and heat transfer in mini/microchannel boiling systems: a review	C	오픈액세스 리뷰(Front Heat Mass Transfer 3). I77·논문 2
+10.1115/icnmm2009-82244	Zhang	2009	Characteristics of microlayer thickness formed during boiling in microgaps	C	ASME ICNMM 2009. I77
