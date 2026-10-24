@@ -38,7 +38,7 @@
    - 7 mm는 Darcy 영역이 아니다 → 웅덩이 효과는 관성 손실이고, 같은 웅덩이 비율에서 E가 유량과 함께 커진다(팬케이크와 반대, I66).
 
 ## 기존 0.3·0.7 mm 자료로 바로 해 볼 첫 단계 (2026-10-24)
-1. 운전점마다 한 줄씩 `points.csv`를 만든다: name, H_mm(단상 ΔP로 정한 유효 갭), jL, jG(m/s), dp_tp, dp_l(같은 탭·같은 j_L의 단상 ΔP, Pa), tracking_csv(result_tracking.csv 경로), roi_area_px, px_mm, fps, flow(투명 채널은 up).
+1. 운전점마다 한 줄씩 `points.csv`를 만든다: name, H_mm(단상 ΔP로 정한 유효 갭), jL, jG(m/s), dp_tp, dp_l(같은 탭·같은 j_L의 단상 ΔP, Pa), tracking_csv(result_tracking.csv 경로), roi_area_px, px_mm, fps, flow(투명 채널은 up), (선택) T_tp·T_l(두 측정 때 수온 °C — 1 K 차이가 E 0.024라 꼭 적는다).
 2. `python docs/research/tools/plane_from_csv.py points.csv --out plane_out` → `plane_out/plane.png`(판별 평면), `plane_points.csv`(α, b/a, s̄, s̄_T, x, y, 예측 y, Re_B, Λ). 처음에는 `--demo`로 동작을 확인한다.
 3. 읽는 법: 점이 y ≈ 1이면 분리류(쌍극자 없음), 영상 b/a로 그린 직선 y = 1 + (b/a)x 근처면 폐합 성립, y ≈ 0이면 마찰이 거의 없는 납작한 기포(Moriyama형), y ≫ 1이면 관성(Λ 확인)이나 입구·탭 문제. 예상 위치는 설계 17장 "첫 그림에서 점이 놓일 곳".
 4. 그다음: 같은 유량에서 주입기만 바꾼 점(I54·I79)으로 기울기 부호를 본다.
