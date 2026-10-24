@@ -5,7 +5,7 @@
 ## 먼저 볼 것 (10분)
 1. 보고서 ① 결론 요약(`../research_microgap_paper.md`).
 2. 아래 "핵심 결과".
-3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 모든 모델이 한 점을 지나는 직선), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위).
+3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83).
 
 ## 핵심 결과
 1. **어디가 비어 있나**
