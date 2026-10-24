@@ -57,6 +57,15 @@
 4. 공극률 쪽 읽는 법(판별 평면): 점이 y ≈ 1이면 분리류(쌍극자 없음), 영상 b/a로 그린 직선 y = 1 + (b/a)x 근처면 폐합 성립, y ≈ 0.1~0.2면 마찰이 거의 없는 납작·D형 기포(Moriyama형, C_A 1.3~2.3), y ≫ 1이면 입구·탭·단상 기준의 배율 문제(Fourar 1993 자료는 k_rL 배율 하나로 설명됨)나 관성(Λ 확인). 기울기가 b/a 예측과 다르면 배치 Q(I74)를 먼저 확인한다. 예상 위치는 설계 17장 "첫 그림에서 점이 놓일 곳".
 5. 그다음: 같은 유량에서 주입기만 바꾼 점(I54·I79)으로 기울기를 본다. 예측 기울기는 점마다 b/a와 Q로 다르므로, 주입기끼리 Q가 비슷한지 먼저 확인한다.
 
+## 철 채널(1 mm) 기존 영상으로 속도로 바로 해 볼 것 (2026-10-24, I95·I96·I98)
+1. 추적할 때 `SAVE_INSTANCE_MASKS = True`로 라벨 지도를 저장한다(`steel/2_steel_track.py`).
+2. `python docs/research/tools/steel_velocity_checks.py --csv <OUTPUT_FOLDER>/result_tracking.csv --masks <OUTPUT_FOLDER>/instances --images <IMAGE_FOLDER> --bg <BACKGROUND_PATH> --px_mm <화소 크기> --fps <촬영 속도> --groove_mm <홈 간격(알면)> --out sv_out`
+3. 읽는 법
+   - `brightness_vs_speed.csv`: 크기·위치 칸마다 기울기가 0 근처면 갇힌 빛 광학이다. 모든 칸에서 같은 부호의 매끈한 기울기면 막 광학(막 두께 ∝ Ca^(2/3))이다. 느린 기포 쪽만 따로 꺾이면 마른 자리 쪽이다(실험 H의 0단계).
+   - `groove_spectrum.csv`: 봉우리/주변 비가 크고 δV/V̄가 몇 % 이상이면 홈이 기포를 붙잡는다. F_pin은 홈 하나의 고정력 진폭이고, 유속이 느릴수록 커질 것으로 예상한다(I51의 An ∝ 1/Ca).
+4. 속도–크기 곡선(I95): result_tracking.csv의 속도를 크기 구간별 중앙값으로 그려 꺾임을 본다. 폭을 채우면 평탄해진다.
+5. 압력계가 같이 있으면 `plane_from_csv.py`(흐름 right)로 힘 균형 E_vel과 k_fit을 본다. 1 mm는 기포당 수 Pa라 차압 분해능 0.5 Pa 근처가 필요하다(I89).
+
 ## 파일 지도
 | 파일 | 내용 |
 |---|---|
@@ -77,6 +86,7 @@
 | `tools/plane_from_csv.py` | 운전점 표(유량·차압·화소 크기·측벽 위치·마스크 폴더) + 추적 CSV → α, 종횡비 b/a, 윤곽 C_A(경계요소, I81), s̄(유량계·추적), 배치 계수 Q(측벽 거울상, I74), 예측 기울기, Re_B, Λ, 판별 평면 좌표와 그림. `--demo`, `--selftest-q`로 점검 |
 | `tools/added_mass_bem.py` | 기포 윤곽 또는 마스크 → 2차원 부가질량 계수 C_A(폐합 모양 인자 c = 1 + C_A, I81). 원·타원·45° 타원 이론과 일치. 마스크는 marching squares + 푸리에 평활(화소 원판 R ≥ 10 px에서 0.4% 안), 흐름 방향 회전(flow) |
 | `tools/darcy_disks.py` | 주기 상자 속 무작위 원판(국소장의 s배로 움직이는 원 = 전도도 s/(2 − s) 원판)의 2차원 Darcy 계산 → E, B, 배치마다 Q(주기 상). `--sweep out.json`이 α 0.05~0.4 × s 3개 × 배치 2개(약 9분). 그림 r13(I82)의 계산 |
+| `tools/steel_velocity_checks.py` | 철 채널 기존 영상(추적 CSV + instances npz + 원본·배경)으로 속도 시험 두 가지. I98: 같은 크기·같은 화면 위치에서 기포 안쪽 밝기 ΔI 대 속도 잔차(트랙 단위 부트스트랩 구간) → 마른 자리/막 광학/갇힌 빛. I96: 트랙별 속도 스펙트럼의 홈 주파수 V̄/λ_g 진폭 → δV/V̄와 홈 고정력 F_pin ≈ (2/3)·D·δV/V̄. `--demo`(합성: 기울기 +20, 변조 8% 되돌림) |
 | `../refs_microgap.bib`, `refs_check.tsv`, `make_bib.py` | 참고문헌(Crossref·DataCite·doi.org 대조) |
 | `PROGRESS.md` | 작업 기록, 비용 규칙, 접속 상태 |
 
