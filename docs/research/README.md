@@ -5,7 +5,7 @@
 ## 먼저 볼 것 (10분)
 1. 보고서 ① 결론 요약(`../research_microgap_paper.md`).
 2. 아래 "핵심 결과".
-3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83), `fig/fig_r13_closure_alpha_limit.png`(무작위 원판 수치 실험: 폐합은 α 0.2까지 ±0.02, 그 위의 흩어짐은 배치 Q로 설명, I82), `fig/fig_r14_velocity_closure.png`(예상: 계면 상태 셋(깨끗·녹는 계면활성제·굳은 막 미끄럼)의 두 판독. (a) 압력: 단분산 E/B = Δ(d/H), (b) 추적만: 이동도 s(d/H). 굳은 막 미끄럼은 우리 유속에서 s 약 6×10⁻⁴로 사실상 멈춤. 검토 6으로 앞 판의 "정확 대 근사" 패널을 지움, I89~I91), `fig/fig_r15_mobility_collapse.png`(r13과 같은 계산을 속도로 본 것: V/J는 α에 따라 퍼지고 국소장 정규화는 거의 일정. 독립 확인이 아니라 정규화 선택의 실용적 경고, I91).
+3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83), `fig/fig_r13_closure_alpha_limit.png`(무작위 원판 수치 실험: 폐합은 α 0.2까지 ±0.02, 그 위의 흩어짐은 배치 Q로 설명, I82), `fig/fig_r14_velocity_closure.png`(예상: 계면 상태 셋(깨끗·녹는 계면활성제·굳은 막 미끄럼)의 두 판독. (a) 압력: 단분산 E/B = Δ(d/H), (b) 추적만: 이동도 s(d/H). 굳은 막 미끄럼은 우리 유속에서 s 약 6×10⁻⁴로 사실상 멈춤. 검토 6으로 앞 판의 "정확 대 근사" 패널을 지움, I89~I91), `fig/fig_r15_mobility_collapse.png`(r13과 같은 계산을 속도로 본 것: V/J는 α에 따라 퍼지고 국소장 정규화는 거의 일정. 독립 확인이 아니라 정규화 선택의 실용적 경고, I91), `fig/fig_r16_velocity_fluctuations.png`(예상: 추적 속도 요동의 폭 = Σα|λ|(2차원 쌍극자 합 = 코시), 흐름 방향/가로 폭 비 = 마찰 지수 m. 실제로는 배치 비등방 때문에 회귀형으로 읽음, I99·I100).
 
 ## 핵심 결과
 1. **어디가 비어 있나**
@@ -75,6 +75,11 @@
    - `groove_spectrum.csv`: 봉우리/주변 비가 크고 δV/V̄가 몇 % 이상이면 홈이 기포를 붙잡는다. F_pin은 홈 하나의 고정력 진폭이고, 유속이 느릴수록 커질 것으로 예상한다(I51의 An ∝ 1/Ca).
 4. 속도–크기 곡선(I95): result_tracking.csv의 속도를 크기 구간별 중앙값으로 그려 꺾임을 본다. 폭을 채우면 평탄해진다.
 5. 압력계가 같이 있으면 `plane_from_csv.py`(흐름 right)로 힘 균형 E_vel과 k_fit을 본다. 1 mm는 기포당 수 Pa라 차압 분해능 0.5 Pa 근처가 필요하다(I89).
+6. 속도 요동(I99·I100, 압력 불필요): `python docs/research/tools/velocity_fluctuations.py --csv <OUTPUT_FOLDER>/result_tracking.csv --px_mm <화소 크기> --fps <촬영 속도> --H_mm 1 --flow right --k 4 --out vf_out`
+   - 먼저 `--demo`로 자가 시험(약 1분)을 돌린다.
+   - 가로 요동 폭(코시 척도 γ_c)은 Σα|λ|를 말한다. d/H ≈ 10(이동도 1)에서 가장 작아야 한다.
+   - 국소장 U_loc(m/s)을 알면 `--U_loc <값> --regress --walls <두 측벽의 가로 좌표 px>`로 회귀형 비 R_reg와 마찰 지수 m_reg를 낸다. 막(m 2/3)이면 R_reg 1.1~1.4, 마른 접촉선(m ≈ 0)이면 1 + Δ(2~6)다. I98(밝기)과 독립인 두 번째 증거다.
+   - 철 바닥 홈이 흐름 방향 요동을 더하면 `--smooth <홈 한 주기의 프레임 수>`로 지운다(두 방향에 똑같이 건다).
 
 ## 파일 지도
 | 파일 | 내용 |
@@ -97,6 +102,7 @@
 | `tools/added_mass_bem.py` | 기포 윤곽 또는 마스크 → 2차원 부가질량 계수 C_A(폐합 모양 인자 c = 1 + C_A, I81). 원·타원·45° 타원 이론과 일치. 마스크는 marching squares + 푸리에 평활(화소 원판 R ≥ 10 px에서 0.4% 안), 흐름 방향 회전(flow) |
 | `tools/darcy_disks.py` | 주기 상자 속 무작위 원판(국소장의 s배로 움직이는 원 = 전도도 s/(2 − s) 원판)의 2차원 Darcy 계산 → E, B, 배치마다 Q(주기 상). `--sweep out.json`이 α 0.05~0.4 × s 3개 × 배치 2개(약 9분). 그림 r13(I82)의 계산 |
 | `tools/steel_velocity_checks.py` | 철 채널 기존 영상(추적 CSV + instances npz + 원본·배경)으로 속도 시험 두 가지. I98: 같은 크기·같은 화면 위치에서 기포 안쪽 밝기 ΔI 대 속도 잔차(트랙 단위 부트스트랩 구간) → 마른 자리/막 광학/갇힌 빛. I96: 트랙별 속도 스펙트럼의 홈 주파수 V̄/λ_g 진폭 → δV/V̄와 홈 고정력 F_pin ≈ (2/3)·D·δV/V̄. `--demo`(합성: 기울기 +20, 변조 8% 되돌림) |
+| `tools/velocity_fluctuations.py` | 추적 CSV만으로 속도 요동의 폭(I99: Σα|λ|)과 흐름/가로 비(I100: 마찰 지수 m)를 낸다. 중심 좌표 차분, 프레임·구분 공통 요동 제거, 위치 잡음(2차 차분) 추정, 코시⊗정규 분위수 맞춤, 트랙 부트스트랩. `--regress`는 프레임마다 계산한 쌍극자 장(측벽 거울상)에 회귀해 배치 비등방을 지운다. `--demo`: 쌍극자 상호작용을 넣은 합성 추적 331개 × 260프레임으로 12개 항목 점검 |
 | `../refs_microgap.bib`, `refs_check.tsv`, `make_bib.py` | 참고문헌(Crossref·DataCite·doi.org 대조) |
 | `PROGRESS.md` | 작업 기록, 비용 규칙, 접속 상태 |
 

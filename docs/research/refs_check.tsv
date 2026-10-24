@@ -360,7 +360,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1038/nmat1962	OK	steinberger	2007	High friction on a bubble mattress	Nature Materials	10_ideas,check
 10.1038/nmat3025	OK	tambe	2011	Collective cell guidance by cooperative intercellular forces	Nature Materials	12_ideas3,check
 10.1038/nmeth.1237	OK	jaqaman	2008	Robust single-particle tracking in live-cell time-lapse sequences	Nature Methods	5_ai_image,8_iate_coalescence,check
-10.1038/nphys2843	OK	shani	2014	Long-range orientational order in two-dimensional microfluidic dipoles	Nature Physics	13_plane
+10.1038/nphys2843	OK	shani	2014	Long-range orientational order in two-dimensional microfluidic dipoles	Nature Physics	13_plane,check
 10.1038/nphys432	OK	beatus	2006	Phonons in a one-dimensional microfluidic crystal	Nature Physics	13_plane,check
 10.1038/s41467-022-35084-w	OK	xie	2022	Data-driven discovery of dimensionless numbers and governing laws from scarce measurements	Nature Communications	5_ai_image,check
 10.1038/s41467-023-37899-7	OK	zhang	2023	A unifying criterion of the boiling crisis	Nature Communications	5_ai_image,check
@@ -387,6 +387,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1039/c0sm01535k	OK	eri	2011	Viscous drag friction acting on a fluid drop confined in between two plates	Soft Matter	3_pressure_drop,check
 10.1039/c1lc20534j	OK	jakiela	2011	Speed of flow of individual droplets in microfluidic channels as a function of the capillary number, volume of droplets 	Lab on a Chip	1_adiabatic_gap,3_pressure_drop,check
 10.1039/c3lc00013c	OK	fisher	2013	Equilibrium gas–oil ratio measurements using a microfluidic technique	Lab on a Chip	11_ideas2,check
+10.1039/c3sm52543k	OK	brosseau	2014	Microfluidic Dynamic Interfacial Tensiometry (μDIT)	Soft Matter	15_velocity
 10.1039/c4ra15163a	OK	musterd	2015	Calculating the volume of elongated bubbles and droplets in microchannels from a top view image	RSC Advances	11_ideas2,6_measurement,check
 10.1039/c5lc01417d	OK	huerre	2016	Absolute 3D reconstruction of thin films topography in microfluidic channels by interference reflection microscopy	Lab on a Chip	12_ideas3,check
 10.1039/c7sm01478c	OK	franco-gomez	2017	Bubble propagation on a rail: a concept for sorting bubbles by size	Soft Matter	10_ideas,12_ideas3,check
@@ -446,6 +447,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1088/1742-6596/2605/1/012024	OK	ito	2023	Measurements of gas-liquid two-phase flow dynamics using high-speed neutron imaging	Journal of Physics: Conference Series	6_measurement,check
 10.1093/oxfordjournals.aje.a112510	OK	rogan	1978	ESTIMATING PREVALENCE FROM THE RESULTS OF A SCREENING TEST	American Journal of Epidemiology	8_iate_coalescence,check
 10.1093/qjmam/12.3.265	OK	taylor	1959	A NOTE ON THE MOTION OF BUBBLES IN A HELE-SHAW CELL AND POROUS MEDIUM	The Quarterly Journal of Mechanics and Applied Mathematics	0_estimates,1_adiabatic_gap,3_pressure_drop,7_closest_novelty,9_data,check
+10.1098/rsif.2010.0545	OK	zaid	2011	Lévy fluctuations and mixing in dilute suspensions of algae and bacteria	Journal of The Royal Society Interface	15_velocity
 10.1098/rsos.252426	OK	booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	Royal Society Open Science	10_ideas,3_pressure_drop,9_data,check
 10.1098/rspa.1932.0169	OK	taylor	1932	The viscosity of a fluid containing small drops of another fluid	Proceedings of the Royal Society of London. Series A, Containing Papers of a Mathematical and Physical Character	10_ideas,check
 10.1098/rspa.1979.0160	OK	perrins	1979	Transport properties of regular arrays of cylinders	Proceedings of the Royal Society of London. A. Mathematical and Physical Sciences	13_plane,check
@@ -471,6 +473,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevlett.100.044501	OK	schindler	2008	Droplet Traffic in Microfluidic Networks: A Simple Model for Understanding and Designing	Physical Review Letters	12_ideas3,check
 10.1103/physrevlett.106.068301	OK	biance	2011	How Topological Rearrangements and Liquid Fraction Control Liquid Foam Stability	Physical Review Letters	8_iate_coalescence,check
 10.1103/physrevlett.107.124501	OK	dangla	2011	Trapping Microfluidic Drops in Wells of Surface Energy	Physical Review Letters	12_ideas3,check
+10.1103/physrevlett.111.118301	OK	desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	Physical Review Letters	15_velocity
 10.1103/physrevlett.115.064501	OK	huerre	2015	Droplets in Microchannels: Dynamical Properties of the Lubrication Film	Physical Review Letters	12_ideas3,1_adiabatic_gap,check
 10.1103/physrevlett.79.1265	OK	kelley	1997	Path Instabilities of Rising Air Bubbles in a Hele-Shaw Cell	Physical Review Letters	9_data,check
 10.1103/physrevlett.98.244501	OK	ritacco	2007	Lifetime of Bubble Rafts: Cooperativity and Avalanches	Physical Review Letters	8_iate_coalescence,check
