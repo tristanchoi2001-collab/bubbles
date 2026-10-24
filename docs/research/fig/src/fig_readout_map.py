@@ -24,7 +24,7 @@ rows = [  # (label, gives set, needs set, tool)
     ("I106 tilt along vs across", {2}, {1, 2}, "—"),
     ("I107 relaxation after merging", {1, 2}, {3}, "merge_relax.py"),
     ("I108 pressure–velocity phase", {4}, {0, 2}, "—"),
-    ("I109 steady flattening", {1, 2}, {3}, "—"),
+    ("I109 steady flattening", {1, 2}, {3}, "shape_flatten.py"),
 ]
 ncol = len(gives) + len(needs)
 fig, ax = plt.subplots(figsize=(11.6, 5.6))
