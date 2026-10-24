@@ -22,6 +22,8 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
     masks_dir     (선택) 추적 프로그램의 SAVE_INSTANCE_MASKS 출력 폴더(OUTPUT_FOLDER/instances, 프레임마다 <파일 이름>.npz의
                   라벨 지도 inst). 있으면 기포 윤곽마다 경계요소법으로 C_A(I81)를 구해 b/a 추정기 대신 쓴다.
                   CSV 기포와는 중심 3 px·면적 비 0.8~1.25로 짝짓는다. ca_max_bubbles(기본 2000)개까지만 표본으로 계산한다.
+    dp_tp_se, dp_l_se  (선택) 두 ΔP의 표준오차(Pa). T_se(선택): 수온 차의 표준오차(K, 물 점도 2.4 %/K로 환산).
+    B_rel_se      (선택) 유량계 비 B의 상대 표준오차(예: 0.02)
 
 계산 (모두 "갭을 채운 기포", 즉 등가직경 d > 2H만 쓴다)
     α        프레임마다 Σ ROI内面積 / ROI 면적의 평균
@@ -32,6 +34,8 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
     예측     원형 폐합 y = 1 + x, 모양 폐합 y = 1 + (b/a)x, 분리류 y = 1, 균질류 y = 1 − x
              기포별 y_track = ΣA_i[1 + (b/a)_i(1 − s_i)]/ΣA_i, s_i = u_i(1 − α)/jL (추적 속도, 유량계 불필요)
     Re_B     ρH²u_B²/(μ w_B u_L) (Moriyama & Inoue 1993), Λ = ρ u_L H²/(10 μ d̄)
+    오차     α·B_f·Q는 프레임 블록 부트스트랩(블록 = 프레임 수/20, 400번)으로 표준오차를 낸다(프레임끼리 상관이 있어
+             기포 수로 나누면 과소). E는 위 선택 열로, x·y는 그것을 전파한다. α 오차는 점을 (1, 0) 쪽으로, E 오차는 세로로 옮긴다.
     Q        배치 계수(I74, 독립 검토 3). 기포 i에서 Q_i = Σ_j a_j²·cos 2θ_ij / r_ij²(a_j = 등가 반경, θ는 흐름 방향 기준,
              원 합 = Lorentz 기준). 측벽(불투과)의 거울상(같은 부호, 두 벽이라 2W 주기)과 기포 자신의 거울상을 넣고,
              흐름 방향 띠 |Δs| ≤ L에서 더한 뒤 연속체 보정으로 원 합으로 바꾼다(layout_q 설명). 띠가 시야 밖으로 나가지 않는
@@ -57,7 +61,24 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 WATER = (1.0e-3, 998.0)
 COLS = ["name", "H_mm", "jL", "jG", "dp_tp", "dp_l", "tracking_csv", "roi_area_px", "px_mm", "fps", "flow", "mu", "rho", "T_tp", "T_l",
-        "wall_lo_px", "wall_hi_px", "q_radius_px", "masks_dir", "ca_max_bubbles"]
+        "wall_lo_px", "wall_hi_px", "q_radius_px", "masks_dir", "ca_max_bubbles", "dp_tp_se", "dp_l_se", "T_se", "B_rel_se"]
+
+
+def block_bootstrap_se(series_list, stat, n_boot=400, seed=0):
+    """프레임 순서의 여러 계열(같은 길이)을 블록째 다시 뽑아 stat(*계열)의 표준오차. 블록 길이 = max(5, n/20)."""
+    n = len(series_list[0])
+    if n < 10:
+        return float("nan")
+    L = max(5, n // 20)
+    starts = np.arange(0, n - L + 1)
+    rng = np.random.default_rng(seed)
+    arrs = [np.asarray(sv, dtype=float) for sv in series_list]
+    vals = []
+    for _ in range(n_boot):
+        idx = np.concatenate([np.arange(st, st + L) for st in rng.choice(starts, size=int(np.ceil(n / L)))])[:n]
+        vals.append(stat(*[a[idx] for a in arrs]))
+    vals = np.asarray(vals, dtype=float)
+    return float(np.nanstd(vals, ddof=1))
 
 
 def mu_water(t_c):
@@ -270,6 +291,7 @@ def analyse_point(p):
         print(f"  [{p['name']}] 경고: 측벽 위치가 없어 기포 가로 끝으로 추정({walls[0]:.0f}~{walls[1]:.0f} px). 시야가 측벽을 포함하지 않으면 Q가 틀린다.")
     q_rows = {"img": [], "noimg": []}
     q_of = {}
+    q_frame = {}
     if allb:
         s_rng = (min(b[0] - math.sqrt(b[2]) for b in allb), max(b[0] + math.sqrt(b[2]) for b in allb))
         W_px = walls[1] - walls[0]
@@ -279,6 +301,8 @@ def analyse_point(p):
         for f, fb in frame_bub.items():
             bl = [(b[0], b[1], b[2], b[3]) for b in fb]
             for i, q, qn in layout_q(bl, walls, R, s_rng, frame_alpha[f]):
+                qa, qw = q_frame.get(f, (0.0, 0.0))
+                q_frame[f] = (qa + math.pi * fb[i][2] * q, qw + math.pi * fb[i][2])
                 q_rows["img"].append((math.pi * fb[i][2], q))
                 q_rows["noimg"].append((math.pi * fb[i][2], qn))
                 if fb[i][4] >= 0:
@@ -300,6 +324,26 @@ def analyse_point(p):
     E = _f(p["dp_tp"]) / dp_l - 1
     y = E * kappa
     x = 1 - s_bar
+    # 표준오차: α·B_f·Q는 프레임 블록 부트스트랩, E는 입력 열, x·y는 전파
+    fl = list(frames.keys())
+    se_alpha = block_bootstrap_se([alpha_t], lambda a: a.mean())
+    fx = np.array([v if v == v else 0.0 for v in flux_t])
+    se_bf = block_bootstrap_se([fx], lambda v: v.mean()) / jl
+    qa = np.array([q_frame.get(f, (0.0, 0.0))[0] for f in fl])
+    qw = np.array([q_frame.get(f, (0.0, 0.0))[1] for f in fl])
+    se_q = block_bootstrap_se([qa, qw], lambda u, w: u.sum() / w.sum() if w.sum() > 0 else np.nan) if qw.sum() > 0 else float("nan")
+    rel2 = 0.0
+    for col, ref in (("dp_tp_se", _f(p["dp_tp"])), ("dp_l_se", _f(p["dp_l"]))):
+        v = _f(p.get(col))
+        if v == v:
+            rel2 += (v / ref) ** 2
+    t_se = _f(p.get("T_se"))
+    if t_se == t_se:
+        rel2 += (0.024 * t_se) ** 2
+    se_E = (1 + E) * math.sqrt(rel2) if rel2 > 0 else float("nan")
+    b_rel = _f(p.get("B_rel_se"), 0.0)
+    se_y = math.sqrt((kappa * (se_E if se_E == se_E else 0.0)) ** 2 + (E * se_alpha / alpha ** 2) ** 2) if se_alpha == se_alpha else float("nan")
+    se_x = math.sqrt((B * se_alpha / alpha ** 2) ** 2 + (kappa * B * b_rel) ** 2) if se_alpha == se_alpha else float("nan")
     ba = w_ba / w_area if w_area else float("nan")
     u_b = w_u / w_area if w_area else float("nan")
     d_bar = w_d / w_area if w_area else float("nan")
@@ -336,6 +380,7 @@ def analyse_point(p):
         "Q": Q, "Q_noimg": Q_noimg, "Q_bubbles": len(q_rows["img"]), "slope_pred": slope, "y_layout": y_layout,
         "y_track_layout": y_track_layout,
         "u_bubble": u_b, "d_bar_mm": d_bar * 1e3, "Re_B": re_b, "Lambda": lam, "frames": len(alpha_t),
+        "se_alpha": se_alpha, "se_B_f": se_bf, "se_Q": se_q, "se_E": se_E, "se_x": se_x, "se_y": se_y,
     }
 
 
@@ -353,11 +398,19 @@ def plot(results, path):
     ax.plot(xs, 1 - xs, color=s3, lw=2, label="homogeneous y = 1 − x")
     for r in results:
         ax.plot(r["x"], r["y"], "o", ms=8, color="#0b0b0b", mec=surf, mew=2, zorder=5)
-        ax.plot(r["x"], r["y_shape"], "o", ms=7, color=surf, mec=s1, mew=1.6, zorder=4)
-        ax.plot([r["x"], r["x"]], [r["y"], r["y_shape"]], color=muted, lw=0.8, zorder=3)
+        ax.plot(r["x"], r["y_layout"], "o", ms=7, color=surf, mec=s1, mew=1.6, zorder=4)
+        ax.plot([r["x"], r["x"]], [r["y"], r["y_layout"]], color=muted, lw=0.8, zorder=3)
+        sa, se = r.get("se_alpha", float("nan")), r.get("se_E", float("nan"))
+        a0, B, E = r["alpha"], r["B"], r["E"]
+        if sa == sa and 0 < a0 - sa and a0 + sa < 1:              # α 오차: (1, 0)을 지나는 직선 위로
+            k1, k2 = (1 - (a0 - sa)) / (a0 - sa), (1 - (a0 + sa)) / (a0 + sa)
+            ax.plot([1 - B * k1, 1 - B * k2], [E * k1, E * k2], color=ink2, lw=1.1, zorder=4)
+        if se == se:                                              # E 오차: 세로
+            kap = (1 - a0) / a0
+            ax.plot([r["x"], r["x"]], [r["y"] - se * kap, r["y"] + se * kap], color=ink2, lw=1.1, zorder=4)
         ax.annotate(r["name"], (r["x"], r["y"]), xytext=(5, 4), textcoords="offset points", fontsize=7.5, color=ink2)
-    ax.plot([], [], "o", ms=8, color="#0b0b0b", label="measured (pressure + imaged α)")
-    ax.plot([], [], "o", ms=7, color=surf, mec=s1, mew=1.6, label="closure with imaged b/a")
+    ax.plot([], [], "o", ms=8, color="#0b0b0b", label="measured (pressure + imaged α); bars: ±1 SE of E (vertical), α (toward (1, 0))")
+    ax.plot([], [], "o", ms=7, color=surf, mec=s1, mew=1.6, label="closure with imaged shape (C_A or b/a) and layout Q")
     ax.set_xlabel("x = 1 − s̄  (s̄ = B(1 − α)/α)", color=ink2)
     ax.set_ylabel("y = E(1 − α)/α", color=ink2)
     ax.grid(color=grid, lw=0.8); ax.set_axisbelow(True)
@@ -419,7 +472,7 @@ def make_demo(out):
         E = alpha_t / (1 - alpha_t) + ba_t * alpha_t * (1 - s_t) / (1 - alpha_t)
         pts.append({"name": f"demo{k} (b/a {ba_t}, s {s_t})", "H_mm": 0.3, "jL": jl, "jG": jg, "dp_tp": 100 * (1 + E), "dp_l": 100,
                     "tracking_csv": path, "roi_area_px": W * Hpx, "px_mm": px * 1e3, "fps": fps, "flow": "up", "mu": "", "rho": "",
-                    "wall_lo_px": 0, "wall_hi_px": W, "masks_dir": mdir})
+                    "wall_lo_px": 0, "wall_hi_px": W, "masks_dir": mdir, "dp_tp_se": 1.0, "dp_l_se": 1.0, "T_se": 0.1, "B_rel_se": 0.02})
     pfile = os.path.join(out, "demo_points.csv")
     with open(pfile, "w", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=COLS)
@@ -452,6 +505,7 @@ def main():
     for r in res:
         print(f"{r['name']}: α {r['alpha']:.3f}, b/a {r['b_over_a']:.2f}, s̄ {r['s_bar']:.2f} (추적 {r['s_bar_T']:.2f}), "
               f"x {r['x']:.2f}, y {r['y']:.2f} (원형 {r['y_circle']:.2f}, 모양 {r['y_shape']:.2f}, 기포별 {r['y_track']:.2f}), Re_B {r['Re_B']:.2f}, Λ {r['Lambda']:.3f}")
+        print(f"    표준오차: α {r['se_alpha']:.4f}, B_f {r['se_B_f']:.4f}, Q {r['se_Q']:.4f}, E {r['se_E']:.4f}, x {r['se_x']:.3f}, y {r['se_y']:.3f}")
         if r["C_A_bubbles"]:
             print(f"    윤곽 C_A {r['C_A']:.2f}(같은 {r['C_A_bubbles']}개 기포의 b/a 추정기 {r['b_over_a_matched']:.2f})")
         print(f"    배치 Q {r['Q']:.3f}(거울상 없음 {r['Q_noimg']:.3f}, 기포 {r['Q_bubbles']}개), 예측 기울기 {r['slope_pred']:.2f}, "

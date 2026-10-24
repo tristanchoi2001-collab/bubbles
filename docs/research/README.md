@@ -39,7 +39,7 @@
 
 ## 기존 0.3·0.7 mm 자료로 바로 해 볼 첫 단계 (2026-10-24)
 1. 운전점마다 한 줄씩 `points.csv`를 만든다: name, H_mm(단상 ΔP로 정한 유효 갭), jL, jG(m/s), dp_tp, dp_l(같은 탭·같은 j_L의 단상 ΔP, Pa), tracking_csv(result_tracking.csv 경로), roi_area_px, px_mm, fps, flow(투명 채널은 up), (선택) T_tp·T_l(두 측정 때 수온 °C — 1 K 차이가 E 0.024라 꼭 적는다), wall_lo_px·wall_hi_px(두 측벽의 가로 좌표, 배치 Q의 거울상에 필요. 비우면 기포 끝으로 추정), masks_dir(추적 때 `SAVE_INSTANCE_MASKS = True`로 저장한 `OUTPUT_FOLDER/instances` 폴더. 있으면 윤곽마다 경계요소 C_A를 구해 기울기에 쓴다 — b/a 추정기는 D형 기포에서 C_A를 17~40% 작게 낸다).
-2. `python docs/research/tools/plane_from_csv.py points.csv --out plane_out` → `plane_out/plane.png`(판별 평면), `plane_points.csv`(α, b/a, s̄, s̄_T, x, y, 예측 y, 배치 Q·예측 기울기 b/a − 2Q/(1 − α), Re_B, Λ). 처음에는 `--demo`와 `--selftest-q`(격자·무작위 배치에서 Q 점검)로 동작을 확인한다.
+2. `python docs/research/tools/plane_from_csv.py points.csv --out plane_out` → `plane_out/plane.png`(판별 평면), `plane_points.csv`(α, b/a, s̄, s̄_T, x, y, 예측 y, 배치 Q·예측 기울기 b/a − 2Q/(1 − α), Re_B, Λ). 처음에는 `--demo`와 `--selftest-q`(격자·무작위 배치에서 Q 점검)로 동작을 확인한다. 선택 열 dp_tp_se·dp_l_se(Pa)·T_se(K)·B_rel_se를 넣으면 E·x·y 오차 막대를 그린다(α·B_f·Q는 프레임 블록 부트스트랩). y 오차는 E 오차의 (1 − α)/α배라 α ≳ 0.15 점이 판별에 쓸모 있다.
 3. 읽는 법: 점이 y ≈ 1이면 분리류(쌍극자 없음), 영상 b/a로 그린 직선 y = 1 + (b/a)x 근처면 폐합 성립, y ≈ 0.1~0.2면 마찰이 거의 없는 납작·D형 기포(Moriyama형, C_A 1.3~2.3), y ≫ 1이면 입구·탭·단상 기준의 배율 문제(Fourar 1993 자료는 k_rL 배율 하나로 설명됨)나 관성(Λ 확인). 기울기가 b/a 예측과 다르면 배치 Q(I74)를 먼저 확인한다. 예상 위치는 설계 17장 "첫 그림에서 점이 놓일 곳".
 4. 그다음: 같은 유량에서 주입기만 바꾼 점(I54·I79)으로 기울기를 본다. 예측 기울기는 점마다 b/a와 Q로 다르므로, 주입기끼리 Q가 비슷한지 먼저 확인한다.
 
