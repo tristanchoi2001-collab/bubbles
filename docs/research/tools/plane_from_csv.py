@@ -105,6 +105,7 @@ COLS = ["name", "H_mm", "jL", "jG", "dp_tp", "dp_l", "tracking_csv", "roi_area_p
 M_GRID = sorted(set([round(0.05 * k, 2) for k in range(25)] + [1 / 3, 2 / 3]))   # 마찰 법칙의 속도 지수 후보(I90)
 DH_BINS = ((2, 5), (5, 15), (15, 50), (50, 1e9))                # 이동도 붕괴 표의 d/H 구간
 _SR = np.exp(np.linspace(np.log(0.2), np.log(5.0), 121))        # 모양 배율 표의 b/a 격자
+EDGE_INSET_PX = 0.5   # 추적기의 先端部는 경계 화소 중심의 평균이라 면적 경계보다 약 0.5 px 안쪽이다(검토 8 #8). 반축에 더한다
 _ST = None
 
 
@@ -134,25 +135,36 @@ def wall_G(a_px, y0_px, W_px):
     return (math.pi * a_px / (2 * W_px)) ** 2 * (1 / math.sin(math.pi * y0 / W_px) ** 2 + 1 / 3)
 
 
-def s_wall_correct(s_m, G, m=2 / 3):
+def s_wall_correct(s_m, G, m=2 / 3, G_max=0.25):
     """측정 이동도 s_m에서 측벽 자기 거울상을 뺀 무한 폭 이동도 s를 푼다(검토 7 #13).
     s_m = s·(1 − R(s)·(s − 1)·G), R = (1 + Δ)/(1 + mΔ), Δ = 2/s − 1: 흐름 방향 국소장 변화에는 접선 이동도로 응답한다(I100).
-    m은 깨끗한 막 2/3을 기본으로 둔다(R 1.08~1.4). 보정이 95%를 넘는 근거리(a/W ≳ 0.2, 벽 바로 옆)는 풀지 않고 s_m을 돌려준다.
-    그 범위는 Booth 외 2023의 정확해(원형 기포, Hele-Shaw 채널)를 써야 한다."""
-    if not (G == G and G > 1e-12 and s_m == s_m and s_m > 0):
+    m은 깨끗한 막 2/3을 기본으로 둔다(R 1.08~1.4).
+    풀지 않고 NaN을 돌려주는 경우(검토 8 #10): G > G_max(a/W ≳ 0.2이거나 벽 바로 옆), 보정이 95%를 넘음, 정방향 사상
+    s → s_m의 기울기 1 − G[(2s − 1)R + s(s − 1)R′]가 0 이하(근이 둘이라 작은 근을 조용히 고를 수 있음), 수렴 안 함.
+    G 0.5·참 s 1.6이면 1.357, G 0.7·참 1.5면 0.773(λ 부호가 뒤집힘)을 내던 경우다. 그 범위는 Booth 외 2023의 정확해를 써야 한다."""
+    if not (G == G and s_m == s_m and s_m > 0):
         return s_m
-    s = s_m
-    for _ in range(100):
+    if G <= 1e-12:
+        return s_m
+    if G > G_max:
+        return float("nan")
+
+    def R_of(s):
         dl = max(2 / s - 1, 0.0)
-        R = (1 + dl) / (1 + m * dl)
-        den = 1 - R * (s - 1) * G
+        return (1 + dl) / (1 + m * dl)
+    s = s_m
+    for _ in range(400):
+        den = 1 - R_of(s) * (s - 1) * G
         if den < 0.05:
-            return s_m
+            return float("nan")
         s_new = s_m / den
         if abs(s_new - s) < 1e-12:
-            return s_new
+            h = 1e-6 * s_new
+            dR = (R_of(s_new + h) - R_of(s_new - h)) / (2 * h)
+            slope = 1 - G * ((2 * s_new - 1) * R_of(s_new) + s_new * (s_new - 1) * dR)
+            return s_new if slope > 0 else float("nan")
         s = 0.5 * s + 0.5 * s_new
-    return s
+    return float("nan")
 
 
 def shape_factors(ba):
@@ -417,8 +429,8 @@ def analyse_point(p, out_dir=None):
             v = _f(r.get(speed_col)) if speed_col else float("nan")
             ba_i = float("nan")                              # 잘리지 않은 기포의 b/a(마찰 모양 배율용)
             if not cut:
-                ap0 = abs(_f(r.get(f"中心{ax}")) - _f(r.get(f"先端部{ax}")))
-                if ap0 > 0:
+                ap0 = abs(_f(r.get(f"中心{ax}")) - _f(r.get(f"先端部{ax}"))) + EDGE_INSET_PX
+                if ap0 > EDGE_INSET_PX:
                     ba_i = min(max(A_px / (math.pi * ap0 * ap0), 0.2), 5.0)
             moving = False
             if v == v:
@@ -445,8 +457,8 @@ def analyse_point(p, out_dir=None):
                 kv = len(vel_bub) - 1
             lead = _f(r.get(f"先端部{ax}"))
             cen = _f(r.get(f"中心{ax}"))
-            a_px = abs(cen - lead)
-            if not a_px > 0:
+            a_px = abs(cen - lead) + EDGE_INSET_PX
+            if not a_px > EDGE_INSET_PX:
                 continue
             ba = min(max(A_px / (math.pi * a_px * a_px), 0.2), 5.0)
             w_area += A_px
@@ -602,7 +614,11 @@ def analyse_point(p, out_dir=None):
         coll[f"s_starC_{tag}"] = _bin(lambda b: b[2] * (1 + (b[3] if b[3] == b[3] else 1.0)) / (U_P + (b[3] if b[3] == b[3] else 1.0) * J))
         coll[f"V_over_J_{tag}"] = _bin(lambda b: b[2] / J)
         coll[f"deltaB_{tag}"] = _bin(lambda b: 1.12 * ca_loc ** (1 / 3) * b[1])     # Booth 붕괴 좌표 δ_B
-        coll[f"s_starW_{tag}"] = _bin(s_wall)                                       # 측벽 자기 거울상을 뺀 이동도(I101)
+        sw = [(b[0], s_wall(b)) for b in sel]                                       # 측벽 자기 거울상을 뺀 이동도(I101)
+        sw_ok = [(w_, v_) for w_, v_ in sw if v_ == v_]
+        w_ok = sum(w_ for w_, _ in sw_ok)
+        coll[f"s_starW_{tag}"] = sum(w_ * v_ for w_, v_ in sw_ok) / w_ok if w_ok else float("nan")
+        coll[f"n_wall_skip_{tag}"] = len(sw) - len(sw_ok)                          # 벽에 너무 가깝거나 큰 기포(G > 0.25)라 뺀 수
     if out_dir and frame_rows:
         safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in p["name"])
         with open(os.path.join(out_dir, f"frames_{safe}.csv"), "w", encoding="utf-8", newline="") as fh:
@@ -703,7 +719,7 @@ def make_demo(out):
                     inst[y0:y1, x0:x1][m] = tid + 1
                     A = float(m.sum())
                 rows.append({"ファイル名": f"f{f}.png", "フレーム": f, "トラックID": tid, "イベント": "", "親トラックID": "",
-                             "面積(px)": f"{A:.0f}", "ROI内面積(px)": f"{A:.0f}", "先端部X": f"{cx:.2f}", "先端部Y": f"{cy - a:.2f}",
+                             "面積(px)": f"{A:.0f}", "ROI内面積(px)": f"{A:.0f}", "先端部X": f"{cx:.2f}", "先端部Y": f"{cy - a + EDGE_INSET_PX:.2f}",
                              "中心X": f"{cx:.2f}", "中心Y": f"{cy:.2f}", "上昇速度(px/frame)": f"{-v_px:.3f}",
                              "周長(px)": "", "フレーム接触": "0"})
                 area_sum += A
@@ -856,7 +872,7 @@ def _selftest_vel(out):
                 u = s * jl
                 cx = 100.0 + 130.0 * k
                 rows.append({"ファイル名": f"f{f}.png", "フレーム": f, "トラックID": k, "イベント": "", "面積(px)": f"{A_vis:.6f}",
-                             "ROI内面積(px)": f"{A_vis:.6f}", "先端部X": f"{cx + r:.3f}", "先端部Y": "500", "中心X": f"{cx:.3f}",
+                             "ROI内面積(px)": f"{A_vis:.6f}", "先端部X": f"{cx + r - EDGE_INSET_PX:.3f}", "先端部Y": "500", "中心X": f"{cx:.3f}",
                              "中心Y": "500", "速度X(px/frame)": f"{u / (px * fps):.9f}", "フレーム接触": "1" if vis < 1 else "0"})
                 if 2 * r * px <= 2 * H:
                     sub += A_vis / roi
@@ -919,6 +935,11 @@ def _selftest_vel(out):
         dl = 2 / s_true - 1
         s_meas = s_true * (1 - (1 + dl) / (1 + 2 / 3 * dl) * (s_true - 1) * G)
         check(f"(차) 측벽 거울상 역산 s {s_true}, a {a_px:g} px, y₀ {y0:g}/1000 px(측정 {s_meas:.4f})", s_wall_correct(s_meas, G), s_true, 1e-9)
+    for s_true, G in ((1.6, 0.5), (1.5, 0.7), (1.9, 0.4)):                 # 근이 둘인 영역은 NaN이어야 한다(검토 8 #10)
+        dl = 2 / s_true - 1
+        s_meas = s_true * (1 - (1 + dl) / (1 + 2 / 3 * dl) * (s_true - 1) * G)
+        got = s_wall_correct(s_meas, G)
+        check(f"(차) G {G:g}·참 s {s_true}: 풀지 않음(NaN)", 1.0 if got != got else 0.0, 1.0, 1e-12)
     fw = friction_fit([dict(r, se_E=0.02 * (1 + i) * r["E"]) for i, r in enumerate(resA)])
     check("(바) se_E가 있으면 가중 맞춤(weighted 1)", float(fw["weighted"]), 1.0, 1e-9)
     check("(바) 가중 맞춤의 지수 m", fw["m_best"], 2 / 3, 1e-9)
@@ -931,7 +952,7 @@ def _selftest_vel(out):
     fc = friction_fit(run("C", lambda tr: 16.85 * tr["P"][2 / 3] + 6.86 * tr["Parea"]))
     check("(아) 2항 k1", fc["k1"], 16.85, 1e-5)
     check("(아) 2항 k2", fc["k2"], 6.86, 1e-5)
-    # (자) 타원 기포: 흐름 방향 반축 a = |先端部 − 中心|, b/a = 면적/(πa²). 정답 배율은 표 대신 다각형에서 직접 적분한다.
+    # (자) 타원 기포: 흐름 방향 반축 a = |先端部 − 中心| + 0.5 px(추적기 규약), b/a = 면적/(πa²). 정답 배율은 표 대신 다각형에서 직접 적분한다.
     q = 1.5
     tt = np.linspace(0.0, 2 * np.pi, 20000, endpoint=False)
     ex, ey = np.cos(tt), q * np.sin(tt)
@@ -947,7 +968,7 @@ def _selftest_vel(out):
                 u = s * jl
                 cx = 100.0 + 200.0 * k
                 rows.append({"ファイル名": f"f{f}.png", "フレーム": f, "トラックID": k, "イベント": "", "面積(px)": f"{math.pi * r * r:.6f}",
-                             "ROI内面積(px)": f"{math.pi * r * r:.6f}", "先端部X": f"{cx + r / math.sqrt(q):.6f}", "先端部Y": "500",
+                             "ROI内面積(px)": f"{math.pi * r * r:.6f}", "先端部X": f"{cx + r / math.sqrt(q) - EDGE_INSET_PX:.6f}", "先端部Y": "500",
                              "中心X": f"{cx:.3f}", "中心Y": "500", "速度X(px/frame)": f"{u / (px * fps):.9f}", "フレーム接触": "0"})
                 s23 += r * px * (mu * u / sig) ** (2 / 3) * S23
                 flux += math.pi * r * r * u
