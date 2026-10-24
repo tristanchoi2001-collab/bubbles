@@ -17,6 +17,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1007/978-3-319-68852-7	OK	raffel	2018	Particle Image Velocimetry		6_measurement,check
 10.1007/bf00189056	OK	hurlburt	1996	Optical measurement of liquid film thickness and wave velocity in liquid film flows	Experiments in Fluids	6_measurement,check
 10.1007/bf01047407	OK	eck	1978	On bubble motion in a Hele-Shaw cell, a possibility to study two-phase flows under reduced gravity	Ingenieur-Archiv	9_data,check
+10.1007/bf01093902	OK	bratukhin	1984	Thermocapillary drift of an air bubble in a horizontal Hele-Shaw cell	Fluid Dynamics	16_drift
 10.1007/bf02537424	OK	monde	1995	Enhancement of heat transfer due to bubbles passing through a narrow vertical rectangular channel (Change in heat transf	Heat and Mass Transfer	2_boiling_gap,check
 10.1007/s00231-007-0325-9	OK	stutz	2009	Nucleate and transition boiling in narrow horizontal spaces	Heat and Mass Transfer	2_boiling_gap,9_data,check
 10.1007/s00231-019-02604-2	OK	kapitz	2019	Impact of surface parameters on confined boiling heat transfer in a Hele-Shaw cell	Heat and Mass Transfer	2_boiling_gap,check
@@ -58,6 +59,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/0017-9310(94)90064-7	OK	wilmarth	1994	Two-phase flow regimes in narrow rectangular vertical and horizontal channels	International Journal of Heat and Mass Transfer	1_adiabatic_gap,7_closest_novelty,9_data,check
 10.1016/0017-9310(94)90224-0	OK	tokuhiro	1994	Natural convection heat transfer from a vertical plate—I. Enhancement with gas injection	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/0017-9310(96)00006-3	OK	kenning	1996	Pool boiling heat transfer on a thin plate: features revealed by liquid crystal thermography	International Journal of Heat and Mass Transfer	2_boiling_gap,check
+10.1016/0094-5765(78)90048-6	OK	johann	1978	Migration of a bubble with adsorbed film in a Hele-Shaw cell	Acta Astronautica	16_drift
 10.1016/0098-1354(92)80021-z	OK	wright	1992	Solutions of inverse problems in population balances—I. Aggregation kinetics	Computers & Chemical Engineering	10_ideas,11_ideas2,check
 10.1016/0098-1354(94)00062-s	OK	sathyagal	1995	Solution of inverse problems in population balances-II. Particle break-up	Computers & Chemical Engineering	11_ideas2,check
 10.1016/0169-5983(95)00053-g	OK	chen	1995	Experimental study of plane turbulent wakes in a shallow water layer	Fluid Dynamics Research	12_ideas3,check
@@ -381,6 +383,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1039/b815002h	OK	vanapalli	2009	Hydrodynamic resistance of single confined moving drops in rectangular microchannels	Lab Chip	10_ideas,1_adiabatic_gap,3_pressure_drop,7_closest_novelty,check
 10.1039/b903276b	OK	marmottant	2009	Microfluidics with foams	Soft Matter	3_pressure_drop,check
 10.1039/b918933e	OK	chan	2010	Dynamic interactions between deformable drops in the Hele–Shaw geometry	Soft Matter	12_ideas3,8_iate_coalescence,check
+10.1039/c001900c	OK	selva	2010	Thermocapillary actuation by optimized resistor pattern: bubbles and droplets displacing, switching and trapping	Lab on a Chip	16_drift
 10.1039/c0lc00104j	OK	abbyad	2011	Rails and anchors: guiding and trapping droplet microreactors in two dimensions	Lab Chip	12_ideas3,check
 10.1039/c0lc00478b	OK	molla	2011	Pressure drop of slug flow in microchannels with increasing void fraction: experiment and modeling	Lab on a Chip	10_ideas,11_ideas2,check
 10.1039/c0sm00812e	OK	chan	2011	Film drainage and coalescence between deformable drops and bubbles	Soft Matter	12_ideas3,check
@@ -390,6 +393,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1039/c3sm52543k	OK	brosseau	2014	Microfluidic Dynamic Interfacial Tensiometry (μDIT)	Soft Matter	15_velocity,check
 10.1039/c4ra15163a	OK	musterd	2015	Calculating the volume of elongated bubbles and droplets in microchannels from a top view image	RSC Advances	11_ideas2,6_measurement,check
 10.1039/c5lc01417d	OK	huerre	2016	Absolute 3D reconstruction of thin films topography in microfluidic channels by interference reflection microscopy	Lab on a Chip	12_ideas3,check
+10.1039/c6sm00686h	OK	miralles	2016	Investigating the role of a poorly soluble surfactant in a thermally driven 2D microfoam	Soft Matter	16_drift
 10.1039/c7sm01478c	OK	franco-gomez	2017	Bubble propagation on a rail: a concept for sorting bubbles by size	Soft Matter	10_ideas,12_ideas3,check
 10.1051/e3sconf/202345904005	OK	dementyev	2023	Two-phase flow patterns investigation in large aspect ratio microchannel with T-mixer	E3S Web of Conferences	9_data,check
 10.1051/matecconf/20167201023	OK	ronshin	2016	Investigation of Two-Phase Flow in Short Horizontal Mini Channel Height of 1 MM	MATEC Web of Conferences	9_data,check
@@ -403,6 +407,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1063/1.3109686	OK	labrot	2009	Extracting the hydrodynamic resistance of droplets from their behavior in microchannel networks	Biomicrofluidics	10_ideas,3_pressure_drop,7_closest_novelty,check
 10.1063/1.3142502	OK	raufaste	2009	Dissipation in quasi-two-dimensional flowing foams	Physics of Fluids	3_pressure_drop,5_ai_image,7_closest_novelty,check
 10.1063/1.346276	OK	kim	1990	Determination of the effective conductivity of heterogeneous media by Brownian motion simulation	Journal of Applied Physics	13_plane,check
+10.1063/1.3590743	OK	selva	2011	Temperature-induced migration of a bubble in a soft microcavity	Physics of Fluids	16_drift
 10.1063/1.4793544	OK	cantat	2013	Liquid meniscus friction on a wet plate: Bubbles, lamellae, and foams	Physics of Fluids	0_estimates,3_pressure_drop,7_closest_novelty,check
 10.1063/1.4878095	OK	gallaire	2014	Marangoni induced force on a drop in a Hele Shaw cell	Physics of Fluids	1_adiabatic_gap,3_pressure_drop,check
 10.1063/1.4903488	OK	wang	2014	Experimental and numerical study of buoyancy-driven single bubble dynamics in a vertical Hele-Shaw cell	Physics of Fluids	1_adiabatic_gap,check
@@ -474,6 +479,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevlett.106.068301	OK	biance	2011	How Topological Rearrangements and Liquid Fraction Control Liquid Foam Stability	Physical Review Letters	8_iate_coalescence,check
 10.1103/physrevlett.107.124501	OK	dangla	2011	Trapping Microfluidic Drops in Wells of Surface Energy	Physical Review Letters	12_ideas3,check
 10.1103/physrevlett.111.118301	OK	desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	Physical Review Letters	15_velocity,check
+10.1103/physrevlett.112.238302	OK	miralles	2014	Foam Drainage Control Using Thermocapillary Stress in a Two-Dimensional Microchamber	Physical Review Letters	16_drift
 10.1103/physrevlett.115.064501	OK	huerre	2015	Droplets in Microchannels: Dynamical Properties of the Lubrication Film	Physical Review Letters	12_ideas3,1_adiabatic_gap,check
 10.1103/physrevlett.79.1265	OK	kelley	1997	Path Instabilities of Rising Air Bubbles in a Hele-Shaw Cell	Physical Review Letters	9_data,check
 10.1103/physrevlett.98.244501	OK	ritacco	2007	Lifetime of Bubble Rafts: Cooperativity and Avalanches	Physical Review Letters	8_iate_coalescence,check
