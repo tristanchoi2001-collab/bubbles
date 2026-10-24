@@ -1,0 +1,7 @@
+doi	first_author	year	short_title	level	note
+10.1103/physrevlett.111.118301	Desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	C+F	I110. PRL 111:118301, arXiv 1301.5549 원문 확인. 2차원 갇힌 액적 무리의 밀도파 분산 관계 ω = μσρ₀q_x·J1(2qR)/(2qR)(선형 마찰, 배제 영역), 평균 속도 ⟨v_d⟩ = μv_F + ½μσρ₀, 폭을 채운 띠가 액적보다 빠름
+10.1103/physrevlett.103.114502	Beatus	2009	Burgers Shock Waves and Sound in a 2D Microfluidic Droplets Ensemble	C	I110. PRL 103:114502. 폭 평균 밀도가 높을수록 액적이 빠름 → Burgers 충격과 소리(Desreumaux 2013 서론의 요약으로 확인)
+10.1017/jfm.2022.1008	Booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	C+F	I110. 저자 원고(people.maths.ox.ac.uk/~griffit4/papers/booth_jfm_2022.pdf) 3.4절: 세 기포 열에서 δ < 1이면 가운데 기포가 뒤 기포에, δ > 1이면 앞 기포에 붙음(파가 뒤/앞으로). δ > 1이면 기포가 바깥 흐름보다 빠름
+10.1016/0301-9322(91)90067-d	Kytomaa	1991	Small amplitude kinematic wave propagation in two-component media	C+A	I110. IJMF 17:13–26. 수직 기포류·입자류의 공극률 파 속도·감쇠를 두 임피던스 공극률계의 무작위 요동 위상 지연으로 한 번의 실험에서 잼, 분산 없음, 기포류는 약 40%에서 감쇠 급감(Caltech 저장소 초록)
+10.1016/0301-9322(90)90055-n	Biesheuvel	1990	Void fraction disturbances in a uniform bubbly fluid	C	I110. IJMF 16:211–231. 균일 기포류의 공극률 교란(운동학적 파)
+10.1016/0301-9322(87)90029-2	Matuszkiewicz	1987	The bubble-slug flow pattern transition and instabilities of void fraction waves	C	I110. IJMF 13:199–217. 기포–슬러그 전이를 공극률 파 불안정과 연결(제목 수준)

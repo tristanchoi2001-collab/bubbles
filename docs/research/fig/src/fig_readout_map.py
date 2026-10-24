@@ -25,9 +25,10 @@ rows = [  # (label, gives set, needs set, tool)
     ("I107 relaxation after merging", {1, 2}, {3}, "merge_relax.py"),
     ("I108 pressure–velocity phase", {4}, {0, 2}, "—"),
     ("I109 steady flattening", {1, 2}, {3}, "shape_flatten.py"),
+    ("I110 void-wave speed vs bubble speed", {0, 2}, set(), "void_waves.py"),
 ]
 ncol = len(gives) + len(needs)
-fig, ax = plt.subplots(figsize=(11.6, 5.6))
+fig, ax = plt.subplots(figsize=(11.6, 6.0))
 x0_label, x_cols, x_tool = 0.0, 4.6, 4.6 + 0.62 * ncol + 0.25
 for i, (lab, gv, nd, tool) in enumerate(rows):
     y = len(rows) - 1 - i
@@ -53,11 +54,11 @@ ax.axis("off")
 ax.plot([], [], "o", ms=9, color=C1, label="gives")
 ax.plot([], [], "s", ms=8, color=C2, label="needs (beyond tracking + flowmeters)")
 ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(0.0, 1.0), fontsize=8.2, ncol=2)
-ax.set_title("What each tracked-velocity readout gives and what it needs (velocity-first program, I89–I109)",
+ax.set_title("What each tracked-velocity readout gives and what it needs (velocity-first program, I89–I110)",
              fontsize=10, color=INK, loc="left", pad=2)
 fig.text(0.01, 0.01, "U_loc can come from ΔP + flow rates ((U_P + J)/2), from imaged α and flowmeters (j_L/(1 − α), mean-field closure) or from a lateral tilt (I102). "
-         "Readouts that need neither pressure nor U_loc: I99, I101 (sign of λ), I107, I109.\n"
-         "f and m are each read five to six ways; agreement between them is the main test (velocity_links.md section 3). "
+         "Readouts that need neither pressure nor U_loc: I99, I101 (sign of λ), I107, I109, I110 (signed λ; I110 also needs no track IDs).\n"
+         "f is read five ways and m seven ways; agreement between them is the main test (velocity_links.md section 3). "
          "Independent reviews 6–7 corrected I90–I103; review 8 of I104–I107 is pending.",
          fontsize=7.2, color=MUTED, va="bottom")
 fig.savefig(f"{HERE}/fig_r19_readout_map.png", dpi=170, bbox_inches="tight")

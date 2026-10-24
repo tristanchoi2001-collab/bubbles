@@ -69,8 +69,11 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/0301-9322(82)90009-x	OK	beattie	1982	A simple two-phase frictional pressure drop calculation method	International Journal of Multiphase Flow	13_plane,check
 10.1016/0301-9322(82)90068-4	OK	sadatomi	1982	Two-phase flow in vertical noncircular channels	International Journal of Multiphase Flow	1_adiabatic_gap,9_data,check
 10.1016/0301-9322(84)90007-7	OK	matsui	1984	Identification of flow regimes in vertical gas-liquid two-phase flow using differential pressure fluctuations	International Journal of Multiphase Flow	10_ideas,6_measurement,check
+10.1016/0301-9322(87)90029-2	OK	matuszkiewicz	1987	The bubble-slug flow pattern transition and instabilities of void fraction waves	International Journal of Multiphase Flow	18_waves
 10.1016/0301-9322(89)90042-6	OK	monde	1989	Enhancement of heat transfer due to bubbles passing through a narrow vertical rectangular channel	International Journal of Multiphase Flow	4_heat_transfer,check
+10.1016/0301-9322(90)90055-n	OK	biesheuvel	1990	Void fraction disturbances in a uniform bubbly fluid	International Journal of Multiphase Flow	18_waves
 10.1016/0301-9322(91)90003-l	OK	wambsganss	1991	Two-phase flow patterns and transitions in a small, horizontal, rectangular channel	International Journal of Multiphase Flow	10_ideas,1_adiabatic_gap,9_data,check
+10.1016/0301-9322(91)90067-d	OK	kytomaa	1991	Small amplitude kinematic wave propagation in two-component media	International Journal of Multiphase Flow	18_waves
 10.1016/0301-9322(93)90027-r	OK	mishima	1993	Some characteristics of gas-liquid flow in narrow rectangular ducts	International Journal of Multiphase Flow	1_adiabatic_gap,6_measurement,7_closest_novelty,9_data,check
 10.1016/0301-9322(95)00005-i	OK	fourar	1995	Experimental study of air-water two-phase flow through a fracture (narrow channel)	International Journal of Multiphase Flow	10_ideas,1_adiabatic_gap,9_data,check
 10.1016/0301-9322(96)00010-9	OK	mishima	1996	Some characteristics of air-water two-phase flow in small diameter vertical tubes	International Journal of Multiphase Flow	3_pressure_drop,check
@@ -327,7 +330,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2020.4	OK	filella	2020	Interaction of two oscillating bubbles rising in a thin-gap cell: vertical entrainment and interaction with vortices	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/jfm.2020.844	OK	gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,9_data,check
 10.1017/jfm.2021.1128	OK	klettner	2022	The effect of inertia and vertical confinement on the flow past a circular cylinder in a Hele-Shaw configuration	Journal of Fluid Mechanics	13_plane,check
-10.1017/jfm.2022.1008	OK	booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	Journal of Fluid Mechanics	0_estimates,10_ideas,12_ideas3,3_pressure_drop,9_data,check
+10.1017/jfm.2022.1008	OK	booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	Journal of Fluid Mechanics	0_estimates,10_ideas,12_ideas3,18_waves,3_pressure_drop,9_data,check
 10.1017/jfm.2022.361	OK	monnet	2022	Bubble rise in a Hele-Shaw cell: bridging the gap between viscous and inertial regimes	Journal of Fluid Mechanics	10_ideas,14_jstage,1_adiabatic_gap,check
 10.1017/jfm.2022.492	OK	ruiz-rus	2022	Coalescence of bubbles in a high Reynolds number confined swarm	Journal of Fluid Mechanics	10_ideas,8_iate_coalescence,9_data,check
 10.1017/jfm.2022.618	OK	keeler	2022	The interaction of multiple bubbles in a Hele-Shaw channel	Journal of Fluid Mechanics	10_ideas,1_adiabatic_gap,8_iate_coalescence,9_data,check
@@ -479,9 +482,10 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevfluids.9.123603	OK	wu	2024	Motion and deformation of a bubble in a Hele-Shaw cell	Physical Review Fluids	10_ideas,17_relax,3_pressure_drop,7_closest_novelty,9_data,check
 10.1103/physrevlett.100.024501	OK	bremond	2008	Decompressing Emulsion Droplets Favors Coalescence	Physical Review Letters	8_iate_coalescence,check
 10.1103/physrevlett.100.044501	OK	schindler	2008	Droplet Traffic in Microfluidic Networks: A Simple Model for Understanding and Designing	Physical Review Letters	12_ideas3,check
+10.1103/physrevlett.103.114502	OK	beatus	2009	Burgers Shock Waves and Sound in a 2D Microfluidic Droplets Ensemble	Physical Review Letters	18_waves
 10.1103/physrevlett.106.068301	OK	biance	2011	How Topological Rearrangements and Liquid Fraction Control Liquid Foam Stability	Physical Review Letters	8_iate_coalescence,check
 10.1103/physrevlett.107.124501	OK	dangla	2011	Trapping Microfluidic Drops in Wells of Surface Energy	Physical Review Letters	12_ideas3,check
-10.1103/physrevlett.111.118301	OK	desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	Physical Review Letters	15_velocity,check
+10.1103/physrevlett.111.118301	OK	desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	Physical Review Letters	15_velocity,18_waves,check
 10.1103/physrevlett.112.238302	OK	miralles	2014	Foam Drainage Control Using Thermocapillary Stress in a Two-Dimensional Microchamber	Physical Review Letters	16_drift,check
 10.1103/physrevlett.115.064501	OK	huerre	2015	Droplets in Microchannels: Dynamical Properties of the Lubrication Film	Physical Review Letters	12_ideas3,1_adiabatic_gap,check
 10.1103/physrevlett.79.1265	OK	kelley	1997	Path Instabilities of Rising Air Bubbles in a Hele-Shaw Cell	Physical Review Letters	9_data,check
