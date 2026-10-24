@@ -57,6 +57,7 @@
 | `microgap_data_catalog.md` | 겹쳐 그릴 수 있는 문헌 자료와 공개 데이터셋 |
 | `reading_list.md` | 먼저 읽을 논문(무료 원문 위치 포함), 공개 데이터 |
 | `abstract_drafts.md` | 논문 1·2 초록 초안(실험 전 가안, 숫자는 빈칸) |
+| `intro_draft_paper1.md` | 논문 1 서론 초안(영문 5문단 + 심사자 관점 요지): 선행 인정 → 빈칸 → 모양 가족 폐합·판별 평면 |
 | `data_paper_plan.md` | 데이터 논문 설계(담을 것, 지금 CSV로 바로 계산되는 양, 분할·과제, 용량) |
 | `fig/`, `fig/src/` | 그림 r1~r10과 생성 스크립트 |
 | `tools/plane_from_csv.py` | 운전점 표(유량·차압·화소 크기) + 추적 CSV → α, 종횡비 b/a, s̄(유량계·추적), Re_B, Λ, 판별 평면 좌표와 그림. `--demo`로 합성 자료 점검 |
