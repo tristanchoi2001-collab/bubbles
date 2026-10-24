@@ -60,6 +60,7 @@
 | `data_paper_plan.md` | 데이터 논문 설계(담을 것, 지금 CSV로 바로 계산되는 양, 분할·과제, 용량) |
 | `fig/`, `fig/src/` | 그림 r1~r9와 생성 스크립트 |
 | `tools/plane_from_csv.py` | 운전점 표(유량·차압·화소 크기) + 추적 CSV → α, 종횡비 b/a, s̄(유량계·추적), Re_B, Λ, 판별 평면 좌표와 그림. `--demo`로 합성 자료 점검 |
+| `tools/added_mass_bem.py` | 기포 윤곽 → 2차원 부가질량 계수 C_A(폐합 모양 인자 c = 1 + C_A, I81). 원·타원 이론과 일치 |
 | `../refs_microgap.bib`, `refs_check.tsv`, `make_bib.py` | 참고문헌(Crossref·DataCite·doi.org 대조) |
 | `PROGRESS.md` | 작업 기록, 비용 규칙, 접속 상태 |
 
