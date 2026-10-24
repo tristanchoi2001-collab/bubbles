@@ -42,6 +42,7 @@
 | `lit_1`~`lit_8` | 주제별 문헌 조사(단열 갭, 비등, 압력 강하, 열전달, AI 영상, 계측, 신규성, 합체) |
 | `microgap_data_catalog.md` | 겹쳐 그릴 수 있는 문헌 자료와 공개 데이터셋 |
 | `reading_list.md` | 먼저 읽을 논문(무료 원문 위치 포함), 공개 데이터 |
+| `abstract_drafts.md` | 논문 1·2 초록 초안(실험 전 가안, 숫자는 빈칸) |
 | `fig/`, `fig/src/` | 그림 r1~r6과 생성 스크립트 |
 | `../refs_microgap.bib`, `refs_check.tsv`, `make_bib.py` | 참고문헌(Crossref·DataCite·doi.org 대조) |
 | `PROGRESS.md` | 작업 기록, 비용 규칙, 접속 상태 |
