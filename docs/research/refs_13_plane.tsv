@@ -13,3 +13,7 @@ doi	first_author	year	short_title	level	note
 10.1016/0301-9322(82)90009-X	Beattie	1982	A simple two-phase frictional pressure drop calculation method	C	Sadatomi 1992 표 3에서 분리류 모델과 함께 평균 오차가 가장 작은 균질류 점도식(판별 평면에서 E/B = 2.5/(1 + B), 독립 검토 3의 표현). IJMF 8:83-87
 10.1039/b510841a	Garstecki	2006	Formation of droplets and bubbles in a microfluidic T-junction—scaling and mechanism of break-up	C	I79(독립 검토 4 제안). Lab Chip 6:437. T자 짜내기 영역 L/w = 1 + α·Q_G/Q_L(검토자 기억, 원문 미확인). 작은 팬케이크 발생 후보
 10.1016/0301-9322(75)90015-4	Jones	1975	The interrelation between void fraction fluctuations and flow patterns in two-phase flow	C	독립 검토 4: 수직 좁은 직사각 유로 기공률 측정의 더 이른 선례 후보(원문 미확인). IJMF 2:273-306
+10.1038/nphys432	Beatus	2006	Phonons in a one-dimensional microfluidic crystal	C+A	I83. Nat Phys 2:743. 1차원 액적 결정의 포논, 쌍극자 1/r² 상호작용, 벽은 거울상 쌍극자. 압력·저항은 다루지 않음(arXiv 초록)
+10.1017/jfm.2016.403	Sarig	2016	Interaction forces between microfluidic droplets in a Hele-Shaw cell	C+A	I83. JFM 800:264. 두 액적 사이 힘의 정확해(쌍극 좌표), 쌍극자 모형과 비교. 무리 평균 압력 강하는 없음
+10.1017/jfm.2015.469	Vasconcelos	2015	Multiple bubbles and fingers in a Hele-Shaw channel: complete set of steady solutions	C+A	I83·I82. JFM 780:299. 표면장력 없는 여러 기포·주기 배열의 정상 해(Schottky–Klein). 배치 Q 식을 높은 α에서 점검할 기준 후보
+10.1553/etna_vol63s150	Nasser	2025	A computational method for multiple steady Hele-Shaw bubbles in planar domains	C	I82. ETNA 63:150-170. 여러 정상 기포의 수치 해법
