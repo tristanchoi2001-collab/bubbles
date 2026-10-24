@@ -162,7 +162,7 @@ def near_contact(tracks, gap_frac, periodic=None):
 
 
 def track_velocities(tracks, k, smooth, H_px, near=frozenset()):
-    """(트랙, 프레임, v_s, v_c, d/H) 목록과 위치 2차 차분 표본. 창 안에 접촉 근처(near) 프레임이 있으면 버린다."""
+    """(트랙, 프레임, v_s, v_c, d/H, s, c) 목록과 위치 2차 차분 표본. 창 안에 접촉 근처(near) 프레임이 있으면 버린다."""
     obs, dd = [], []
     for tid, fr in tracks.items():
         fs = sorted(fr)
@@ -190,7 +190,7 @@ def track_velocities(tracks, k, smooth, H_px, near=frozenset()):
                     sm[f] = (float(np.mean([vel[g][0] for g in win])), float(np.mean([vel[g][1] for g in win])), vel[f][2])
             vel = sm
         for f, (vs, vc, A) in vel.items():
-            obs.append((tid, f, vs, vc, math.sqrt(4 * A / math.pi) / H_px))
+            obs.append((tid, f, vs, vc, math.sqrt(4 * A / math.pi) / H_px, fr[f][0], fr[f][1]))
     return obs, np.array(dd) if dd else np.zeros((0, 3))
 
 
@@ -301,12 +301,50 @@ def _mad_sigma(v):
     return float(1.4826 * np.median(np.abs(v - np.median(v))))
 
 
+def cell_ids(s, c, n_s, n_c, periodic=None):
+    """흐름 방향 s·가로 c 분위 칸 번호. periodic = (L_s, L_c)면 감은 좌표로 나눈다(합성 주기 상자)."""
+    if periodic:
+        s, c = np.mod(s, periodic[0]), np.mod(c, periodic[1])
+    es = np.quantile(s, np.linspace(0, 1, n_s + 1)); ec = np.quantile(c, np.linspace(0, 1, n_c + 1))
+    i = np.clip(np.searchsorted(es, s, "right") - 1, 0, n_s - 1); j = np.clip(np.searchsorted(ec, c, "right") - 1, 0, n_c - 1)
+    return i * n_c + j
+
+
+def detrend_cells(v, cid, ok=None, min_n=20):
+    """칸마다 시간 평균(중앙값)을 뺀다: 위치마다 다른 정상 표류(측벽 거울상의 평균장, 덮개 처짐·기울임의 I105 표류)는 쌍극자 요동이 아니다.
+    관측이 min_n보다 적은 칸은 그대로 둔다."""
+    out = v.copy()
+    for q in np.unique(cid):
+        m = cid == q
+        mm = m & ok if ok is not None else m
+        if mm.sum() >= min_n:
+            out[m] -= np.median(v[mm])
+    return out
+
+
+def class_unit_fields(tracks, bins, H_px, obs, k, smooth, walls=None, periodic=None, scheme="trapezoid"):
+    """원천 구분마다 λ = 1(그 구분만), U = 1로 계산한 쌍극자 장(창 평균). 회귀 yc = Σ_k λ_k·F_k,c의 설명 변수."""
+    out = []
+    for lo, hi in bins:
+        lam_of = (lambda lo_, hi_: (lambda dh: 1.0 if lo_ <= dh < hi_ else 0.0))(lo, hi)
+        out.append(window_fields(dipole_fields(tracks, lam_of, H_px, 1.0, walls=walls, periodic=periodic), obs, k, smooth, scheme=scheme))
+    return out
+
+
 def analyse(obs, dd, k, smooth, bins, frame_alpha=None, U_loc_px=None, n_boot=200, seed=0, fields=None,
-            unit_fields=None, fields_noself=None, noise_px=None, min_frame_obs=10):
+            unit_fields=None, fields_noself=None, noise_px=None, min_frame_obs=10, detrend=(4, 8), periodic=None,
+            class_fields=None):
     """구분별 요동 폭·응답 비·회귀 기울기. 공통 요동은 그 프레임의 모든 기포(모든 구분)에서 구한 상대 편차에 대한 회귀로 뺀다
     (앞 판의 프레임·구분 중앙값 빼기는 그 구분의 관측이 적은 프레임에서 폭을 줄였다: n 3이면 0.58배, 검토 7 #7).
     unit_fields(λ = 1, U = 1로 계산한 장)가 있으면 같은 관측·같은 창에서 그 장의 가로 폭으로 나눈 |λ|_fwd를 낸다(실제 배치·
-    접촉 필터·탐침 크기를 모두 반영하는 순방향 환산, 검토 7 #2). fields_noself는 측벽 자기 거울상을 뺀 장(회귀를 하나 더 낸다)."""
+    접촉 필터·탐침 크기를 모두 반영하는 순방향 환산, 검토 7 #2). fields_noself는 측벽 자기 거울상을 뺀 장(회귀를 하나 더 낸다).
+    detrend = (n_s, n_c)면 구분마다 (s, c) 분위 칸의 시간 중앙값을 관측 속도와 계산한 장 모두에서 뺀다(위치마다 다른 정상 표류는
+    쌍극자 요동이 아니다). None이면 끈다.
+    class_fields(원천 구분별 단위 장 목록)가 있으면 U_loc 없이 부호 있는 λ를 회귀로 낸다(I111): 상대 가로 속도 yc = v_c/V̄는
+    Σ_k λ_k·F_k,c(F_k = 그 구분만 λ = 1, U = 1인 장)이고 자기 할선 이동도와 U가 지워진다. 흐름 방향은 ys = R·Σ_k λ_k·F_k,s라
+    R = (ys를 Σλ̂_k F_k,s에 회귀한 기울기)다. 그러면 s = 1 + λ_자기, Δ = 2/s − 1, m = ((1 + Δ)/R − 1)/Δ도 압력·유량 없이 나온다.
+    위치 잡음은 회귀 기울기를 치우치게 하지 않는다(폭 방식의 잡음 바닥이 없다: 끝까지 시험의 상호작용 없는 자료에서 폭 방식
+    |λ|_fwd는 0.05·0.19였다. 부화소 위상이 천천히 도는 중심 오차는 2차 차분 잡음 추정에 안 잡혀 디컨볼루션으로 빠지지 않는다)."""
     if len(dd) > 20:
         sig_p_all = float(np.mean([_mad_sigma(dd[:, j]) for j in (0, 1)]) / math.sqrt(6))
     else:
@@ -366,6 +404,10 @@ def analyse(obs, dd, k, smooth, bins, frame_alpha=None, U_loc_px=None, n_boot=20
         for y, x in ((ys, xs), (yc, xc)):                # 공통 요동: 프레임 상대 편차에 대한 회귀 기울기만큼 뺀다
             if (x * x).sum() > 0:
                 y -= (x @ y) / (x @ x) * x
+        cid = None
+        if detrend and len(sel[0]) >= 7:                 # 위치별 정상 표류 빼기
+            cid = cell_ids(np.array([o[5] for o in sel]), np.array([o[6] for o in sel]), detrend[0], detrend[1], periodic)
+            ys = detrend_cells(ys, cid); yc = detrend_cells(yc, cid)
         yc -= np.median(yc)
         lx = np.log(dh)                                  # 구분 안 크기 의존(흐름 방향) 빼기: 강건 회귀
         if lx.std() > 1e-9:
@@ -401,6 +443,8 @@ def analyse(obs, dd, k, smooth, bins, frame_alpha=None, U_loc_px=None, n_boot=20
             fx_, fy_ = fu[:, 0].copy(), fu[:, 1].copy()
             if fcmap:
                 fx_ -= np.array([fcmap.get(f, (0.0, 0.0))[0] for f in fr]); fy_ -= np.array([fcmap.get(f, (0.0, 0.0))[1] for f in fr])
+            if cid is not None:                          # 관측 속도와 같은 칸 빼기
+                fx_ = detrend_cells(np.nan_to_num(fx_), cid, ok); fy_ = detrend_cells(np.nan_to_num(fy_), cid, ok)
             return fx_, fy_, ok
         if unit_fields is not None:                      # 순방향 |λ| 환산: 같은 관측·같은 창의 λ = 1 장 가로 폭
             ux_, uy_, ok_u = field_xy(unit_fields, ucm)
@@ -408,6 +452,55 @@ def analyse(obs, dd, k, smooth, bins, frame_alpha=None, U_loc_px=None, n_boot=20
                 wu = hiqr(uy_[ok_u] - np.median(uy_[ok_u]))
                 rec["unit_field_hiqr_c"] = wu
                 rec["abs_lambda_fwd"] = gc / wu if wu > 0 else float("nan")
+        if class_fields:                                # I111: U_loc 없는 부호 있는 λ_k(가로)와 R(흐름 방향)
+            Fc, Fs, oks = [], [], []
+            for fl in class_fields:
+                fcm_k = frame_cm_fields(fl)
+                fx_, fy_, ok_k = field_xy(fl, fcm_k)
+                Fs.append(fx_); Fc.append(fy_); oks.append(ok_k)
+            Fc, Fs = np.column_stack(Fc), np.column_stack(Fs)
+            okk = np.all(np.column_stack(oks), 1)
+            act = np.where(np.abs(Fc[okk]).sum(0) > 0)[0]            # 원천이 있는 구분만
+            if okk.sum() > 30 and len(act):
+                tot = np.abs(Fc[:, act]).sum(1)
+                keep_all = okk & (tot <= np.percentile(tot[okk], 99))   # 가장 가까운 이웃(근접장) 1%는 뺀다
+
+                def fit_lam(ii):
+                    A = Fc[ii][:, act]
+                    lam_k, *_ = np.linalg.lstsq(A, yc[ii], rcond=None)
+                    G = Fs[ii][:, act] @ lam_k
+                    Rr = float((G @ ys[ii]) / (G @ G)) if (G @ G) > 0 else float("nan")
+                    return lam_k, Rr
+                base = np.where(keep_all)[0]
+                lam_k, Rr = fit_lam(base)
+                okset = np.zeros(len(sel), bool); okset[base] = True
+                lb, rb = [], []
+                for _ in range(n_boot):
+                    pick = rng.choice(tids, size=len(tids))
+                    ii = np.concatenate([idx_of[t] for t in pick]); ii = ii[okset[ii]]
+                    if len(ii) > 30:
+                        l2, r2 = fit_lam(ii)
+                        lb.append(l2); rb.append(r2)
+                for q, kk in enumerate(act):
+                    lo_k, hi_k = bins[kk]
+                    rec[f"lam_reg_src_{lo_k:g}_{hi_k:g}"] = float(lam_k[q])
+                    if lb:
+                        arr = np.array([b[q] for b in lb])
+                        rec[f"lam_reg_src_{lo_k:g}_{hi_k:g}_lo"], rec[f"lam_reg_src_{lo_k:g}_{hi_k:g}_hi"] = ci(arr)
+                rec["R_lamreg"] = Rr
+                rec["R_lamreg_lo"], rec["R_lamreg_hi"] = ci([r for r in rb if r == r])
+                if j in act:
+                    q = list(act).index(j)
+                    lam_self = float(lam_k[q])
+                    s_self = 1 + lam_self
+                    rec["lam_reg_self"], rec["s_lamreg"] = lam_self, s_self
+                    lo_s, hi_s = (ci(np.array([b[q] for b in lb])) if lb else (float("nan"),) * 2)
+                    rec["lam_self_zero"] = not (lo_s > 0 or hi_s < 0)     # 구간이 0을 품으면 R·m을 읽지 않는다
+                    Dl = 2 / s_self - 1 if s_self > 0 else float("nan")
+                    if rec["lam_self_zero"]:
+                        rec["R_lamreg"] = rec["R_lamreg_lo"] = rec["R_lamreg_hi"] = float("nan")
+                    elif Dl == Dl and abs(Dl) > 1e-6 and Rr == Rr:
+                        rec["m_lamreg"] = ((1 + Dl) / Rr - 1) / Dl
         if fields is not None:                          # 회귀형(I100 보강): 계산한 쌍극자 장에 대한 기울기 = 접선·할선 이동도
             ys_a, yc_a = ys * Vbar, yc * Vbar
 
@@ -539,14 +632,16 @@ def _demo(out, push=False, seed=3, contact_gap=0.5):
     obs, dd = track_velocities(tracks, k, 1, H_px, near)
     fields = window_fields(dipole_fields(tracks, class_lambda(obs, bins, U), H_px, U, periodic=per), obs, k, 1, scheme="euler")
     unit = window_fields(dipole_fields(tracks, lambda dh: 1.0, H_px, 1.0, periodic=per), obs, k, 1, scheme="euler")
-    res, sig_p = analyse(obs, dd, k, 1, bins, frame_alpha=frame_alpha, U_loc_px=U, n_boot=100, fields=fields, unit_fields=unit)
+    cfs = class_unit_fields(tracks, bins, H_px, obs, k, 1, periodic=per, scheme="euler")
+    res, sig_p = analyse(obs, dd, k, 1, bins, frame_alpha=frame_alpha, U_loc_px=U, n_boot=100, fields=fields, unit_fields=unit, periodic=per,
+                         class_fields=cfs)
     # 정답: 잡음 없는 위치로 같은 계산을 하고 잡음 0으로 둔다
     tr_true = defaultdict(dict)
     for f in range(truth.shape[0]):
         for i in range(truth.shape[1]):
             tr_true[str(i + 1)][f] = (truth[f, i, 0], truth[f, i, 1], math.pi * a[i] ** 2, False)
     obs_t, _ = track_velocities(tr_true, k, 1, H_px, near)
-    res_t, _ = analyse(obs_t, np.zeros((0, 3)), k, 1, bins, n_boot=0, noise_px=0.0)
+    res_t, _ = analyse(obs_t, np.zeros((0, 3)), k, 1, bins, n_boot=0, noise_px=0.0, periodic=per)
     lam_true = float(np.sum(np.abs(2 / (1 + D0) - 1) * math.pi * a * a) / np.sum(math.pi * a * a))   # Σα|λ|/α
     fails = []
 
@@ -578,13 +673,25 @@ def _demo(out, push=False, seed=3, contact_gap=0.5):
             if not inside:
                 fails.append(tag)
     check("작은 기포 회귀로 되찾은 m", res[0]["m_reg"], m, 0.03, absolute=True)
+    for r, dl in zip(res, (4.8, 0.29)):                  # I111: U_loc 없이 부호 있는 λ와 m
+        tag = f"d/H {r['dH_lo']:g}~{r['dH_hi']:g}"
+        lam_t = 2 / (1 + dl) - 1
+        U_est = r["V_px_per_frame"] / r["s_lamreg"] if r.get("s_lamreg", 0) > 0 else float("nan")
+        print(f"  {tag}: I111 λ_자기 {r.get('lam_reg_self', float('nan')):+.3f}(참 {lam_t:+.3f}), R_λ {r.get('R_lamreg', float('nan')):.3f}"
+              f" [{r.get('R_lamreg_lo', float('nan')):.3f}~{r.get('R_lamreg_hi', float('nan')):.3f}], m_λ {r.get('m_lamreg', float('nan')):.3f}, "
+              f"U_loc = V̄/(1 + λ) {U_est:.3f}(참 {U:.3f} px/frame)")
+        check(f"{tag} I111 λ_자기(U_loc 없음) 대 s − 1", r.get("lam_reg_self", float("nan")), lam_t, 0.06, absolute=True)
+    check("작은 기포 I111 m(U_loc 없음)", res[0].get("m_lamreg", float("nan")), m, 0.06, absolute=True)
     print("자가 시험 " + ("모두 통과" if not fails else f"실패 {len(fails)}건: " + ", ".join(fails)))
     return not fails
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--csv"); ap.add_argument("--px_mm", type=float); ap.add_argument("--fps", type=float, default=500.0)
+    ap.add_argument("--csv"); ap.add_argument("--px_mm", type=float, help="화소 하나의 크기(mm/px), 예 0.02")
+    ap.add_argument("--fps", type=float, default=500.0)
+    ap.add_argument("--detrend", default="4,8", help="위치별 정상 표류를 뺄 (흐름 방향, 가로) 분위 칸 수. none이면 끈다")
+    ap.add_argument("--no_lamreg", action="store_true", help="U_loc 없는 부호 있는 λ 회귀(I111)를 끈다(원천 구분마다 장을 한 번 더 계산)")
     ap.add_argument("--H_mm", type=float); ap.add_argument("--flow", default="up")
     ap.add_argument("--k", type=int, default=2); ap.add_argument("--smooth", type=int, default=1)
     ap.add_argument("--frame_area_px", type=float, default=float("nan"))
@@ -601,6 +708,11 @@ def main():
     a = ap.parse_args()
     if a.demo:
         raise SystemExit(0 if _demo(a.out) else 1)
+    if not (a.csv and a.px_mm and a.H_mm):
+        ap.error("--csv, --px_mm, --H_mm가 필요하다")
+    if a.px_mm > 1:
+        ap.error("--px_mm은 화소 하나의 크기(mm/px)다(예 0.02). 1보다 크면 px/mm로 넣은 것 같다.")
+    detrend = None if a.detrend.strip().lower() == "none" else tuple(int(v) for v in a.detrend.split(","))
     os.makedirs(a.out, exist_ok=True)
     H_px = a.H_mm / a.px_mm
     edges = [float(v) for v in a.dH_bins.split(",")]
@@ -626,9 +738,20 @@ def main():
         fields = window_fields(dipole_fields(tracks, lam, H_px, U_px, walls=walls), obs, a.k, a.smooth)
         if walls:
             fields_ns = window_fields(dipole_fields(tracks, lam, H_px, U_px, walls=walls, self_image=False), obs, a.k, a.smooth)
-    res, sig_p = analyse(obs, dd, a.k, a.smooth, bins, frame_alpha, U_px, a.n_boot, fields=fields, unit_fields=unit,
-                         fields_noself=fields_ns, noise_px=a.noise_px if a.noise_px == a.noise_px else None)
-    print(f"속도 표본 {len(obs)}개(트랙 {len(set(o[0] for o in obs))}개), 위치 잡음 σ_p ≈ {sig_p:.3f} px")
+    cfs = None if a.no_lamreg else class_unit_fields(tracks, bins, H_px, obs, a.k, a.smooth, walls=walls)
+    res, sig_p = analyse(obs, dd, a.k, a.smooth, bins, frame_alpha, U_px, a.n_boot, fields=fields, unit_fields=unit, class_fields=cfs,
+                         fields_noself=fields_ns, noise_px=a.noise_px if a.noise_px == a.noise_px else None, detrend=detrend)
+    print(f"속도 표본 {len(obs)}개(트랙 {len(set(o[0] for o in obs))}개), 위치 잡음 σ_p ≈ {sig_p:.3f} px"
+          + (f", 위치별 정상 표류 뺌({detrend[0]}×{detrend[1]} 칸)" if detrend else ""))
+    if obs:
+        dh_all = np.array([o[4] for o in obs])
+        for lo, hi in bins:
+            n_in = int(((dh_all >= lo) & (dh_all < hi)).sum())
+            if n_in < 30:
+                print(f"  d/H {lo:g}~{hi:g}: 관측 {n_in}개라 뺐다(30개 이상 필요)")
+        if not res:
+            print(f"  쓸 구분이 없다. 관측 d/H 범위 {np.percentile(dh_all, 1):.2f}~{np.percentile(dh_all, 99):.2f}(H = {H_px:.2f} px). "
+                  "--dH_bins나 --px_mm(mm/px)·--H_mm를 확인한다.")
     if res:
         keys = sorted({k for r in res for k in r}, key=lambda k: list(res[0].keys()).index(k) if k in res[0] else 99)
         with open(os.path.join(a.out, "vf_classes.csv"), "w", encoding="utf-8", newline="") as fh:
@@ -655,6 +778,15 @@ def main():
             if "R_reg_noself" in r:
                 line += f"; 측벽 자기 거울상 뺀 회귀 R_reg {r['R_reg_noself']:.3f}"
         print(line)
+        srcs = [kk for kk in r if kk.startswith("lam_reg_src_") and not kk.endswith(("_lo", "_hi"))]
+        if srcs:
+            parts = [f"원천 d/H {kk[12:].replace('_', '~')} λ {r[kk]:+.3f} [{r.get(kk + '_lo', float('nan')):+.3f}~{r.get(kk + '_hi', float('nan')):+.3f}]"
+                     for kk in srcs]
+            print("  I111(U_loc 없음): " + "; ".join(parts)
+                  + (f" → 자기 s {r['s_lamreg']:.3f}" if "s_lamreg" in r else "")
+                  + (" (자기 λ 구간이 0을 품어 R·m은 읽지 않음)" if r.get("lam_self_zero") else "")
+                  + f", R_λ {r.get('R_lamreg', float('nan')):.3f} [{r.get('R_lamreg_lo', float('nan')):.3f}~{r.get('R_lamreg_hi', float('nan')):.3f}]"
+                  + (f" → m {r['m_lamreg']:.2f}" if r.get("m_lamreg", float("nan")) == r.get("m_lamreg", float("nan")) and "m_lamreg" in r else ""))
         if r.get("noise_over_signal", 0) > 0.5:
             print(f"  경고: 잡음이 가로 폭의 {r['noise_over_signal']:.0%}다. 디컨볼루션은 코시꼴(α ≲ 0.05)에서만 2~4% 안이고, 정규꼴이면 −15% 이상 치우친다(검토 7 #8).")
         if r.get("n_per_frame_class", 99) < 5:

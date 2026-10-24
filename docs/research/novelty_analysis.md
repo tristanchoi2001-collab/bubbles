@@ -132,3 +132,9 @@
 - 기계 학습 쪽은 압력 강하 상관식 자체를 학습한다(Correlated-informed neural networks, arXiv 2201.07835; 2025년 XGBoost 잔차 학습 — 검색 요약). 추적 속도를 입력으로 쓰는 예는 못 봤다.
 - 3·7 mm에 쓸 만한 것: 단일 고속 카메라로 기포의 깊이(갭 방향 위치)를 추정하는 기계 학습(Nayak, Mohammed, Kumar, Prajapati & Aidun 2026, arXiv 2601.21175, FEDSM2026, 초록 확인: 20 kHz·3 µm 해상도, 비지도 군집 + 반지도 학습). 3·7 mm의 갭보다 작은 기포가 덮개에 붙었는지 판정하는 데 참고할 수 있다(I95).
 - → 논문 1의 새로움 판단(이론 낮음, 실험 중)은 그대로 둔다.
+
+### 새로움 재조정 (2026-10-24 10:41 UTC, 독립 검토 9 + WebSearch 2회 standard)
+- **I100·I110 내림(검토 9 #7)**: Booth, Griffiths & Howell 2026(R. Soc. Open Sci. 13:252426)의 쌍극자 모형 식 (3.19)가 이웃 장에 흐름 방향 6U/(4 + U)·가로 U로 응답하고 "상호작용 세기가 비등방"이라고 적었다. 이것이 m 2/3의 접선·할선 응답과 같다. 그래서 I100은 중~높음 → **중**(m 판독으로 쓰는 것이 새것), I110은 중 → **낮음~중**(방향 응답은 Booth 2026, 연속 극한은 Desreumaux 2013, 마이크로갭 기액 판독으로 쓰는 것이 새것)이다. 이 논문은 이미 bib에 있었는데 식 (3.19)의 비등방을 놓쳤다.
+- **I108(검토 9 #1·#2)**: 한 지점 압력–유량 위상법은 액체 관성을 빠뜨려 철회했다. 두 시야 국소 질량 수지판만 낮음~중으로 남는다.
+- **I111(새 아이디어, 같은 날)**: 원천 구분별 단위 쌍극자 장에 추적 속도를 회귀해 부호 있는 λ와 국소장 U_loc = V̄/(1 + λ)를 압력 없이 낸다. 검색어 "measure hydrodynamic dipole strength from tracked droplet velocity fluctuations regression on computed dipole field Hele-Shaw", "quasi-two-dimensional suspension pair hydrodynamic interaction measured from correlated particle velocities". 가장 가까운 것은 갇힌 콜로이드의 짝 상관(Cui, Diamant, Lin & Rice 2004 PRL 92:258301; Diamant 외 2005 JPCM)과 액적 결정의 포논(Beatus 2006)이다. 다체 장 회귀로 크기 구분별 부호 있는 세기와 국소장을 내는 쓰임은 못 찾았다 → **중**.
+- 논문 1의 판단(이론 낮음, 실험 중)은 그대로다. 압력 없는 판독의 묶음은 I111이 국소장을 주므로 더 단단해졌다(I91·I100·I104를 압력 없이 닫음).

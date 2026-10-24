@@ -339,6 +339,8 @@ def analyse_point(p, out_dir=None):
     H = _f(p["H_mm"]) * 1e-3
     jl, jg = _f(p["jL"]), _f(p["jG"])
     px = _f(p["px_mm"]) * 1e-3
+    if px > 1e-3:
+        raise SystemExit(f"{p.get('name', '')}: px_mm {px * 1e3:g}은 화소 하나의 크기(mm/px)여야 한다(예 0.02). 1보다 크면 px/mm로 넣은 것 같다.")
     fps = _f(p["fps"])
     roi = _f(p["roi_area_px"])
     mu = _f(p.get("mu"), float("nan"))

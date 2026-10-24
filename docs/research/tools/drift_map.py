@@ -451,7 +451,7 @@ def _demo(out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--csv")
-    ap.add_argument("--px_mm", type=float)
+    ap.add_argument("--px_mm", type=float, help="화소 하나의 크기(mm/px), 예 0.02")
     ap.add_argument("--fps", type=float)
     ap.add_argument("--H_mm", type=float)
     ap.add_argument("--flow", default="up", choices=["up", "down", "right", "left"])
@@ -475,6 +475,8 @@ def main():
         raise SystemExit(0 if _demo(a.out) else 1)
     if not (a.csv and a.px_mm and a.fps and a.H_mm and a.U_loc):
         ap.error("--csv, --px_mm, --fps, --H_mm, --U_loc가 필요하다")
+    if a.px_mm > 1:
+        ap.error("--px_mm은 화소 하나의 크기(mm/px)다(예 0.02). 1보다 크면 px/mm로 넣은 것 같다.")
     os.makedirs(a.out, exist_ok=True)
     px_m = a.px_mm * 1e-3
     tracks = read_tracks(a.csv, a.flow, a.px_mm, a.H_mm)

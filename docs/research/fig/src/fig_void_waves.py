@@ -6,6 +6,8 @@
     점: `tools/void_waves.py --demo`와 같은 평균장 입자 모의(α 0.10, 3000 프레임)의 시드별 결과(빠른 큰 기포 s 1.55 여섯 개,
     느린 작은 기포 s 0.35 다섯 개)를 그 s에 해당하는 d/H에 놓았다.
 (b) 방향 의존 D(θ)/(αλ) = 1 + (R − 1)·cos 2θ(θ = 파수와 흐름 사이 각). 선형 마찰(R = 1, Desreumaux 외 2013의 액적)은 수평선이다.
+검토 9 반영(2026-10-24): (a)에 지금 시야(흐름 방향 1080~1200 px, 0.02 mm/px)로 잴 수 있는 d/H 범위(a ≤ 0.3·L_s/(4π), 0.3 mm에서
+d/H ≤ 3.4~3.8)를 칠하고, 제목의 "ID-free"를 뺐다(무늬 속도만 ID 불필요). (b)의 합성 점은 평균장 정확식 역산(R 1.36 [1.07~1.73]).
 """
 import math
 import numpy as np
@@ -65,6 +67,8 @@ D_train = -(2 * math.pi ** 2 / 3) * lam * R / 64.0             # 한 줄 열, �
 d_star = dH_of_s(1.0)
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.6, 4.7), gridspec_kw={"width_ratios": [1.35, 1]})
+ax1.axvspan(2, 3.6, color=GRID, alpha=0.9, lw=0, zorder=0)
+ax1.text(2.06, 0.8, "measurable now:\nfield 1080–1200 px,\nka ≤ 0.3, mode ≥ 2", color=INK2, fontsize=7.0, ha="left", va="bottom")
 ax1.axhline(0, color=MUTED, lw=0.8, zorder=1)
 ax1.axvline(d_star, color=MUTED, lw=0.8, ls=":", zorder=1)
 ax1.text(d_star * 1.04, -14.2, f"d* = {d_star:.1f}H (s = 1)", color=MUTED, fontsize=7.6, ha="left", va="bottom")
@@ -91,7 +95,7 @@ ax1.text(13.5, 1.0, "bands across the width (αλR)", color=C1, fontsize=8, ha="
 ax1.text(48, 3.6, "45° patterns (αλ)", color=C3, fontsize=8, ha="right", va="top")
 ax1.text(2.15, 100 * D_train[0] + 0.8, "single-file train, spacing 8a:\nopposite sign (Booth 2023 cradle)", color=C2, fontsize=8, ha="left", va="bottom")
 ax1.text(2.15, 100 * D_band[0] - 0.8, "slow bubbles: pattern runs ahead", color=INK2, fontsize=7.6, ha="left", va="top")
-ax1.text(48, 13.6, "fast bubbles: pattern lags", color=INK2, fontsize=7.6, ha="right", va="top")
+ax1.text(48, 13.6, "fast bubbles: pattern lags\n(needs a field ≥ 42a along the flow)", color=INK2, fontsize=7.6, ha="right", va="top")
 ax1.plot([], [], color=C1, lw=1.2, ls=(0, (1, 1.5)), label="bands, mean-field exact αλR/[1 + α(Rs − 1)]")
 ax1.plot([], [], "o", ms=5.5, color=SURF, mec=C1, mew=1.5, label="synthetic self-test, one point per seed (void_waves.py)")
 ax1.legend(frameon=False, fontsize=7.4, loc="lower right", bbox_to_anchor=(1.0, 0.13))
@@ -105,21 +109,23 @@ for dh, col in ((3, C2), (10, C4), (30, C1)):
     ax2.text(2, 1 + (R_ - 1) + 0.012, f"d/H {dh}: R = {R_:.2f}", color=col, fontsize=8, ha="left", va="bottom")
 ax2.axhline(1, color=MUTED, lw=1.0, ls="--", zorder=2)
 ax2.text(88, 1.01, "linear friction (droplets, R = 1)", color=MUTED, fontsize=7.6, ha="right", va="bottom")
-# 합성 B 경우(s 0.35, d/H ≈ 3): 방향 맞춤 R 1.28 [1.14, 1.49]
-ax2.errorbar([0], [1.28], yerr=[[0.14], [0.21]], fmt="o", ms=5.5, color=C2, mfc=SURF, mec=C2, mew=1.5, capsize=3, zorder=4)
-ax2.text(48, 1.36, "synthetic fit (d/H ≈ 3, marker at θ = 0):\nR 1.28 [1.14–1.49], true 1.38", color=INK2, fontsize=7.4, ha="left", va="center")
-ax2.set_xlim(-3, 90); ax2.set_ylim(0.55, 1.55)
+# 합성 B 경우(s 0.35, d/H ≈ 3): 평균장 정확식 역산 R 1.36 [1.07, 1.73](검토 9 반영 회귀자)
+ax2.errorbar([0], [1.36], yerr=[[0.29], [0.37]], fmt="o", ms=5.5, color=C2, mfc=SURF, mec=C2, mew=1.5, capsize=3, zorder=4)
+ax2.text(40, 1.62, "synthetic fit (d/H ≈ 3, marker at θ = 0):\nR 1.36 [1.07–1.73], true 1.38; m 0.68 [0.47–0.89]\nwide: a cross-check only, needs a field ≥ 42a across", color=INK2, fontsize=7.2, ha="left", va="center")
+ax2.set_xlim(-3, 90); ax2.set_ylim(0.55, 1.8)
 ax2.set_xticks([0, 15, 30, 45, 60, 75, 90])
 ax2.set_xlabel("angle between pattern wavevector and flow θ (deg)")
 ax2.set_ylabel("deficit / αλ = 1 + (R − 1)·cos 2θ")
 ax2.grid(color=GRID, lw=0.8, axis="y"); ax2.set_axisbelow(True)
 ax2.set_title("(b) Direction dependence from meniscus friction", fontsize=9.5, color=INK, loc="left")
-fig.suptitle("Void-fraction waves as a pressure-free, ID-free readout of the signed mobility deficit λ and the tangent/secant ratio R (expected, I110)",
+fig.suptitle("Void-fraction waves as a pressure-free readout of the signed mobility deficit λ and the tangent/secant ratio R (expected, I110, review 9)",
              fontsize=10, color=INK, x=0.01, ha="left")
 fig.text(0.01, -0.03,
          "Dilute mean field: δu = −λU·δα·(cos 2θ, sin 2θ); streamwise response uses the tangent mobility, lateral the secant one, so ω = k_x·V̄·{1 − αλ[1 + (R − 1)cos 2θ]}. "
          "Linear friction (R = 1) reproduces Desreumaux et al. 2013.\n"
-         "A constant-C₀ drift-flux model predicts zero deficit (c/V̄ − 1 = α·d ln C₀/dα). Long waves only (ka ≲ 0.3); a size spread blurs the pattern. "
+         "A constant-C₀ drift-flux model predicts zero deficit (c/V̄ − 1 = α·d ln C₀/dα). Long waves only (ka ≲ 0.3, wavelength ≤ field/2, so a ≤ 0.3·L_s/4π); "
+         "a speed spread inside a class changes the deficit (×1.17–1.28 at 15–30%).\n"
+         "Pattern speed needs no track IDs; the reference V̄ does. In a realistic 1080 × 416 px field the sign needs ~200 field transits. "
          "Synthetic points: mean-field particle simulation, not data.",
          fontsize=7.0, color=MUTED, va="top")
 fig.tight_layout(rect=(0, 0, 1, 0.95))

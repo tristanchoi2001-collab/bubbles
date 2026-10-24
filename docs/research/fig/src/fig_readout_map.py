@@ -23,9 +23,10 @@ rows = [  # (label, gives set, needs set, tool)
     ("I105 capillary-potential drift", {5, 6}, {1}, "drift_map.py"),
     ("I106 tilt along vs across", {2}, {1, 2}, "—"),
     ("I107 relaxation after merging", {1, 2}, {3}, "merge_relax.py"),
-    ("I108 pressure–velocity phase", {4}, {0, 2}, "—"),
+    ("I108 two-view flow difference vs pressure", {4}, {0, 2}, "—"),
     ("I109 steady flattening", {1, 2}, {3}, "shape_flatten.py"),
     ("I110 void-wave speed vs bubble speed", {0, 2}, set(), "void_waves.py"),
+    ("I111 regression on unit dipole fields", {0, 2, 3}, set(), "velocity_fluctuations.py"),
 ]
 ncol = len(gives) + len(needs)
 fig, ax = plt.subplots(figsize=(11.6, 6.0))
@@ -54,12 +55,13 @@ ax.axis("off")
 ax.plot([], [], "o", ms=9, color=C1, label="gives")
 ax.plot([], [], "s", ms=8, color=C2, label="needs (beyond tracking + flowmeters)")
 ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(0.0, 1.0), fontsize=8.2, ncol=2)
-ax.set_title("What each tracked-velocity readout gives and what it needs (velocity-first program, I89–I110)",
+ax.set_title("What each tracked-velocity readout gives and what it needs (velocity-first program, I89–I111)",
              fontsize=10, color=INK, loc="left", pad=2)
 fig.text(0.01, 0.01, "U_loc can come from ΔP + flow rates ((U_P + J)/2), from imaged α and flowmeters (j_L/(1 − α), mean-field closure) or from a lateral tilt (I102). "
-         "Readouts that need neither pressure nor U_loc: I99, I101 (sign of λ), I107, I109, I110 (signed λ; I110 also needs no track IDs).\n"
-         "f is read five ways and m seven ways; agreement between them is the main test (velocity_links.md section 3). "
-         "Independent reviews 6–7 corrected I90–I103; review 8 of I104–I107 is pending.",
+         "Readouts that need neither pressure nor U_loc: I99, I101 (sign of λ), I107, I109, I110 (signed λ), I111 (signed λ and U_loc = V̄/(1 + λ) itself).\n"
+         "f is read five ways and m eight ways; agreement between them is the main test (velocity_links.md section 3). I110: pattern speed needs no track IDs, "
+         "the reference V̄ does; current fields of view reach only small bubbles at 0.3 mm.\n"
+         "Independent reviews 6–9 corrected I90–I110 (review 9: I108 recast as a two-view local mass balance; liquid inertia dominates the single-point phase).",
          fontsize=7.2, color=MUTED, va="bottom")
 fig.savefig(f"{HERE}/fig_r19_readout_map.png", dpi=170, bbox_inches="tight")
 plt.close(fig)
