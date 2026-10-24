@@ -79,7 +79,7 @@
 6. 속도 요동(I99·I100, 압력 불필요): `python docs/research/tools/velocity_fluctuations.py --csv <OUTPUT_FOLDER>/result_tracking.csv --px_mm <화소 크기> --fps <촬영 속도> --H_mm 1 --flow right --k 4 --out vf_out`
    - 먼저 `--demo`로 자가 시험(약 1분)을 돌린다.
    - 가로 요동 폭(코시 척도 γ_c)은 Σα|λ|를 말한다. d/H ≈ 10(이동도 1)에서 가장 작아야 한다.
-   - 국소장 U_loc(m/s)을 알면 `--U_loc <값> --regress --walls <두 측벽의 가로 좌표 px>`로 회귀형 비 R_reg와 마찰 지수 m_reg를 낸다. 막(m 2/3)이면 R_reg 1.1~1.4, 마른 접촉선(m ≈ 0)이면 1 + Δ(2~6)다. I98(밝기)과 독립인 두 번째 증거다.
+   - 국소장 U_loc(m/s)을 알면(차압이 거칠면 U_loc = j_L/(1 − α): 원형 평균장 폐합을 넣으면 (U_P + J)/2가 정확히 이 값이 된다. j_L = Q_L/(W·H), 유량계 L/min을 m³/s로, α는 영상) `--U_loc <값> --regress --walls <두 측벽의 가로 좌표 px>`로 회귀형 비 R_reg와 마찰 지수 m_reg를 낸다. 막(m 2/3)이면 R_reg 1.1~1.4, 마른 접촉선(m ≈ 0)이면 1 + Δ(2~6)다. I98(밝기)과 독립인 두 번째 증거다.
    - 철 바닥 홈이 흐름 방향 요동을 더하면 `--smooth <홈 한 주기의 프레임 수>`로 지운다(두 방향에 똑같이 건다).
 
 ## 파일 지도
