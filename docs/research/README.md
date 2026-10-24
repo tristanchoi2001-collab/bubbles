@@ -5,6 +5,7 @@
 ## 먼저 볼 것 (10분)
 1. 보고서 ① 결론 요약(`../research_microgap_paper.md`).
 2. 아래 "핵심 결과".
+   - 속도 중심(사용자 방향 10-24)은 `velocity_links.md` 한 장에 모았다: 속도를 무엇과 잇나, 같은 양을 독립인 방법으로 재는 교차 확인, 기존 자료로 지금 할 순서.
 3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83), `fig/fig_r13_closure_alpha_limit.png`(무작위 원판 수치 실험: 폐합은 α 0.2까지 ±0.02, 그 위의 흩어짐은 배치 Q로 설명, I82), `fig/fig_r14_velocity_closure.png`(예상: 계면 상태 셋(깨끗·녹는 계면활성제·굳은 막 미끄럼)의 두 판독. (a) 압력: 단분산 E/B = Δ(d/H), (b) 추적만: 이동도 s(d/H). 굳은 막 미끄럼은 우리 유속에서 s 약 6×10⁻⁴로 사실상 멈춤. 검토 6으로 앞 판의 "정확 대 근사" 패널을 지움, I89~I91), `fig/fig_r15_mobility_collapse.png`(r13과 같은 계산을 속도로 본 것: V/J는 α에 따라 퍼지고 국소장 정규화는 거의 일정. 독립 확인이 아니라 정규화 선택의 실용적 경고, I91), `fig/fig_r16_velocity_fluctuations.png`(예상: 추적 속도 요동의 폭 = Σα|λ|(2차원 쌍극자 합 = 코시), 흐름 방향/가로 폭 비 = 마찰 지수 m. 실제로는 배치 비등방 때문에 회귀형으로 읽음, I99·I100).
 
 ## 핵심 결과
@@ -85,6 +86,7 @@
 | 파일 | 내용 |
 |---|---|
 | `../research_microgap_paper.md` | 보고서 ①~⑥(결론, 유사 논문, 아이디어 평가, 논문 구성, 실험 조건, 질문) |
+| `velocity_links.md` | 추적 속도로 무엇과 연결하나 — 한 장 지도. 아이디어별 연결 표, 같은 양을 독립인 방법으로 재는 교차 확인 표, 기존 자료로 지금 할 순서 |
 | `design_predictions.md` | 실험 A~J별 가설·식·설계·예상 결과·반증, 시나리오 표, 논문 1·2 실행 순서(17·18장) |
 | `estimates_microgap.md` | 크기 추정. 5.4절 유효 매질 폐합(+ L–M 연결), 5.5절 거대 기포 1차원 폐합, 14장 유량 정밀도 |
 | `idea_log.md` | 아이디어 I1~I88(착안·식·설계·예상·반증·비용, 점검·검토 정정 포함) |
