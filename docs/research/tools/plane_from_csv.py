@@ -27,6 +27,7 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
     sigma         (선택) 표면장력(N/m). 비우면 물 σ(T) = 0.0757 − 1.665×10⁻⁴·T(T_tp, 없으면 20 °C)
     friction_k    (선택) 힘 균형 예측의 마찰 계수 k(D = k·σ·a·Ca^(2/3)). 비우면 16.85(깨끗한 막)
     stuck_s       (선택) 멈춘 기포로 보는 이동도 문턱 s* = 2u/(U_P + J). 비우면 0.1
+    shape_friction (선택) 0이면 마찰 합에 모양 배율 S(b/a)를 곱하지 않는다(원 공식). 비우면 곱한다(아래 속도 중심).
 
 계산 (모두 "갭을 채운 기포", 즉 등가직경 d > 2H만 쓴다)
     α        프레임마다 Σ ROI内面積 / ROI 면적의 평균
@@ -62,6 +63,11 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
              갭보다 작은 기포(d ≤ 2H): 마찰 법칙이 다르므로 빼고 그 면적 비를 alpha_subgap으로 낸다.
              속도 없는 기포(새 트랙 등): 마찰 둘레 항은 둘레(Σw·a) 비로, 유량·멈춘 몫·면적 항은 면적 비로 채운다.
              k_fit = (E − E_stuck)/P_2/3는 측정 ΔP가 말하는 마찰 계수다(17 근처 깨끗, 21~43 잘 녹는 계면활성제).
+             모양 배율(검토 6 #16d): 메니스커스 마찰은 둘레의 ∫|n_x|^(m+1)ds라 같은 면적이라도 가로로 넓은 기포가 더 크다.
+               타원(흐름 방향 반축 a, 가로 반축 b)에서 등가 반경 원 대비 S(b/a) = 0.69(0.6), 0.86(0.8), 1.17(1.27), 1.30(1.5),
+               1.56(2), 1.97(3)(m 2/3. m마다 따로 표로 만든다). 화면 끝에 닿지 않은 기포는 b/a = A/(πa²)로 S를 곱하고,
+               잘린 기포는 1이다. 원 공식이면 b/a 1.27(0.3 mm d/H 10 근처)에서 마찰을 17% 작게 세어 k_fit이 17% 커진다
+               (오염 신호 ×1.26과 같은 크기). k_fit_circle = 원 공식의 값(비교용). D형·총알 모양은 타원이 아니라 몇 % 다르다.
              P_area = (H/(12μ j_L))·σ·⟨Σ w·(a²/H)·Ca^(1/3)⟩/A_ROI는 굳은 막 미끄럼의 발자국 막 전단 항이다(계수 6.86).
              여러 운전점이면 friction_fit.csv(m 격자마다 로그 잔차)와 friction_fit_summary.csv를 낸다.
                m = 2/3 고정 k(2점 이상), 지수 맞춤과 2항 맞춤 k1·P_2/3 + k2·P_area(5점 이상, 운전점 부트스트랩 95% 구간).
@@ -91,9 +97,42 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 WATER = (1.0e-3, 998.0)
 COLS = ["name", "H_mm", "jL", "jG", "dp_tp", "dp_l", "tracking_csv", "roi_area_px", "px_mm", "fps", "flow", "mu", "rho", "T_tp", "T_l",
         "wall_lo_px", "wall_hi_px", "q_radius_px", "masks_dir", "ca_max_bubbles", "dp_tp_se", "dp_l_se", "T_se", "B_rel_se",
-        "sigma", "friction_k", "stuck_s"]
+        "sigma", "friction_k", "stuck_s", "shape_friction"]
 M_GRID = sorted(set([round(0.05 * k, 2) for k in range(25)] + [1 / 3, 2 / 3]))   # 마찰 법칙의 속도 지수 후보(I90)
 DH_BINS = ((2, 5), (5, 15), (15, 50), (50, 1e9))                # 이동도 붕괴 표의 d/H 구간
+_SR = np.exp(np.linspace(np.log(0.2), np.log(5.0), 121))        # 모양 배율 표의 b/a 격자
+_ST = None
+
+
+def _shape_table():
+    """타원(흐름 방향 반축 a, 가로 반축 b)의 앞 메니스커스 적분 ∫|n_x|^(m+1)ds를 등가 반경 원 대비로(검토 6 #16d).
+    a = 1, b = r에서 ∫ r^(m+1)|cos t|^(m+1)(sin²t + r²cos²t)^(−m/2) dt / (원의 값 × √r). b/a 1.27에서 1.17, 1.5에서 1.30(m 2/3)."""
+    global _ST
+    if _ST is None:
+        tt = np.linspace(-np.pi / 2, np.pi / 2, 4001)
+        dt = tt[1] - tt[0]
+        c = np.abs(np.cos(tt)); s2 = np.sin(tt) ** 2; c2 = np.cos(tt) ** 2
+
+        def trap(y):
+            return float(np.sum(y[1:] + y[:-1]) * dt / 2)
+        rows = []
+        for m in M_GRID:
+            ref = trap(c ** (m + 1))
+            rows.append([trap(r ** (m + 1) * c ** (m + 1) * (s2 + r * r * c2) ** (-m / 2)) / (ref * np.sqrt(r)) for r in _SR])
+        _ST = np.array(rows)
+    return _ST
+
+
+def shape_factors(ba):
+    """M_GRID 순서의 모양 배율 배열. b/a를 모르면 1."""
+    if not (ba == ba and ba > 0):
+        return np.ones(len(M_GRID))
+    x = np.log(min(max(ba, 0.2), 5.0))
+    lx = np.log(_SR)
+    i = int(min(max(np.searchsorted(lx, x) - 1, 0), len(lx) - 2))
+    w = (x - lx[i]) / (lx[i + 1] - lx[i])
+    tab = _shape_table()
+    return tab[:, i] * (1 - w) + tab[:, i + 1] * w
 
 
 def block_bootstrap_se(series_list, stat, n_boot=400, seed=0):
@@ -293,6 +332,8 @@ def analyse_point(p, out_dir=None):
     alpha_t, flux_t = [], []
     fric_t = []                                             # 프레임별 {m: Σ (ROI 몫)·a·Ca^m}(I89·I90), 움직이는 기포만
     farea_t = []                                            # 프레임별 Σ (ROI 몫)·(a²/H)·Ca^(1/3): 굳은 막 미끄럼의 면적 항(검토 6)
+    fricc_t = []                                            # 프레임별 원 공식(모양 배율 없음) 2/3 합
+    use_shape = (p.get("shape_friction") or "1").strip() not in ("0", "no", "false")
     stuck_t, subgap_t = [], []                              # 멈춘 기포(s* < stuck_s)와 갭보다 작은 기포(d ≤ 2H)의 면적 비
     frame_rows = []
     vel_bub = []                                            # [A, d/H, u, b/a] — 이동도 붕괴용(I91), 움직이고 잘리지 않은 기포
@@ -309,6 +350,7 @@ def analyse_point(p, out_dir=None):
         p_all = p_known = 0.0                               # Σ (ROI 몫)·a: 속도 없는 기포의 마찰 몫은 둘레 비로 채운다(검토 6 #16a)
         st_area = sub_area = 0.0
         fr = {m: 0.0 for m in M_GRID}
+        fr_c = 0.0                                          # 모양 배율 없는(원) 2/3 합, 비교용
         fa = 0.0
         n_v = 0
         fb = frame_bub.setdefault(f, [])
@@ -341,6 +383,11 @@ def analyse_point(p, out_dir=None):
             w_roi = A_roi / A_true if A_true > 0 else 0.0
             p_all += w_roi * a_r
             v = _f(r.get(speed_col)) if speed_col else float("nan")
+            ba_i = float("nan")                              # 잘리지 않은 기포의 b/a(마찰 모양 배율용)
+            if not cut:
+                ap0 = abs(_f(r.get(f"中心{ax}")) - _f(r.get(f"先端部{ax}")))
+                if ap0 > 0:
+                    ba_i = min(max(A_px / (math.pi * ap0 * ap0), 0.2), 5.0)
             moving = False
             if v == v:
                 u = sgn * v * px * fps                       # m/s, 흐름 방향 +
@@ -352,8 +399,10 @@ def analyse_point(p, out_dir=None):
                 else:
                     moving = True
                     ca = mu * u / sigma
-                    for m in M_GRID:
-                        fr[m] += w_roi * a_r * ca ** m
+                    sf = shape_factors(ba_i) if use_shape else None
+                    for j, m in enumerate(M_GRID):
+                        fr[m] += w_roi * a_r * ca ** m * (sf[j] if use_shape else 1.0)
+                    fr_c += w_roi * a_r * ca ** (2 / 3)
                     fa += w_roi * a_r * a_r / H * ca ** (1 / 3)
                     n_v += 1
             if cut or v != v:
@@ -388,6 +437,7 @@ def analyse_point(p, out_dir=None):
             sc_p = p_all / p_known if p_known > 0 else float("nan")   # 마찰 둘레 항: 둘레 비(검토 6 #16a)
         flux_t.append(flux / roi * sc_a)
         fric_t.append({m: fr[m] * sc_p for m in M_GRID})
+        fricc_t.append(fr_c * sc_p)
         farea_t.append(fa * sc_a)
         stuck_t.append(st_area / roi * sc_a)
         subgap_t.append(sub_area / roi)
@@ -496,6 +546,8 @@ def analyse_point(p, out_dir=None):
     E_vel_moving = k_fric * P_m[2 / 3]
     E_vel = E_vel_moving + E_stuck
     k_fit = (E - E_stuck) / P_m[2 / 3] if P_m[2 / 3] > 0 else float("nan")
+    P23_circle = pref * float(np.nanmean(fricc_t)) if fricc_t else float("nan")
+    k_fit_circle = (E - E_stuck) / P23_circle if P23_circle > 0 else float("nan")
     ca_loc = mu * (U_P + J) / 2 / sigma
     coll = {}
     for lo, hi in DH_BINS:
@@ -527,7 +579,7 @@ def analyse_point(p, out_dir=None):
         "C_A": C_A, "b_over_a_matched": ba_m, "C_A_bubbles": len(ca_of), "y_shape_CA": 1 + C_A * x,
         "Q": Q, "Q_flux": Q_flux, "Q_noimg": Q_noimg, "Q_bubbles": len(q_rows["img"]), "eps": eps, "slope_pred": slope,
         "y_layout": y_layout, "y_track_layout": y_track_layout,
-        "sigma": sigma, "friction_k": k_fric, "E_vel": E_vel, "E_vel_moving": E_vel_moving, "E_stuck": E_stuck, "k_fit": k_fit,
+        "sigma": sigma, "friction_k": k_fric, "E_vel": E_vel, "E_vel_moving": E_vel_moving, "E_stuck": E_stuck, "k_fit": k_fit, "k_fit_circle": k_fit_circle,
         "alpha_stuck": alpha_stuck, "alpha_subgap": alpha_subgap, "P_area": P_area,
         "cut_obs": n_cut, "cut_fixed": n_cut_fixed, "cut_noref_alpha": cut_noref / (roi * len(alpha_t)) if alpha_t else float("nan"),
         "U_P": U_P, "J": J, **coll,
@@ -722,7 +774,8 @@ def _selftest_vel(out):
     (가) 잘린 기포는 같은 트랙의 온전한 크기로 센다  (나) 멈춘 기포는 마찰에서 빼고 α_멈춤·(2 + E + B)로 센다
     (다) 갭보다 작은 기포는 뺀다  (라) 기포 없는 프레임은 0으로 센다  (마) 프레임 CSV의 순간 식 평균 = E_vel
     (바) E를 16.85·P_2/3로 만들면 k_fit = 16.85, 지수 맞춤 2/3, 2항 (16.85, 0)
-    (사) 30·P_0.5로 만들면 지수 맞춤 0.5  (아) 16.85·P_2/3 + 6.86·P_area로 만들면 2항 맞춤이 둘을 되돌린다."""
+    (사) 30·P_0.5로 만들면 지수 맞춤 0.5  (아) 16.85·P_2/3 + 6.86·P_area로 만들면 2항 맞춤이 둘을 되돌린다
+    (자) 타원 기포(b/a 1.5)의 마찰 합에 모양 배율이 들어간다(정답은 타원 다각형 직접 적분으로 따로 셈)."""
     os.makedirs(out, exist_ok=True)
     H, px, fps, mu, sig = 0.3e-3, 0.02e-3, 500.0, 1.0e-3, 0.072
     roi = 1000 * 1000
@@ -814,6 +867,40 @@ def _selftest_vel(out):
     fc = friction_fit(run("C", lambda tr: 16.85 * tr["P"][2 / 3] + 6.86 * tr["Parea"]))
     check("(아) 2항 k1", fc["k1"], 16.85, 1e-5)
     check("(아) 2항 k2", fc["k2"], 6.86, 1e-5)
+    # (자) 타원 기포: 흐름 방향 반축 a = |先端部 − 中心|, b/a = 면적/(πa²). 정답 배율은 표 대신 다각형에서 직접 적분한다.
+    q = 1.5
+    tt = np.linspace(0.0, 2 * np.pi, 20000, endpoint=False)
+    ex, ey = np.cos(tt), q * np.sin(tt)
+    dx, dy = np.roll(ex, -1) - ex, np.roll(ey, -1) - ey
+    ds = np.hypot(dx, dy)
+    tc = np.linspace(-np.pi / 2, np.pi / 2, 20001)
+    cc = np.cos(tc) ** (5 / 3)
+    S23 = float(np.sum(np.clip(dy / ds, 0.0, None) ** (5 / 3) * ds)) / (float(np.sum(cc[1:] + cc[:-1])) * (tc[1] - tc[0]) / 2 * math.sqrt(q))
+    for jl in (0.03, 0.12):
+        rows, s23, flux = [], 0.0, 0.0
+        for f in range(nf):
+            for k, r, s in bubbles[:4]:
+                u = s * jl
+                cx = 100.0 + 200.0 * k
+                rows.append({"ファイル名": f"f{f}.png", "フレーム": f, "トラックID": k, "イベント": "", "面積(px)": f"{math.pi * r * r:.6f}",
+                             "ROI内面積(px)": f"{math.pi * r * r:.6f}", "先端部X": f"{cx + r / math.sqrt(q):.6f}", "先端部Y": "500",
+                             "中心X": f"{cx:.3f}", "中心Y": "500", "速度X(px/frame)": f"{u / (px * fps):.9f}", "フレーム接触": "0"})
+                s23 += r * px * (mu * u / sig) ** (2 / 3) * S23
+                flux += math.pi * r * r * u
+        path = os.path.join(out, f"selftest_ellipse_{jl:g}.csv")
+        with open(path, "w", encoding="utf-8-sig", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+        E = 16.85 * pref0 / jl * s23 / nf
+        for sf in ("1", "0"):
+            rr = analyse_point({"name": f"D_{jl:g}_{sf}", "H_mm": H * 1e3, "jL": jl, "jG": flux / roi / nf, "dp_tp": 100 * (1 + E),
+                                "dp_l": 100, "tracking_csv": path, "roi_area_px": roi, "px_mm": px * 1e3, "fps": fps, "flow": "right",
+                                "mu": mu, "rho": 998.0, "sigma": sig, "wall_lo_px": 0, "wall_hi_px": 1000, "q_radius_px": 1000,
+                                "shape_friction": sf}, out)
+            check(f"(자) j_L {jl:g}, b/a {q:g}: k_fit(모양 배율 {'켬' if sf == '1' else '끔'})", rr["k_fit"],
+                  16.85 if sf == "1" else 16.85 * S23, 1e-3)
+            check(f"(자) j_L {jl:g}: k_fit_circle = 16.85·S(1.5) = 16.85·{S23:.4f}", rr["k_fit_circle"], 16.85 * S23, 1e-3)
     print("자가 시험 " + ("모두 통과" if not fails else f"실패 {len(fails)}건: " + ", ".join(fails)))
     return not fails
 

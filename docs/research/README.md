@@ -56,7 +56,7 @@
 1. 운전점마다 한 줄씩 `points.csv`를 만든다: name, H_mm(단상 ΔP로 정한 유효 갭), jL, jG(m/s), dp_tp, dp_l(같은 탭·같은 j_L의 단상 ΔP, Pa), tracking_csv(result_tracking.csv 경로), roi_area_px, px_mm, fps, flow(투명 채널은 up), (선택) T_tp·T_l(두 측정 때 수온 °C — 1 K 차이가 E 0.024라 꼭 적는다), wall_lo_px·wall_hi_px(두 측벽의 가로 좌표, 배치 Q의 거울상에 필요. 비우면 기포 끝으로 추정), masks_dir(추적 때 `SAVE_INSTANCE_MASKS = True`로 저장한 `OUTPUT_FOLDER/instances` 폴더. 있으면 윤곽마다 경계요소 C_A를 구해 기울기에 쓴다 — b/a 추정기는 D형 기포에서 C_A를 17~40% 작게 낸다).
 2. `python docs/research/tools/plane_from_csv.py points.csv --out plane_out` → `plane_out/plane.png`(판별 평면), `plane_points.csv`(α, b/a, s̄, s̄_T, x, y, 예측 y, 배치 Q·예측 기울기(정확식), Re_B, Λ, 속도 중심의 힘 균형 예측 E_vel과 압력이 말하는 마찰 계수 k_fit, d/H 구간별 이동도 붕괴 s* = 2u/(U_P + J)). 처음에는 `--demo`, `--selftest-q`(격자·무작위 배치에서 Q 점검), `--selftest-vel`(정답을 아는 합성 6점으로 속도 경로 점검: 잘린·멈춘·작은 기포, 빈 프레임, 순간 식, k·m·2항 되돌리기)로 동작을 확인한다. 선택 열 dp_tp_se·dp_l_se(Pa)·T_se(K)·B_rel_se를 넣으면 E·x·y 오차 막대를 그린다(α·B_f·Q는 프레임 블록 부트스트랩). y 오차는 E 오차의 (1 − α)/α배라 α ≳ 0.15 점이 판별에 쓸모 있다.
 3. **먼저 읽을 것 — 속도 중심(I89~I91, 공극률 불필요)**
-   - `E_vel`(움직이는 기포 `E_vel_moving` + 멈춘 기포 `E_stuck`) 대 측정 `E`: 깨끗한 막(k = 16.85)이면 비슷해야 한다. `k_fit` = (E − E_stuck)/P_2/3 = 압력이 말하는 마찰 계수다.
+   - `E_vel`(움직이는 기포 `E_vel_moving` + 멈춘 기포 `E_stuck`) 대 측정 `E`: 깨끗한 막(k = 16.85)이면 비슷해야 한다. `k_fit` = (E − E_stuck)/P_2/3 = 압력이 말하는 마찰 계수다. 마찰 합에는 기포마다 모양 배율 S(b/a)가 들어간다(가로로 넓은 타원이 같은 면적의 원보다 마찰이 큼: b/a 1.27에서 1.17배). `k_fit_circle`은 원 공식의 값이다. 둘의 차가 크면 모양이 결론을 바꾸는 운전점이다(`shape_friction` 0이면 끔).
      - 17 근처: 깨끗한 Bretherton 막.
      - 21~43: 잘 녹는 계면활성제(같은 지수, 계수 1.26~2.52배).
      - 훨씬 크고 기포가 크기와 무관하게 거의 멈춤(s ≈ 1300·Ca_loc², 물 0.05 m/s에서 약 6×10⁻⁴): 녹지 않는 오염으로 굳은 막(미끄럼).
