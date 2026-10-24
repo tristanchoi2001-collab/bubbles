@@ -323,12 +323,12 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2019.453	OK	shukla	2019	Film thickness distribution in gravity-driven pancake-shaped droplets rising in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,check
 10.1017/jfm.2020.4	OK	filella	2020	Interaction of two oscillating bubbles rising in a thin-gap cell: vertical entrainment and interaction with vortices	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/jfm.2020.844	OK	gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,9_data,check
-10.1017/jfm.2021.1128	OK	klettner	2022	The effect of inertia and vertical confinement on the flow past a circular cylinder in a Hele-Shaw configuration	Journal of Fluid Mechanics	13_plane
+10.1017/jfm.2021.1128	OK	klettner	2022	The effect of inertia and vertical confinement on the flow past a circular cylinder in a Hele-Shaw configuration	Journal of Fluid Mechanics	13_plane,check
 10.1017/jfm.2022.1008	OK	booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	Journal of Fluid Mechanics	0_estimates,10_ideas,12_ideas3,3_pressure_drop,9_data,check
 10.1017/jfm.2022.361	OK	monnet	2022	Bubble rise in a Hele-Shaw cell: bridging the gap between viscous and inertial regimes	Journal of Fluid Mechanics	10_ideas,14_jstage,1_adiabatic_gap,check
 10.1017/jfm.2022.492	OK	ruiz-rus	2022	Coalescence of bubbles in a high Reynolds number confined swarm	Journal of Fluid Mechanics	10_ideas,8_iate_coalescence,9_data,check
 10.1017/jfm.2022.618	OK	keeler	2022	The interaction of multiple bubbles in a Hele-Shaw channel	Journal of Fluid Mechanics	10_ideas,1_adiabatic_gap,8_iate_coalescence,9_data,check
-10.1017/jfm.2023.527	OK	klettner	2023	On the flow past ellipses in a Hele-Shaw cell	Journal of Fluid Mechanics	13_plane
+10.1017/jfm.2023.527	OK	klettner	2023	On the flow past ellipses in a Hele-Shaw cell	Journal of Fluid Mechanics	13_plane,check
 10.1017/jfm.2025.10951	OK	booth	2025	The motion of a surfactant-laden bubble in a channel or a Hele-Shaw cell	Journal of Fluid Mechanics	3_pressure_drop,9_data,check
 10.1017/jfm.2025.167	OK	baue	2025	Droplet velocity in both limits of low and high soluble surfactants in a Hele-Shaw cell: experimental and analytical res	Journal of Fluid Mechanics	10_ideas,1_adiabatic_gap,3_pressure_drop,9_data,check
 10.1017/jfm.2025.322	OK	booth	2025	Bubble racing in a Hele-Shaw cell	Journal of Fluid Mechanics	3_pressure_drop,7_closest_novelty,9_data,check
@@ -360,6 +360,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1038/nmat1962	OK	steinberger	2007	High friction on a bubble mattress	Nature Materials	10_ideas,check
 10.1038/nmat3025	OK	tambe	2011	Collective cell guidance by cooperative intercellular forces	Nature Materials	12_ideas3,check
 10.1038/nmeth.1237	OK	jaqaman	2008	Robust single-particle tracking in live-cell time-lapse sequences	Nature Methods	5_ai_image,8_iate_coalescence,check
+10.1038/nphys2843	OK	shani	2014	Long-range orientational order in two-dimensional microfluidic dipoles	Nature Physics	13_plane
 10.1038/nphys432	OK	beatus	2006	Phonons in a one-dimensional microfluidic crystal	Nature Physics	13_plane,check
 10.1038/s41467-022-35084-w	OK	xie	2022	Data-driven discovery of dimensionless numbers and governing laws from scarce measurements	Nature Communications	5_ai_image,check
 10.1038/s41467-023-37899-7	OK	zhang	2023	A unifying criterion of the boiling crisis	Nature Communications	5_ai_image,check

@@ -28,3 +28,4 @@ doi	first_author	year	short_title	level	note
 10.1103/PhysRevE.91.042301	Yazhgur	2015	Electrical conductivity of quasi-two-dimensional foams	C+A	I85. PRE 91:042301. 두 판 사이 단층 거품(정지)의 면내 전도도, 마디 액체 포함 모형. 젖음 막 기여를 빼는 처리(검색 요약) — 움직이는 기포·압력과의 비교는 없음
 10.1017/jfm.2021.1128	Klettner	2022	The effect of inertia and vertical confinement on the flow past a circular cylinder in a Hele-Shaw configuration	C+F	I75·I87. JFM 934:A8, CC BY. Λ_KS = (U_cR/ν)(h/R)², ε = h/R. 선형, 경계층 비선형 I(Λ ~ ε)·II(~ ε^1/2), 바깥 비선형 III(Λ ~ 1). 우리 Λ = 0.133 Λ_KS
 10.1017/jfm.2023.527	Klettner	2023	On the flow past ellipses in a Hele-Shaw cell	C+A	I75·I87. JFM 971:A12. 얇은 타원, 관성이 Λ = O(ε)를 넘을 때 변화
+10.1038/nphys2843	Shani	2014	Long-range orientational order in two-dimensional microfluidic dipoles	C+A	I88. Nat Phys 10:140-144. 2차원 미세유로 액적 무리의 속도 쌍 상관이 1/r²·4중 대칭(쌍극자). 작은 기포를 추적자로 큰 기포 쌍극자를 재는 방법의 뿌리

@@ -5,7 +5,7 @@
 ## 먼저 볼 것 (10분)
 1. 보고서 ① 결론 요약(`../research_microgap_paper.md`).
 2. 아래 "핵심 결과".
-3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83), `fig/fig_r13_closure_alpha_limit.png`(무작위 원판 수치 실험: 폐합은 α 0.2까지 ±0.02, 그 위의 흩어짐은 배치 Q로 설명, I82).
+3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83), `fig/fig_r13_closure_alpha_limit.png`(무작위 원판 수치 실험: 폐합은 α 0.2까지 ±0.02, 그 위의 흩어짐은 배치 Q로 설명, I82), `fig/fig_r14_velocity_closure.png`(속도 중심: 힘 균형은 모든 α에서 정확, 공극률 폐합은 평균장 근사. 예상 E/B = 기포 마찰 매개변수 δ의 크기 의존, I89).
 
 ## 핵심 결과
 1. **어디가 비어 있나**
@@ -13,6 +13,12 @@
    - Lc와 2Lc를 넘는 수평 갭 묶음도 이미 있다(Kumagai 2008, 0.5~10 mm, 양식 지도만).
    - 비어 있는 곳: **영상 운동학으로 압력 강하를 맞춤 없이 예측**하는 것(논문 1), 그리고 그 갭 범위에서 ΔP·h·추적 통계를 함께 잰 자료.
 2. **논문 1의 식(팬케이크 영역)**
+   - **속도 중심판(2026-10-24, 사용자 방향, I89~I91)**: 초과 압력 강하는 추적한 기포 마찰의 합이다.
+     - 식: (ΔP_tp − ΔP_L(j_L))·W·H = Σ_i D(V_i, 크기_i). Darcy에서 액체 벽 마찰은 j_L로만 정해지기 때문이다.
+     - 공극률·배치·모양 인자·평균장이 필요 없다. 원판 수치 실험에서 모든 α·배치에 0.1~0.3% 안으로 맞았다.
+     - 깨끗한 막이면 D ≈ 17σaCa^(2/3)이다. 압력으로 거꾸로 마찰 계수와 속도 지수를 재면 발자국 젖음 상태를 읽는다(지수 2/3 막, 1/2 굳은 계면, ≈ 0 마른 발자국).
+     - 추적 속도를 (U_P + J)/2(U_P = H²ΔP/(12μL))로 나누면 모든 운전점이 고립 기포 이동도 곡선 하나에 모인다.
+     - 아래 공극률 폐합은 "힘 균형 + 평균장 국소장"이다.
    - E = φ_L² − 1 = 2α/(1 − α) − β/(1 − β) = B·(2 − s̄)/s̄. 여기서 B = j_G/j_L, s̄ = B(1 − α)/α(평균 기포 이동도).
    - 마찰 기구와 맞춘 상수가 들어가지 않는다. 크기는 기포 가장자리 쐐기 보정(β_f ≈ β/(1 − 0.43H/d))으로만 들어간다. 원형·α ≲ 0.2·Darcy(Re_H·H/d ≪ 1) 범위의 식이다. 원판 수치 실험(I82, 그림 r13)에서 α 0.2까지 ±0.02 안이었다. 그 위의 흩어짐은 배치 Q로 설명되고, 남는 양의 잔차(α 0.3에서 +0.005~0.04, λ²에 비례)는 계통적이다.
    - 고립된 멈춘 기포는 섞여 있어도 성립한다. 기체가 멈춘 통로로 흐르면(채널링) E = 2α/(1 − α)로 B만큼 커진다 → 그 차로 채널링을 판별한다.
