@@ -23,7 +23,7 @@
   - Google Scholar: curl은 CAPTCHA("unusual traffic")로 막힌다. **WebFetch 도구로는 검색 결과(인용 수 포함)가 열린다.** 사용자 요청(2026-10-23)으로 함께 참조한다.
   - 열림: arXiv, J-STAGE, Europe PMC, Cambridge Core, NASA NTRS, OSTI 검색 페이지, HAL, CiNii, doi.org.
   - 막힘(사이트 쪽 Cloudflare 봇 차단 403): ScienceDirect, Wiley, T&F, ASME, AIP, APS, ResearchGate, CORE. KoreaScience는 시간 초과.
-- **2026-10-24 00:55 UTC 추가 확인**: engineering.purdue.edu(Mudawar 연구실 PDF 공개 목록, Huang 2024·Kim & Mudawar 2012 등)는 인증서 체인이 emSign 루트("emSign Root CA - G1")로 끝난다. 이 환경의 신뢰 저장소(/root/.ccr/ca-bundle.crt, 시스템 저장소, certifi 2026.10.18)에 그 루트가 없어서 검증이 실패한다(curl 60). 검증을 끄거나 표준 저장소에 없는 루트를 임의로 믿는 것은 하지 않으므로 받지 않았다. WebFetch도 503. → 이 사이트 원문은 사용자가 학교 네트워크·브라우저로 받아야 한다.
+- **2026-10-24 00:48 UTC 추가 확인**: engineering.purdue.edu(Mudawar 연구실 PDF 공개 목록, Huang 2024·Kim & Mudawar 2012 등)는 인증서 체인이 emSign 루트("emSign Root CA - G1")로 끝난다. 이 환경의 신뢰 저장소(/root/.ccr/ca-bundle.crt, 시스템 저장소, certifi 2026.10.18)에 그 루트가 없어서 검증이 실패한다(curl 60). 검증을 끄거나 표준 저장소에 없는 루트를 임의로 믿는 것은 하지 않으므로 받지 않았다. WebFetch도 503. → 이 사이트 원문은 사용자가 학교 네트워크·브라우저로 받아야 한다.
 - 2026-10-23 16:14 UTC (이전 세션): OpenAlex, Crossref, Semantic Scholar, doi.org, arXiv, J-STAGE, ScienceDirect, Springer, OSTI 모두 프록시 403(정책 거부). WebFetch도 DNS 실패.
   - 이 세션의 환경: `env_01KeTKUxBSkb8xf3iEYPtuzC`.
 - 확인 수준 표시 규칙
