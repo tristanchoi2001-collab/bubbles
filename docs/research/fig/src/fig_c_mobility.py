@@ -5,6 +5,10 @@
 - 기체 보존 α = B/(B + s), U_m = j_L/(1 − α). E = B(2 − s)/s, C = √(μ_L/μ_G)·√B·(2 − s)/s − √(μ_G/μ_L)·√B.
 - Lee & Lee 2001a 층류-층류: C = 6.833e-8·λ^−1.317·ψ^0.719·Re_Lo^0.557, λ = μ²/(ρσD_h), ψ = μj_L/σ
   (Wang 외 2018 JATSR 표 1의 2차 인용. ψ의 j는 액체 겉보기 속도로 가정). 폭 20 mm 가정.
+- 독립 검토 2(review_2.md 5·6번) 반영: 점선 = 적용 범위 밖(α > 0.3 평균장 한계, δ > 0.5·(d/H)^(1/3) 원형 조건, Ca > 5×10⁻³).
+  D_h만 쓰는 상관식(Mishima & Hibiki 1996 C = 21[1 − exp(−0.319·D_h[mm])], 고전 C_vv = 5)을 띠로 함께 그린다
+  → C의 크기는 기존 상관식과 같은 자릿수라 판별력이 없고, 판별은 "같은 유량에서 크기를 바꾸면 C가 바뀌나"(I54)다.
+  Kim & Mudawar 2012는 원문 계수를 확인하지 못해 넣지 않았다.
 """
 import numpy as np
 import matplotlib
@@ -13,6 +17,7 @@ import matplotlib.pyplot as plt
 
 RAMP = {3: "#86b6ef", 10: "#2a78d6", 30: "#104281"}
 REF = "#eb6834"
+BAND = "#ebe9e3"
 INK, INK2, MUTED, GRID, SURF = "#0b0b0b", "#52514e", "#8a8986", "#e6e5e1", "#fcfcfb"
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 9.5, "axes.edgecolor": MUTED,
                      "axes.labelcolor": INK2, "xtick.color": INK2, "ytick.color": INK2,
@@ -39,9 +44,15 @@ def c_mobility(jl, dh_ratio):
     for _ in range(100):
         alpha = B / (B + s)
         ca = MU * jl / (1 - alpha) / SIG
-        s = booth_s(1.12 * ca ** (1 / 3) * dh_ratio)
+        delta = 1.12 * ca ** (1 / 3) * dh_ratio
+        s = booth_s(delta)
     c = np.sqrt(MU / MUG) * np.sqrt(B) * (2 - s) / s - np.sqrt(MUG / MU) * np.sqrt(B)
-    return c, ca
+    return c, ca, alpha, delta
+
+
+def c_mishima(h):
+    dh_mm = 2 * h * W / (h + W) * 1e3
+    return 21 * (1 - np.exp(-0.319 * dh_mm))
 
 
 def c_leelee(jl, h):
@@ -52,37 +63,51 @@ def c_leelee(jl, h):
     return 6.833e-8 * lam ** -1.317 * psi ** 0.719 * re ** 0.557, re
 
 
-jl = np.logspace(-2, np.log10(0.5), 120)
+jl = np.logspace(-2, np.log10(0.5), 160)
 fig, ax = plt.subplots(figsize=(7.6, 4.6))
+mh = [c_mishima(h) for h in (0.3e-3, 0.7e-3, 1.0e-3)]
+ax.axhspan(min(mh), max(mh), color=BAND, lw=0, zorder=0)
+ax.axhline(5.0, color=MUTED, lw=1, zorder=1)
 for dh_ratio, col in RAMP.items():
-    cc, ca = np.array([c_mobility(j, dh_ratio) for j in jl]).T
-    ok = ca <= 5e-3
-    ax.plot(jl[ok], cc[ok], color=col, lw=2, label=f"pancakes, d/H = {dh_ratio} (any gap)")
-    ax.plot(jl[~ok], cc[~ok], color=col, lw=2, ls=(0, (1, 2)))
+    cc, ca, al, de = np.array([c_mobility(j, dh_ratio) for j in jl]).T
+    ok = (ca <= 5e-3) & (al <= 0.3) & (de <= 0.5 * dh_ratio ** (1 / 3))
+    ax.plot(jl, np.where(ok, cc, np.nan), color=col, lw=2, label=f"pancakes, d/H = {dh_ratio}", zorder=3)
+    ax.plot(jl, np.where(ok, np.nan, cc), color=col, lw=2, ls=(0, (1, 2)), zorder=3)
     ax.text(0.0105, cc[0] * 1.12, f"d/H = {dh_ratio}", color=INK2, fontsize=8, va="bottom")
 for h, dash in ((0.3e-3, (0, (2, 2))), (0.7e-3, (0, (5, 2))), (1.0e-3, (0, (9, 3)))):
     cl, re = np.array([c_leelee(j, h) for j in jl]).T
     inside = re >= 175
-    ax.plot(jl, cl, color=REF, lw=1.2, ls=dash, alpha=0.45)
+    ax.plot(jl, cl, color=REF, lw=1.2, ls=dash, alpha=0.45, zorder=2)
     if inside.any():
-        ax.plot(jl[inside], cl[inside], color=REF, lw=2, ls=dash,
+        ax.plot(jl[inside], cl[inside], color=REF, lw=2, ls=dash, zorder=2,
                 label=f"Lee & Lee 2001 lam.-lam., H = {h * 1e3:.1f} mm")
     ax.text(jl[-1] * 1.06, cl[-1], f"LL {h * 1e3:.1f} mm", color=INK2, fontsize=8, va="center")
+ax.plot([], [], color=INK2, lw=2, ls=(0, (1, 2)), label="pancakes, outside model range (see note)")
+ax.fill_between([], [], color=BAND, lw=0, label=f"Mishima & Hibiki 1996, H = 0.3–1 mm ({min(mh):.1f}–{max(mh):.1f})")
+ax.plot([], [], color=MUTED, lw=1, label="Chisholm C_vv = 5")
 ax.set_xscale("log"); ax.set_yscale("log")
 ax.set_xlim(0.009, 0.9); ax.set_ylim(5e-4, 60)
 ax.grid(color=GRID, lw=0.8); ax.set_axisbelow(True)
 ax.set_xlabel("liquid superficial velocity j_L (m/s)")
 ax.set_ylabel("Chisholm C  (β = 0.2, air–water)")
-ax.legend(frameon=False, fontsize=8, loc="lower left")
-ax.set_title("Expected Chisholm C from bubble mobility: set by bubble size (injector), falls with velocity,\n"
-             "and lies far above Lee & Lee's laminar fit", fontsize=10, color=INK, loc="left")
-fig.text(0.01, -0.07, "Pancakes: Booth et al. 2023 mobility s(δ), δ = 1.12 Ca^(1/3) d/H (clean), one size per curve; "
-         "C = √(μ_L/μ_G)·√B·(2 − s)/s (2D effective-medium closure).\n"
-         "Same d/H and Ca give the same C in every gap. Dotted: Ca > 5×10⁻³ (outside Booth's range). "
-         "Lee & Lee 2001a via Wang et al. 2018 (secondary), width 20 mm;\nfaint where Re_Lo < 175 (outside their fit). "
-         "Width-spanning plugs (1D flow) are expected to give small C like Lee & Lee.", fontsize=7.2, color=MUTED)
+ax.legend(frameon=False, fontsize=7.8, loc="upper left", bbox_to_anchor=(-0.08, -0.13), ncol=2,
+          columnspacing=1.6, handlelength=2.6)
+ax.set_title("C depends on bubble size at fixed flow rates; its magnitude overlaps existing correlations,\n"
+             "so the test is whether C changes when only the injector changes", fontsize=10, color=INK, loc="left")
+fig.text(0.01, -0.29,
+         "Pancakes, Darcy limit (Re_H·H/d ≪ 1): Booth et al. 2023 mobility s(δ), δ = 1.12 Ca^(1/3) d/H (clean), one size per curve; "
+         "C = √(μ_L/μ_G)·√B·(2 − s)/s − √(μ_G/μ_L)·√B.\n"
+         "Same d/H and Ca give the same C in every gap only in this limit. Dotted: α > 0.3 (mean-field limit), δ > 0.5·(d/H)^(1/3) "
+         "(bubbles no longer circular) or Ca > 5×10⁻³.\n"
+         f"Band: Mishima & Hibiki 1996 C = 21[1 − exp(−0.319 D_h)] = {mh[0]:.1f} / {mh[1]:.1f} / {mh[2]:.1f} at 0.3 / 0.7 / 1 mm, width 20 mm. "
+         "Lee & Lee 2001a via Wang et al. 2018 (secondary,\nnot checked against the original); faint where Re_Lo < 175 (outside their fit). "
+         "Kim & Mudawar 2012 not drawn (coefficients not verified).", fontsize=7.2, color=MUTED)
 fig.savefig("/home/user/bubbles/docs/research/fig/fig_r7_chisholm_c_mobility.png", dpi=170, bbox_inches="tight")
 plt.close(fig)
 for h in (0.3e-3, 1e-3):
     for j in (0.02, 0.05, 0.1, 0.2):
-        print(f"H {h*1e3:.1f} jl {j}: " + ", ".join(f"d/H {d}: C {c_mobility(j, d)[0]:.2f}" for d in RAMP) + f", LeeLee {c_leelee(j, h)[0]:.3f}")
+        print(f"H {h*1e3:.1f} jl {j}: " + ", ".join(
+            "d/H {}: C {:.2f} a {:.2f} d/lim {:.2f}".format(d, *[v for k, v in enumerate(c_mobility(j, d)) if k in (0, 2)],
+                                                       c_mobility(j, d)[3] / d ** (1 / 3))
+            for d in RAMP) + f", LeeLee {c_leelee(j, h)[0]:.3f}")
+print("Mishima-Hibiki", [round(v, 2) for v in mh])
