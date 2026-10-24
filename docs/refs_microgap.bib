@@ -1,5 +1,5 @@
 % docs/refs_microgap.bib — docs/research/make_bib.py가 Crossref 메타데이터로 생성. 직접 고치지 말고 refs_*.tsv를 고친 뒤 다시 만든다.
-% OK 649건, WARN(서지 불일치 확인 필요) 0건, 미대조 21건
+% OK 649건, WARN(서지 불일치 확인 필요) 2건, 미대조 21건
 
 @book{coleman2018experimentation,
   author = {Coleman, Hugh W. and Steele, W. Glenn},
@@ -7288,6 +7288,33 @@
   year = {2026},
   doi = {10.7910/dvn/lkaqfw},
   note = {DataCite 대조 2026-10; 확인 수준 D; 주제 9\_data,check}
+}
+
+
+% ===== WARN: DOI는 Crossref에 있으나 TSV의 저자·연도와 다름 (note 확인) =====
+
+@article{anon2010,
+  author = {原村, 嘉彦},
+  title = {{ぬれと乾きが共存する伝熱面における熱流束分布}},
+  journal = {日本伝熱シンポジウム講演論文集},
+  volume = {2010},
+  number = {0},
+  pages = {221--221},
+  year = {2010},
+  doi = {10.11368/nhts.2010.0.221.0},
+  note = {doi.org(JaLC) 대조 2026-10; 확인 수준 C+A; 주제 14\_jstage; 확인 필요: 저자 Harada≠原村}
+}
+
+@article{torisaki2020gas,
+  author = {TORISAKI, Shuhei and MIWA, Shuichiro},
+  title = {{Gas-Liquid Two-Phase Flow Image Analysis Using Bubble Detection Algorithm}},
+  journal = {JAPANESE JOURNAL OF MULTIPHASE FLOW},
+  volume = {34},
+  number = {1},
+  pages = {125--133},
+  year = {2020},
+  doi = {10.3811/jjmf.2020.012},
+  note = {Crossref 대조 2026-10; 확인 수준 C+A; 주제 14\_jstage; 확인 필요: 저자 Toriyama≠torisaki}
 }
 
 
