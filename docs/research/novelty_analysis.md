@@ -125,3 +125,10 @@
 - **바뀐 우선순위**: (1) 0.3 mm 기존 자료로 판별 평면 그림(영상 종횡비 함께), (2) 주입기 바꾸기, (3) 계단 응답, (4) Λ 범위를 넓힌 관성 주곡선은 0.7·1 mm에서.
 - **논문 2 쪽 검색 기록(같은 날)**: J-STAGE 무료 검색 API로 "수평·아래 가열·좁은 유로·공기(기포) 주입 열전달"을 4번 찾았다. 수직 인위 주입(Monde 그룹)과 비등(미니갭 마이크로층 Zhang & Utaka 2012, 아래 벽 가열 수평 유로 비등 Murakami 1998, 수평 평판 좁은 틈 비등 학회 발표)만 나오고, 수평·아래 가열·공기 주입·여러 갭은 못 찾았다. 영상 동기 역열전도의 방법 선례는 있다(原村 2010, 표면 아래 열전대 약 70개 + 고속 영상, 풀 비등).
   - 추가(2026-10-24, WebSearch 4회 + Crossref): **시험부가 가장 비슷한 가열 선례는 Al-Zaidi, Mahmoud, Ivanov & Karayiannis 2025**(IJHMT 242:126830, CC BY, 데이터 목록 B39)다. 1 mm × 20 mm × 25 mm 수평 마이크로갭, 무산소 구리 가열 블록, 표면 아래 3.5 mm 열전대, 폴리카보네이트 덮개 위에서 1800 fps 촬영. 다만 HFE-7100 과냉 흐름 비등의 핵 생성(핵 밀도·빈도·이탈 지름 0.09~0.33 mm)을 다루고, 공기 주입·물·여러 갭·기포 추적·발자국 열전달은 없다. → 논문 2 서론에서 "같은 꼴의 장치(1 mm, 위 촬영, 매립 열전대)로 비등 핵 생성을 본 연구"로 인용하고, 우리 새것(물의 갇힌 팬케이크 발자국, 공기 주입, 갭 묶음, 추적 운동학 → 벽 열전도)을 그 대비로 쓴다.
+
+### 재확인 (2026-10-24 09:50 UTC, 속도 중심 논문 1, WebSearch 2회 standard + arXiv API 1회)
+- 검색어: "pancake bubbles Hele-Shaw channel tracking bubble velocity pressure drop force balance experiment 2025", "narrow gap two-phase flow bubble tracking velocity deep learning pressure drop prediction microchannel 2026".
+- 결과: 추적 속도로 시간 평균 압력 강하를 닫는(힘 균형) 마이크로갭 기액류 실험은 여전히 못 찾았다. 가장 가까운 것은 Booth 그룹의 이론 + 단일·쌍 기포 실험(2023 JFM, 2024 PRF, 2025 JFM "bubble racing")이다. 이들은 기포 속도를 예측하지만 무리의 압력 강하는 다루지 않는다.
+- 기계 학습 쪽은 압력 강하 상관식 자체를 학습한다(Correlated-informed neural networks, arXiv 2201.07835; 2025년 XGBoost 잔차 학습 — 검색 요약). 추적 속도를 입력으로 쓰는 예는 못 봤다.
+- 3·7 mm에 쓸 만한 것: 단일 고속 카메라로 기포의 깊이(갭 방향 위치)를 추정하는 기계 학습(Nayak, Mohammed, Kumar, Prajapati & Aidun 2026, arXiv 2601.21175, FEDSM2026, 초록 확인: 20 kHz·3 µm 해상도, 비지도 군집 + 반지도 학습). 3·7 mm의 갭보다 작은 기포가 덮개에 붙었는지 판정하는 데 참고할 수 있다(I95).
+- → 논문 1의 새로움 판단(이론 낮음, 실험 중)은 그대로 둔다.
