@@ -44,7 +44,7 @@
 
 ## 자동 재개
 - 사용자 요청: 일요일 10시(주간 한도 초기화, UTC+9로 가정 = 2026-10-25 01:00 UTC)까지 스스로 계속한다. 세션 한도가 끝나면 초기화를 기다렸다가 이어서 한다.
-- 이 세션(session_01QFVWo3BPZ98Eh7jXYmYxkN)의 매시간 예약 작업: **`trig_01HkakuwX8ZSm3zyqsZLz9aU`** (매시 41분). 2026-10-25 01:00 UTC가 지나면 지운다.
+- 이 세션(session_01QFVWo3BPZ98Eh7jXYmYxkN)의 매시간 예약 작업: **`trig_013J7rHTeNDDJm1JmNCAj5Sh`** (매시 41분, 지금 살아 있는 것). 2026-10-25 01:00 UTC가 지나면 지운다. 예전 `trig_01HkakuwX8ZSm3zyqsZLz9aU`는 2026-10-23 20:10 UTC에 지웠다.
 - 이전 세션(session_01Lo4WDHp5j9p8HWM9B3Vtdx)의 예약 작업은 지웠다.
 
 ## 기록
