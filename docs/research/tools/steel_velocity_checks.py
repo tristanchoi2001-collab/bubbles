@@ -2,20 +2,32 @@
 
 I98  기포 안쪽 밝기 대 속도: 같은 크기·같은 화면 위치에서 안쪽 평균 밝기 차 ΔI(원본 − 배경)를 속도 잔차(V/V̄_칸 − 1)에
      회귀한다. 마른 자리면 느린 기포가 다르고, 막 광학이면 ΔI가 V^(2/3)을 따라 매끈하고, 갇힌 빛이면 상관이 없다.
-     트랙 단위 부트스트랩으로 기울기의 95% 구간을 낸다. 같은 기포의 ΔI가 화면 안에서 머문 시간과 함께 변하는지도 낸다.
-I96  홈 위 속도 변조: 프레임 수가 충분한 트랙마다 흐름 방향 속도 v(t)의 스펙트럼에서 주파수 V̄/λ_g(홈 간격 λ_g) 근처
+     트랙 단위 부트스트랩으로 기울기의 95% 구간을 낸다.
+     속도는 중심 위치의 중심 차분 (x_{f+1} − x_{f−1})/2로 그 프레임에 맞춘다. CSV 속도 열(선단부 차분의 EMA α 0.5)은 한 프레임쯤 늦고
+     칸 안 속도 잔차를 줄인다(검토 10 #22). 앞뒤 프레임 사이에 합체·분열(중심 점프)이 있으면 그 프레임은 쓰지 않는다.
+     같은 기포의 ΔI가 화면 안에서 머문 시간과 함께 변하는지(idea_log I98)는 아직 하지 않는다: 기포가 모두 같은 쪽에서 들어오면
+     머문 시간이 흐름 방향 위치와 같아져 조명 기울기와 가를 수 없다.
+I96  홈 위 속도 변조: 프레임 수가 충분한 트랙마다 흐름 방향 속도 v(t)의 스펙트럼에서 주파수 f_g = V̄/λ_g(홈 간격 λ_g) 근처
      진폭 δV를 찾는다. 힘 균형에서 홈 하나의 고정력 진폭 F_pin ≈ D·(δV/V̄)·(2/3 + 1/Δ)(독립 검토 6 정정).
      2/3은 마찰 법칙 D = k·σ·a·Ca^(2/3)(k 16.85, I89)의 속도 의존, 1/Δ는 기포가 느려질 때 커지는 Darcy 압력 힘이다.
      Δ = K·D/(V·A·H), K = H²/12μ, A = πa². 원형(C = 1), 국소 액체 속도가 기포 감속에 흔들리지 않는다고 가정.
+     속도는 중심 위치의 한 프레임 차분이다(CSV 속도 열의 EMA는 홈 주파수에서 진폭을 |H| = 0.5/√(1.25 − cos 2πf)배,
+     f 0.1·0.25·0.4에서 0.75·0.45·0.35로 깎는다, 끝까지 시험에서 발견). 한 프레임 차분도 프레임 시간 평균이라 진폭이
+     sinc(πf_g)배(0.98·0.90·0.76)로 깎이므로 나눠서 되돌린다(검토 10 #14, F_pin도 같은 배). 진폭은 0을 8배 덧붙인 FFT의
+     봉우리(±1칸 안 최대)로 읽어 칸 사이 손실(한 칸 Hann 창에서 최대 15%)을 없앤다.
+     표본화 한계: f_g < 0.45라 홈 간격이 프레임당 이동의 2.2배보다 길어야 한다, 곧 fps ≥ 2.2·V/λ_g(검토 10 #15).
+     철 블록 영상(약 48~53 px/frame)이면 홈 간격 약 110 px보다 짧은 홈은 그 fps로는 못 본다. 건너뛴 트랙 수와 필요한 fps를 출력한다.
+     더 빠르면 홈 변조가 |f_g − round(f_g)|로 접혀 보이지만 sinc 감쇠가 크고(f_g 1에서 0) 평균 속도와 섞여 쓰지 않는다.
+     트랙은 빠진 프레임과 합체·분열(중심 점프) 앞에서 잘라 가장 긴 조각을 쓴다(검토 10 #22).
 
 입력 (추적 프로그램 steel/2_steel_track.py의 출력)
-    --csv      result_tracking.csv (속도 열은 이름에 「速度」가 든 열, 흐름 방향 좌표 변화 px/frame)
+    --csv      result_tracking.csv (중심 위치를 쓴다. 이름에 「速度」가 든 속도 열은 없어도 된다)
     --masks    SAVE_INSTANCE_MASKS = True로 저장한 OUTPUT_FOLDER/instances 폴더(<파일 이름>.npz, 라벨 지도 inst)
     --images   원본 영상 폴더(CSV의 ファイル名), --bg 배경 영상(없으면 I98은 건너뛰고 CSV만으로 I96을 한다)
     --px_mm, --fps, --flow(right/left/up/down), (선택) --groove_mm, --H_mm(갭, 기본 1.0), --sigma, --mu
 사용
     python steel_velocity_checks.py --csv result_tracking.csv --masks instances --images frames --bg bg.bmp --px_mm 0.01 --fps 500 --groove_mm 1.0 --out sv_out
-    python steel_velocity_checks.py --demo --out sv_demo     # 합성 자료로 스스로 점검
+    python steel_velocity_checks.py --demo --out sv_demo     # 합성 자료로 스스로 점검(연속 운동, f_g 0.06·0.25·0.40·0.50, 합체 점프)
 출력: brightness_vs_speed.csv(칸별 기울기·구간), groove_spectrum.csv(트랙별 δV/V̄·F_pin), 요약 출력.
 주의: 크기와 속도가 강하게 상관하므로 크기 칸 안에서만 비교한다. 화면 위치에 따른 조명 기울기 때문에 흐름 방향 위치도 칸으로 나눈다.
 """
@@ -28,6 +40,7 @@ from collections import defaultdict
 import numpy as np
 
 AXIS = {"right": ("X", +1), "left": ("X", -1), "down": ("Y", +1), "up": ("Y", -1)}
+JUMP_EVENTS = ("merge", "split")        # 이 프레임에서 중심이 뛴다(앞 프레임과의 차분을 쓰지 않는다)
 
 
 def read_rows(path):
@@ -68,18 +81,30 @@ def label_at(inst, cx, cy):
     return int(inst[ys[k], xs[k]]) if (xs[k] - cx) ** 2 + (ys[k] - cy) ** 2 < 25 else 0
 
 
+def _usable(r):
+    """기포가 있는 행(면적 > 0, 화면 끝 접촉 아님, 합체로 사라진 기록·「気泡なし」 아님)."""
+    try:
+        A = float(r.get("面積(px)") or 0)
+    except ValueError:
+        return False
+    ev = r.get("イベント") or ""
+    return A > 0 and r.get("フレーム接触") != "1" and not ev.startswith("merged_into") and ev != "気泡なし"
+
+
 def collect(rows, speed_col, masks, images, bg_path, flow, load_image=None):
-    """기포·프레임마다 (트랙, 프레임, 등가 지름 px, 흐름 방향 속도 px/frame, 흐름 방향 위치(흐름 쪽이 +), ΔI).
-    영상·배경·마스크 가운데 하나라도 없으면 ΔI = nan으로 CSV만 쓴다(I96 홈 변조는 속도만 필요하다)."""
+    """기포·프레임마다 (트랙, 프레임, 등가 지름 px, CSV 속도 열 px/frame(없으면 nan), 흐름 방향 위치(흐름 쪽이 +), ΔI, 사건).
+    영상·배경·마스크 가운데 하나라도 없거나 그 프레임의 라벨을 못 찾으면 ΔI = nan(I96 홈 변조는 위치만 필요하다)."""
     ax, sgn = AXIS[flow]
+    nan = float("nan")
+
+    def base(r):
+        d = math.sqrt(4 * float(r["面積(px)"]) / math.pi)
+        v = sgn * float(r[speed_col]) if speed_col and r.get(speed_col) else nan
+        return r["トラックID"], int(r["フレーム"]), d, v, sgn * float(r[f"中心{ax}"])
+
+    use = [r for r in rows if _usable(r)]
     if load_image is None and not (images and bg_path and masks):
-        out = []
-        for r in rows:
-            if r.get("フレーム接触") == "1" or not r.get(speed_col):
-                continue
-            d = math.sqrt(4 * float(r["面積(px)"]) / math.pi)
-            out.append((r["トラックID"], int(r["フレーム"]), d, sgn * float(r[speed_col]), sgn * float(r[f"中心{ax}"]), float("nan")))
-        return out
+        return [base(r) + (nan, r.get("イベント") or "") for r in use]
     if load_image is None:
         import cv2
         def load_image(p):
@@ -89,32 +114,41 @@ def collect(rows, speed_col, masks, images, bg_path, flow, load_image=None):
             return im.astype(np.float32)
     bg = load_image(bg_path)
     by_file = defaultdict(list)
-    for r in rows:
-        if r.get("フレーム接触") == "1" or not r.get(speed_col):
-            continue
+    for r in use:
         by_file[r["ファイル名"]].append(r)
     out = []
     for fname, rs in by_file.items():
         npz = os.path.join(masks, os.path.splitext(fname)[0] + ".npz")
-        if not os.path.exists(npz):
-            continue
-        inst = np.load(npz)["inst"]
-        diff = load_image(os.path.join(images, fname)) - bg
-        diff -= np.median(diff[inst == 0])                  # 액체의 전체 밝기 차(조명 표류)를 뺀다
+        inst = np.load(npz)["inst"] if os.path.exists(npz) else None
+        if inst is not None:
+            diff = load_image(os.path.join(images, fname)) - bg
+            diff -= np.median(diff[inst == 0])              # 액체의 전체 밝기 차(조명 표류)를 뺀다
         for r in rs:
-            lab = label_at(inst, float(r["中心X"]), float(r["中心Y"]))
-            if not lab:
-                continue
-            d = math.sqrt(4 * float(r["面積(px)"]) / math.pi)
-            out.append((r["トラックID"], int(r["フレーム"]), d, sgn * float(r[speed_col]), sgn * float(r[f"中心{ax}"]),
-                        interior_mean(diff, inst, lab)))
+            lab = label_at(inst, float(r["中心X"]), float(r["中心Y"])) if inst is not None else 0
+            out.append(base(r) + (interior_mean(diff, inst, lab) if lab else nan, r.get("イベント") or ""))
     return out
 
 
+def position_speed(obs):
+    """(트랙, 프레임) → 중심 차분 속도 (x_{f+1} − x_{f−1})/2(px/frame, 흐름 방향 +). 앞뒤 프레임이 없거나 사이에 합체·분열이 있으면 없음."""
+    by = defaultdict(dict)
+    for t in obs:
+        by[t[0]][t[1]] = t
+    v = {}
+    for tr, fr in by.items():
+        for f, t in fr.items():
+            a, b = fr.get(f - 1), fr.get(f + 1)
+            if a is None or b is None or t[6] in JUMP_EVENTS or b[6] in JUMP_EVENTS:
+                continue
+            v[(tr, f)] = 0.5 * (b[4] - a[4])
+    return v
+
+
 def brightness_vs_speed(obs, n_size=4, n_pos=3, n_boot=300, seed=0):
-    """크기·위치 칸마다 ΔI를 속도 잔차에 회귀. 트랙 단위 부트스트랩 95% 구간."""
+    """크기·위치 칸마다 ΔI를 속도 잔차(중심 위치 차분)에 회귀. 트랙 단위 부트스트랩 95% 구간."""
     rng = np.random.default_rng(seed)
-    o = [t for t in obs if t[5] == t[5] and t[3] > 0]
+    vpos = position_speed(obs)
+    o = [t[:3] + (vpos[(t[0], t[1])],) + t[4:] for t in obs if t[5] == t[5] and vpos.get((t[0], t[1]), 0.0) > 0]
     if len(o) < 20:
         return []
     d = np.array([t[2] for t in o]); s = np.array([t[4] for t in o])
@@ -145,52 +179,141 @@ def brightness_vs_speed(obs, n_size=4, n_pos=3, n_boot=300, seed=0):
     return res
 
 
-def groove_spectrum(obs, px_mm, groove_mm, sigma, mu, fps, H_mm=1.0, min_len=32):
-    """트랙마다 v(t)의 스펙트럼에서 V̄/λ_g 근처 진폭 δV(봉우리 주변 ±1칸의 최대)와 이웃 칸 대비 비."""
+def segments(ts):
+    """프레임 순 관측을 빠진 프레임과 합체·분열(중심 점프) 앞에서 자른 조각들."""
+    segs, cur = [], [ts[0]]
+    for p, t in zip(ts, ts[1:]):
+        if t[1] - p[1] != 1 or t[6] in JUMP_EVENTS:
+            segs.append(cur)
+            cur = []
+        cur.append(t)
+    segs.append(cur)
+    return segs
+
+
+def groove_spectrum(obs, px_mm, groove_mm, sigma, mu, fps, H_mm=1.0, min_len=32, stats=None):
+    """트랙마다 가장 긴 조각의 v(t)(위치의 한 프레임 차분) 스펙트럼에서 f_g = V̄/λ_g 근처 진폭 δV(±1칸 안 최대, 8배 0 덧붙임)를
+    sinc(πf_g)로 나눠 되돌린 값과 이웃 칸 대비 비. stats(dict)를 주면 건너뛴 트랙 수를 채운다:
+    short(조각 < min_len + 1 프레임), fast(f_g ≥ 0.45, 표본화 한계), slow(f_g ≤ 2/N, 홈 두 주기 미만), back(평균 속도 ≤ 0)."""
     by = defaultdict(list)
     for t in obs:
         by[t[0]].append(t)
     lam_px = groove_mm / px_mm
+    st = dict(tracks=0, short=0, fast=0, slow=0, back=0, v_fast=[])
     res = []
     for tr, ts in by.items():
+        st["tracks"] += 1
         ts.sort(key=lambda t: t[1])
-        fr = np.array([t[1] for t in ts])
-        # 속도는 중심 위치의 한 프레임 차분으로 낸다. CSV 속도 열은 추적기가 선단부 차분을 EMA(α 0.5)로 평활한 값이라
-        # 홈 주파수에서 진폭이 |H| = 0.5/√(1.25 − cos ω)배로 깎인다(f 0.1·0.25·0.4 주기/프레임에서 0.75·0.45·0.35, 끝까지 시험에서 발견).
-        if len(fr) < min_len + 1 or np.any(np.diff(fr) != 1):
+        seg = max(segments(ts), key=len)
+        if len(seg) < min_len + 1:
+            st["short"] += 1
             continue
-        v = np.diff(np.array([t[4] for t in ts]))
-        if v.mean() <= 0:
+        v = np.diff(np.array([t[4] for t in seg]))
+        vb = float(v.mean())
+        if vb <= 0:
+            st["back"] += 1
             continue
-        vb = v.mean()
+        n = len(v)
         f_g = vb / lam_px                                    # 주기/프레임
-        if not 2.0 / len(v) < f_g < 0.45:
+        if f_g >= 0.45:
+            st["fast"] += 1
+            st["v_fast"].append(vb)
             continue
-        x = (v - vb) * np.hanning(len(v))
-        spec = np.abs(np.fft.rfft(x)) * 2 / np.hanning(len(v)).sum()
-        fq = np.fft.rfftfreq(len(v))
-        k = int(np.argmin(np.abs(fq - f_g)))
-        win = spec[max(k - 1, 0):k + 2]
-        amp = float(win.max())
+        if f_g <= 2.0 / n:
+            st["slow"] += 1
+            continue
+        w = np.hanning(n)
+        x = (v - vb) * w
+        spec = np.abs(np.fft.rfft(x)) * 2 / w.sum()
+        k = int(np.argmin(np.abs(np.fft.rfftfreq(n) - f_g)))
         bgn = np.median(np.concatenate([spec[max(k - 8, 1):max(k - 2, 1)], spec[k + 3:k + 9]])) if len(spec) > k + 3 else float("nan")
-        d_px = float(np.mean([t[2] for t in ts]))
+        spec8 = np.abs(np.fft.rfft(x, 8 * n)) * 2 / w.sum()
+        amp_raw = float(spec8[np.abs(np.fft.rfftfreq(8 * n) - f_g) <= 1.0 / n].max())
+        att = float(np.sinc(f_g))                            # 한 프레임 차분 = 프레임 시간 평균: sin(πf)/(πf)
+        amp = amp_raw / att
+        d_px = float(np.mean([t[2] for t in seg]))
         a_m = d_px / 2 * px_mm * 1e-3
         V_ms = vb * px_mm * 1e-3 * fps
         Ca = mu * V_ms / sigma
         D = 16.85 * sigma * a_m * Ca ** (2 / 3)
         H = H_mm * 1e-3
         Delta = H * H / (12 * mu) * D / (V_ms * math.pi * a_m * a_m * H)
-        res.append(dict(track=tr, frames=len(v), d_px=d_px, V_px_per_frame=vb, f_groove=f_g, dV_over_V=amp / vb,
-                        peak_to_background=amp / bgn if bgn and bgn == bgn else float("nan"),
+        res.append(dict(track=tr, frames=n, d_px=d_px, V_px_per_frame=vb, f_groove=f_g, dV_over_V=amp / vb,
+                        dV_over_V_raw=amp_raw / vb, sinc=att,
+                        peak_to_background=amp_raw / bgn if bgn and bgn == bgn else float("nan"),
                         Delta=Delta, F_pin_N=D * amp / vb * (2 / 3 + 1 / Delta)))
+    if stats is not None:
+        stats.update(st)
     return res
+
+
+def run(obs, px_mm, fps, groove_mm, sigma, mu, H_mm, out):
+    """I98·I96을 계산해 CSV로 쓰고 요약을 출력한다. (I98 칸 결과, I96 트랙 결과, I96 건너뜀 통계)."""
+    bv = brightness_vs_speed(obs)
+    if bv:
+        with open(os.path.join(out, "brightness_vs_speed.csv"), "w", encoding="utf-8", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(bv[0].keys())); w.writeheader(); w.writerows(bv)
+        sl = np.array([r["slope_dI_per_relV"] for r in bv])
+        print(f"I98 안쪽 밝기 대 속도 잔차(중심 위치 차분 속도): 칸 {len(bv)}개, 기울기 중앙값 {np.nanmedian(sl):+.1f} 계조/(상대 속도 1), "
+              f"95% 구간이 0을 빼는 칸 {sum(1 for r in bv if r['ci_lo'] > 0 or r['ci_hi'] < 0)}개. "
+              "0에 가까우면 갇힌 빛, 크기 칸마다 같은 부호의 매끈한 기울기면 막 광학, 느린 쪽에서만 꺾이면 마른 자리 쪽(I98).")
+    gs, st = [], {}
+    if groove_mm == groove_mm:
+        gs = groove_spectrum(obs, px_mm, groove_mm, sigma, mu, fps, H_mm, stats=st)
+        lam_px = groove_mm / px_mm
+        if gs:
+            with open(os.path.join(out, "groove_spectrum.csv"), "w", encoding="utf-8", newline="") as fh:
+                w = csv.DictWriter(fh, fieldnames=list(gs[0].keys())); w.writeheader(); w.writerows(gs)
+            r = np.array([g["dV_over_V"] for g in gs]); pb = np.array([g["peak_to_background"] for g in gs])
+            sc = np.array([g["sinc"] for g in gs])
+            if np.nanmedian(pb) < 3:
+                print("  참고: 봉우리/주변 중앙값이 3 미만이라 홈 주파수에 뚜렷한 봉우리가 없다(잡음 수준). δV/V̄·F_pin은 상한으로만 본다.")
+            print(f"I96 홈 변조: 트랙 {len(gs)}개, δV/V̄ 중앙값 {np.median(r):.3f}(sinc(πf_g) {sc.min():.2f}~{sc.max():.2f}로 나눔, "
+                  f"나누기 전 {np.median([g['dV_over_V_raw'] for g in gs]):.3f}), 봉우리/주변 중앙값 {np.nanmedian(pb):.1f}, "
+                  f"Δ 중앙값 {np.median([g['Delta'] for g in gs]):.2f}, "
+                  f"F_pin 중앙값 {np.median([g['F_pin_N'] for g in gs]):.2e} N(D = 16.85σaCa^(2/3), F_pin = D·(δV/V̄)·(2/3 + 1/Δ) 가정)")
+        else:
+            print("I96: 조건(연속 프레임 ≥ 33, 2/N < V̄/λ_g < 0.45)을 만족하는 트랙이 없다.")
+        skipped = {k: st.get(k, 0) for k in ("short", "fast", "slow", "back")}
+        if any(skipped.values()):
+            print(f"  I96 건너뜀(트랙 {st.get('tracks', 0)}개 중): 조각 < 33 프레임 {skipped['short']}, f_g ≥ 0.45 {skipped['fast']}, "
+                  f"홈 두 주기 미만 {skipped['slow']}, 역방향 {skipped['back']}")
+        if st.get("fast"):
+            vf = float(np.median(st["v_fast"]))
+            print(f"  표본화 한계: 홈 간격 {lam_px:.0f} px가 프레임당 이동 {vf:.1f} px의 2.2배보다 짧다 → fps ≥ 2.2·V/λ_g = "
+                  f"{2.2 * vf * fps / lam_px:.0f} fps로 찍어야 홈 변조를 본다(지금 {fps:g} fps, 검토 10 #15).")
+    return bv, gs, st
+
+
+def _integrate(x0, v0, ph, lam, eps, nf, sub=20):
+    """연속 운동 dx/dt = v0·(1 + eps·sin(2πx/λ + ph))를 프레임마다 sub번 RK4로 적분한 프레임 시각의 위치."""
+    def fn(x):
+        return v0 * (1 + eps * math.sin(2 * math.pi * x / lam + ph))
+    xs, x, h = [], x0, 1.0 / sub
+    for _ in range(nf):
+        xs.append(x)
+        for _ in range(sub):
+            k1 = fn(x); k2 = fn(x + h * k1 / 2); k3 = fn(x + h * k2 / 2); k4 = fn(x + h * k3)
+            x += h * (k1 + 2 * k2 + 2 * k3 + k4) / 6
+    return xs
+
+
+def _ema(xs):
+    """추적기처럼 한 프레임 차분의 EMA(α 0.5), 첫 프레임은 없음."""
+    out, prev = [], None
+    for f in range(len(xs)):
+        raw = xs[f] - xs[f - 1] if f else float("nan")
+        prev = raw if prev is None or prev != prev else 0.5 * prev + 0.5 * raw
+        out.append(prev)
+    return out
 
 
 def make_demo(out):
     """합성: 원형 기포 40개(겹치지 않게 줄마다 하나) × 48프레임, 오른쪽으로 이동, 속도에 홈 변조(간격 1 mm = 100 px, 진폭 8%).
-    안쪽 밝기는 막 광학형으로 절대 속도에 묶는다: ΔI = −40 + 30·((V/6)^(2/3) − 1)(V는 px/frame).
+    위치는 연속 운동을 적분해 프레임 시각에 찍는다(검토 10 #14: 프레임마다 x += v(x)로 건너뛰면 sinc 감쇠가 없어 못 본다).
+    안쪽 밝기는 막 광학형으로 순간 속도에 묶는다: ΔI = −40 + 30·((V/6)^(2/3) − 1)(V는 px/frame).
     같은 칸에서 상대 속도 1당 기울기는 약 20·(V̄/6)^(2/3) ≈ +15~+23, δV/V̄ ≈ 0.08을 되돌려야 한다.
-    CSV 속도 열은 추적기처럼 EMA(α 0.5)로 쓰므로 I96이 위치 차분을 쓰는지도 함께 시험된다(속도 열을 쓰면 약 0.04~0.06으로 깎인다)."""
+    CSV 속도 열은 추적기처럼 EMA(α 0.5)로 쓰므로 위치 차분을 쓰는지도 함께 시험된다(속도 열을 쓰면 약 0.04~0.06으로 깎인다)."""
     rng = np.random.default_rng(3)
     os.makedirs(os.path.join(out, "instances"), exist_ok=True)
     H, W, px_mm, NF = 1000, 1200, 0.01, 48
@@ -199,22 +322,12 @@ def make_demo(out):
     for b in range(40):
         bubbles.append(dict(id=b + 1, r=rng.uniform(6, 11), x0=rng.uniform(15, 300), y=25 + 24 * b,
                             v0=rng.uniform(4.0, 8.0), ph=rng.uniform(0, 6.28)))
-    for b in bubbles:                                       # 위치를 속도 적분으로: v(x) = v0(1 + 0.08 sin(2πx/λ + ph))
-        xs, x = [], b["x0"]
-        for _ in range(NF):
-            xs.append(x)
-            x += b["v0"] * (1 + 0.08 * math.sin(2 * math.pi * x / lam + b["ph"]))
-        b["xs"] = xs
+    for b in bubbles:
+        b["xs"] = _integrate(b["x0"], b["v0"], b["ph"], lam, 0.08, NF)
+        b["ema"] = _ema(b["xs"])
     rows, imgs = [], {}
     bg = np.full((H, W), 120.0, np.float32)
     yy, xx = np.ogrid[:H, :W]
-    for b in bubbles:                                       # CSV 속도 열은 추적기처럼 선단부 차분의 EMA(α 0.5)로 쓴다
-        ema, prev = [], None
-        for f in range(NF):
-            raw = b["xs"][f] - b["xs"][f - 1] if f else float("nan")
-            prev = raw if prev is None or prev != prev else 0.5 * prev + 0.5 * raw
-            ema.append(prev)
-        b["ema"] = ema
     for f in range(NF):
         im = bg + rng.normal(0, 2.0, (H, W)).astype(np.float32)
         inst = np.zeros((H, W), np.int32)
@@ -241,53 +354,98 @@ def make_demo(out):
     return path, imgs, px_mm
 
 
+def make_demo_fast(out, seed=7):
+    """CSV만(영상 없음)의 I96 합성: 홈 간격 100 px, 진폭 8%, 연속 운동, 위치 잡음 0.1 px, 무리마다 20개 × 48프레임.
+    평균 속도 6·25·40·50 px/frame = f_g 약 0.06·0.25·0.40·0.50(마지막은 표본화 한계 밖이라 건너뛰어야 한다).
+    f_g 0.25 무리의 절반은 96프레임이고 30번째 프레임에서 합체한다(중심 +12 px 점프, 면적 ×1.6, 사건 merge)
+    → 그 앞에서 잘라 뒤 조각(66프레임)만 써야 한다(검토 10 #22). 자르지 않으면 점프가 넓은 띠 성분이 되어 홈 봉우리 진폭을 흔든다
+    (고치기 전 판으로 같은 자료: 점프 없는 트랙 0.071, 점프 트랙 0.064, 둘 다 sinc 보정 없음)."""
+    rng = np.random.default_rng(seed)
+    lam, NF, F_JUMP = 100.0, 48, 30
+    rows, tid = [], 0
+    for v0 in (6.0, 25.0, 40.0, 50.0):
+        for b in range(20):
+            tid += 1
+            jump = v0 == 25.0 and b % 2 == 0
+            nf = 2 * NF if jump else NF
+            xs = _integrate(rng.uniform(0, 100), v0 * rng.uniform(0.97, 1.03), rng.uniform(0, 6.28), lam, 0.08, nf)
+            xs = [x + rng.normal(0, 0.1) + (12.0 if jump and f >= F_JUMP else 0.0) for f, x in enumerate(xs)]
+            ema = _ema(xs)
+            for f in range(nf):
+                A = math.pi * 64 * (1.6 if jump and f >= F_JUMP else 1.0)
+                rows.append({"ファイル名": f"g{f:03d}.png", "フレーム": f, "トラックID": tid,
+                             "イベント": "new" if f == 0 else ("merge" if jump and f == F_JUMP else "normal"), "親トラックID": "",
+                             "面積(px)": f"{A:.0f}", "中心X": f"{xs[f]:.2f}", "中心Y": f"{30.0 * tid:.2f}",
+                             "速度X(px/frame)": f"{ema[f]:.4f}" if ema[f] == ema[f] else "", "フレーム接触": "0"})
+    os.makedirs(out, exist_ok=True)
+    path = os.path.join(out, "demo_fast_tracking.csv")
+    with open(path, "w", encoding="utf-8-sig", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
+        w.writeheader(); w.writerows(rows)
+    return path
+
+
+def _demo(out):
+    fails = []
+
+    def check(ok, label, msg):
+        print(f"  {'통과' if ok else '실패'}  {label}: {msg}")
+        if not ok:
+            fails.append(label)
+
+    os.makedirs(out, exist_ok=True)
+    print("[1] 영상 합성(I98 + I96, f_g 약 0.06)")
+    path, imgs, px_mm = make_demo(out)
+    rows, speed = read_rows(path)
+    obs = collect(rows, speed, os.path.join(out, "instances"), "", "bg.png", "right",
+                  load_image=lambda p: imgs[os.path.basename(p)].astype(np.float32))
+    bv, gs, _ = run(obs, px_mm, 500.0, 1.0, 0.072, 1e-3, 1.0, out)
+    sl = float(np.nanmedian([r["slope_dI_per_relV"] for r in bv])) if bv else float("nan")
+    check(15 <= sl <= 25, "I98 기울기", f"{sl:+.1f}(기대 +15~+23)")
+    r = float(np.median([g["dV_over_V"] for g in gs])) if gs else float("nan")
+    check(abs(r - 0.08) <= 0.008, "I96 f_g 약 0.06", f"δV/V̄ {r:.4f}(참 0.08)")
+    print("[2] CSV만 합성(I96, f_g 0.06·0.25·0.40·0.50, 합체 점프)")
+    sub = os.path.join(out, "fast")
+    rows, speed = read_rows(make_demo_fast(sub))
+    obs = collect(rows, speed, None, None, None, "right")
+    _, gs, st = run(obs, 0.01, 500.0, 1.0, 0.072, 1e-3, 1.0, sub)
+    for lo, hi, name in ((0.04, 0.09, "0.06"), (0.2, 0.3, "0.25"), (0.35, 0.45, "0.40")):
+        g = [x for x in gs if lo <= x["f_groove"] < hi]
+        r = float(np.median([x["dV_over_V"] for x in g])) if g else float("nan")
+        rr = float(np.median([x["dV_over_V_raw"] for x in g])) if g else float("nan")
+        check(len(g) == 20 and abs(r - 0.08) <= 0.008, f"I96 f_g {name}",
+              f"트랙 {len(g)}개, δV/V̄ {r:.4f}(sinc로 나누기 전 {rr:.4f}, 참 0.08)")
+    jumped = [x for x in gs if 0.2 <= x["f_groove"] < 0.3 and int(x["track"]) % 2 == 1]
+    r = float(np.median([x["dV_over_V"] for x in jumped])) if jumped else float("nan")
+    check(len(jumped) == 10 and all(x["frames"] == 65 for x in jumped) and abs(r - 0.08) <= 0.008, "합체 점프 앞에서 자름",
+          f"트랙 {len(jumped)}개, 조각 {sorted({x['frames'] for x in jumped})} 프레임 차분, δV/V̄ {r:.4f}")
+    check(st.get("fast") == 20, "f_g 0.50 건너뜀(표본화 한계)", f"{st.get('fast')}개(20개여야 함)")
+    print("자가 시험 " + ("모두 통과" if not fails else f"실패 {len(fails)}건: " + ", ".join(fails)))
+    return not fails
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--csv"); ap.add_argument("--masks"); ap.add_argument("--images"); ap.add_argument("--bg")
     ap.add_argument("--px_mm", type=float, help="화소 하나의 크기(mm/px), 예 0.01"); ap.add_argument("--fps", type=float, default=500.0)
-    ap.add_argument("--flow", default="right"); ap.add_argument("--groove_mm", type=float, default=float("nan"))
+    ap.add_argument("--flow", default="right", choices=list(AXIS)); ap.add_argument("--groove_mm", type=float, default=float("nan"))
     ap.add_argument("--sigma", type=float, default=0.072); ap.add_argument("--mu", type=float, default=1.0e-3)
     ap.add_argument("--H_mm", type=float, default=1.0)
     ap.add_argument("--out", default="sv_out"); ap.add_argument("--demo", action="store_true")
     a = ap.parse_args()
-    os.makedirs(a.out, exist_ok=True)
-    loader = None
     if a.demo:
-        a.csv, imgs, a.px_mm = make_demo(a.out)
-        a.masks, a.images, a.bg, a.groove_mm, a.flow = os.path.join(a.out, "instances"), "", "bg.png", 1.0, "right"
-        loader = lambda p: imgs[os.path.basename(p)].astype(np.float32)
-    elif not (a.csv and a.px_mm):
+        raise SystemExit(0 if _demo(a.out) else 1)
+    if not (a.csv and a.px_mm):
         ap.error("--csv, --px_mm가 필요하다")
-    elif a.px_mm > 1:
+    if a.px_mm > 1:
         ap.error("--px_mm은 화소 하나의 크기(mm/px)다(예 0.01). 1보다 크면 px/mm로 넣은 것 같다.")
+    os.makedirs(a.out, exist_ok=True)
     rows, speed = read_rows(a.csv)
-    if not speed:
-        raise SystemExit("CSV에 「速度」가 든 열이 없다(steel/2_steel_track.py의 速度X 또는 上昇速度 열이 필요)")
-    if loader is None and not (a.images and a.bg and a.masks):
-        print("영상·배경·마스크 중 빠진 것이 있어 I98(안쪽 밝기 대 속도)은 건너뛰고 CSV 속도만으로 I96을 본다.")
-    obs = collect(rows, speed, a.masks, a.images, a.bg, a.flow, load_image=loader)
+    if not (a.images and a.bg and a.masks):
+        print("영상·배경·마스크 중 빠진 것이 있어 I98(안쪽 밝기 대 속도)은 건너뛰고 CSV 위치만으로 I96을 본다.")
+    obs = collect(rows, speed, a.masks, a.images, a.bg, a.flow)
     print(f"짝지은 관측 {len(obs)}개(트랙 {len(set(t[0] for t in obs))}개)")
-    bv = brightness_vs_speed(obs)
-    if bv:
-        with open(os.path.join(a.out, "brightness_vs_speed.csv"), "w", encoding="utf-8", newline="") as fh:
-            w = csv.DictWriter(fh, fieldnames=list(bv[0].keys())); w.writeheader(); w.writerows(bv)
-        sl = np.array([r["slope_dI_per_relV"] for r in bv])
-        print(f"I98 안쪽 밝기 대 속도 잔차: 칸 {len(bv)}개, 기울기 중앙값 {np.nanmedian(sl):+.1f} 계조/(상대 속도 1), "
-              f"95% 구간이 0을 빼는 칸 {sum(1 for r in bv if r['ci_lo'] > 0 or r['ci_hi'] < 0)}개. "
-              "0에 가까우면 갇힌 빛, 크기 칸마다 같은 부호의 매끈한 기울기면 막 광학, 느린 쪽에서만 꺾이면 마른 자리 쪽(I98).")
-    if a.groove_mm == a.groove_mm:
-        gs = groove_spectrum(obs, a.px_mm, a.groove_mm, a.sigma, a.mu, a.fps, a.H_mm)
-        if gs:
-            with open(os.path.join(a.out, "groove_spectrum.csv"), "w", encoding="utf-8", newline="") as fh:
-                w = csv.DictWriter(fh, fieldnames=list(gs[0].keys())); w.writeheader(); w.writerows(gs)
-            r = np.array([g["dV_over_V"] for g in gs]); pb = np.array([g["peak_to_background"] for g in gs])
-            if np.nanmedian(pb) < 3:
-                print("  참고: 봉우리/주변 중앙값이 3 미만이라 홈 주파수에 뚜렷한 봉우리가 없다(잡음 수준). δV/V̄·F_pin은 상한으로만 본다.")
-            print(f"I96 홈 변조: 트랙 {len(gs)}개, δV/V̄ 중앙값 {np.median(r):.3f}, 봉우리/주변 중앙값 {np.nanmedian(pb):.1f}, "
-                  f"Δ 중앙값 {np.median([g['Delta'] for g in gs]):.2f}, "
-                  f"F_pin 중앙값 {np.median([g['F_pin_N'] for g in gs]):.2e} N(D = 16.85σaCa^(2/3), F_pin = D·(δV/V̄)·(2/3 + 1/Δ) 가정)")
-        else:
-            print("I96: 조건(연속 프레임 ≥ 32, 2/N < V̄/λ_g < 0.45)을 만족하는 트랙이 없다.")
+    run(obs, a.px_mm, a.fps, a.groove_mm, a.sigma, a.mu, a.H_mm, a.out)
 
 
 if __name__ == "__main__":

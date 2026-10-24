@@ -4,6 +4,9 @@
 (a) 단열: 거칠기 뚫음 V_c(Rz)(세로선, H^(−3/2)), 강제 풀림 V*(θ_r)(세로 띠, ln 10~15, H 무관),
     늦은 터짐 d_w ∝ V^(1.7~2)(앞계수 모름: V 0.05 m/s에서 20 mm를 지나게 둔 기울기 띠).
 (b) 가열: 증발 d_ev = h_f(V)·ρh_fg·V/q_ev ∝ V^(5/3)/q(에너지 한계, 공기 기포는 확산 제한이라 더 늦게 마름). 단열 경계는 회색.
+검토 11 반영(2026-10-24): 모양과 기구는 일대일이 아니다. (a)에 옆 막(Burgess & Foster 1990, H(H/d)^(2/5)Ca^(4/5))의 거칠기 뚫음
+d ∝ V²(Rz 5 µm, d/H 10에서 V 0.13~0.72 m/s, 앞계수 0.5~2, 추정)을 더하고, 한 시야(19 mm)·채널 반폭으로 보기 어려운 d > 13 mm를
+회색으로 칠했다(늦은 터짐의 큰 쪽 교차는 34~350 mm). (b)의 d_ev는 20 °C의 μ·σ와 100 °C의 h_fg를 섞은 값이고, 포화 물성이면 약 0.47배다.
 """
 import math
 import numpy as np
@@ -54,6 +57,11 @@ ax1.fill_between(V, np.minimum(d_lo, d_hi), np.maximum(d_lo, d_hi), color=C1, al
 ax1.plot(V, dr * (V / Vr) ** 1.85, color=C1, lw=1.6, zorder=3)
 ax1.text(0.0056, 300, "late rupture at the thin side ravines:\ndry above the blue band, d_w ∝ V^(1.7–2)\n(prefactor unknown, wettability ×10)",
          color=C1, fontsize=7.6, ha="left", va="top")
+# 옆 막(Burgess & Foster 1990)의 거칠기 뚫음: Ca_c ∝ (Rz/H)^(5/4)(d/H)^(1/2) → d = 10 mm·(V/V_ref)², V_ref 0.13~0.72 m/s(Rz 5 µm)
+s_lo, s_hi = 10.0 * (V / 0.72) ** 2, 10.0 * (V / 0.13) ** 2
+ax1.fill_between(V, s_lo, s_hi, facecolor="none", edgecolor=C2, hatch="////", lw=0, alpha=0.55, zorder=1)
+ax1.plot(V, 10.0 * (V / 0.3) ** 2, color=C2, lw=1.1, ls="-.", zorder=2)
+ax1.text(0.33, 2.6, "Rz 5 µm, side film:\nsides dry above,\nd ∝ V² (hatched:\nprefactor 0.5–2)", color=C2, fontsize=7.0, ha="left", va="bottom")
 ax1.text(0.0056, 45, "left of a vertical line:\ndry at every size", color=INK2, fontsize=7.6, ha="left", va="center",
          bbox=dict(facecolor=SURF, edgecolor="none", pad=1.5), zorder=4)
 ax1.text(0.19, 2.2, "wet film", color=INK2, fontsize=8.4, ha="center", va="bottom")
@@ -70,6 +78,10 @@ for U, yl in ((0.02, 300), (0.05, 300), (0.12, 300)):
     ax1.plot(U * sv, dd, color=INK2, lw=0.9, ls="-", alpha=0.75, zorder=2)
     k = int(np.argmin(np.abs(dd - 160)))
     ax1.text(U * sv[k] * 1.04, 160, f"run U {U:g}", color=INK2, fontsize=7.0, ha="left", va="center")
+for ax_ in (ax1, ax2):
+    ax_.axhspan(13.3, 400, color=GRID, alpha=0.55, lw=0, zorder=0)
+ax1.text(0.0056, 16, "d > 13 mm: beyond 0.7 × field of view (19 mm) / half width,\nmerges with width-filling (I95) — kinks not read here",
+         color=MUTED, fontsize=7.0, ha="left", va="bottom")
 frame(ax1)
 ax1.set_ylabel("footprint length d (mm)")
 ax1.set_title("(a) Adiabatic: roughness, forced dewetting, late rupture", fontsize=9.5, color=INK, loc="left")
@@ -85,18 +97,19 @@ for q, ls in ((1e4, "-"), (3e4, "--"), (1e5, ":")):
     y0 = {1e4: 12.0, 3e4: 30.0, 1e5: 80.0}[q]
     k = int(np.argmin(np.abs(dev - y0)))
     ax2.text(V[k] * 0.86, y0, f"{q / 1e4:g} W/cm²", color=C4, fontsize=8.0, ha="right", va="center")
-ax2.text(0.0056, 300, "evaporation uses up the film during d/V:\ndry above each line, d_ev ∝ V^(5/3)/q\n(energy limit; air bubbles below saturation dry later)",
+ax2.text(0.0056, 300, "evaporation uses up the film during d/V:\ndry above each line, d_ev ∝ V^(5/3)/q\n(20 °C μ, σ with h_fg at 100 °C; saturated properties ×0.47.\nAir bubbles: vapour-diffusion limited, set by wall temperature)",
          color=C4, fontsize=7.6, ha="left", va="top")
 frame(ax2)
 ax2.set_title("(b) Heated: the evaporation boundary moves as 1/q", fontsize=9.5, color=INK, loc="left")
-fig.suptitle("Where steel footprints should dry: four mechanisms, four boundary shapes in the (size, speed) plane (1 mm, water; expected, I112)",
+fig.suptitle("Where steel footprints should dry: candidate boundaries in the (size, speed) plane (1 mm, water; expected, I112, review 11)",
              fontsize=10, color=INK, x=0.01, ha="left")
 fig.text(0.01, -0.02,
          "Film 0.669·H·Ca^(2/3). Roughness: film thinner than Rz, V_c ∝ H^(−3/2). Forced dewetting: V* ≈ (σ/μ)θ_r³/(9 ln(ℓ/λ)), independent of H (Snoeijer 2006). "
          "Late rupture: L_w ∝ Ca^(1.7–2) (Khodaparast 2018, microchannels).\n"
          "Grey: one run's bubbles lie on its Booth curve, which can cross a sloped boundary twice (slow small and long large bubbles dry, a wet window between).\n"
-         "Read the boundary from mobility kinks at ≥ 5 flow rates (tools/mobility_kink.py). Vertical (kink speed constant) → roughness or dewetting (a gap shim separates them); "
-         "sloped → late rupture or evaporation (two or three heat fluxes separate them).",
+         "Read the boundary from significant mobility kinks at ≥ 5 flow rates (tools/mobility_kink.py, U_loc = j_L/(1 − α)). Shape narrows the candidates only: side-film roughness is also sloped (d ∝ V²), "
+         "speed-dependent contamination gives near-vertical kinks without drying,\nand a 3% low U_loc gives false small-side kinks. A dry verdict needs a non-kinematic signal (brightness, top-view dry patch). "
+         "Heating also shifts late rupture 2–3× through μ(T), σ(T) → plot against Ca at film temperature.",
          fontsize=7.0, color=MUTED, va="top")
 fig.tight_layout(rect=(0, 0, 1, 0.95))
 fig.savefig(f"{HERE}/fig_r21_dry_boundary.png", dpi=170, bbox_inches="tight")

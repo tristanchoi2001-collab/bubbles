@@ -6,9 +6,18 @@ extract_instances·instances_to_detections·run_laptrack·compute_velocity_ema·
 도구에 줄 값: --px_mm 0.05(mm/px) --H_mm 0.3 --fps 500.
 정답은 OUT/truth.json(구분별 속도, 큰 기포의 가로 표류, 합체 뒤 지수 완화 τ(프레임), 합체 목록).
 --tracker bin  : binarized/2_bin_track.py, 흐름 up (영상 H×W = 1080×416, 흐름이 긴 축)
---tracker steel: steel/2_steel_track.py, 흐름 right (영상 480×1200)
-상호작용 없음(각 기포는 자기 속도로 곧게 감) → 요동·공극률 파 도구는 영(null)이 나와야 한다."""
-import os, sys, math, json, argparse, importlib.util
+--tracker steel: steel/2_steel_track.py, 흐름 right (영상 480×1200). compute_velocity_ema에 검출을 넘겨 화면 끝에서 잘린 쪽을
+                 피한다(steel/2_steel_track.py main과 같게, 검토 10 #22).
+줄마다 생성 시각을 흩는다(첫 생성 프레임 0~주기−1, 간격 주기 ±25%, 검토 10 #23). 모든 줄이 같은 프레임에 만들어지면 프레임 수준 주기 신호가
+    강해 실제 영상을 대표하지 못한다. --no_stagger는 예전 방식이다(같은 시드면 투명은 예전 CSV와 바이트까지 같고,
+    철은 화면 끝에서 선단이 잘린 행의 속도 열만 다르다: 300 프레임에서 183행, 예 8.0 → 14.4 px/frame).
+한계(실제 영상과 다른 점)
+    - 상호작용 없음(각 기포는 자기 속도로 곧게 감) → 요동·공극률 파 도구는 영(null)이 나와야 하고, λ ≠ 0의 이득(쌍극자 장에 반응하는
+      정도를 되찾는지)은 이 경로로 시험하지 않는다(각 도구의 자가 시험에만 있다).
+    - 정답 마스크에서 만든 확률맵이라 분할 잡음·깜빡임이 없고, 이웃이 가까울 때 분할 경계가 중심을 미는 오차(거리·방향에 따라
+      달라 쌍극자 회귀자와 상관할 수 있음)도 없다.
+    - 크기가 두 무리(반경 8·20 px)와 합체한 것뿐이라 크기 분포가 실제보다 좁다."""
+import os, sys, math, json, argparse, importlib.util, inspect
 import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tests"))
@@ -17,6 +26,7 @@ ap.add_argument("out"); ap.add_argument("--tracker", default="bin", choices=["bi
 ap.add_argument("--nf", type=int, default=300); ap.add_argument("--seed", type=int, default=5)
 ap.add_argument("--tau", type=float, default=12.0); ap.add_argument("--e0", type=float, default=0.3)
 ap.add_argument("--drift", type=float, default=0.10, help="큰 기포의 가로 속도(px/frame, +c)")
+ap.add_argument("--no_stagger", action="store_true", help="모든 줄을 같은 프레임에 만든다(예전 방식)")
 a = ap.parse_args()
 path = os.path.join(ROOT, "binarized/2_bin_track.py" if a.tracker == "bin" else "steel/2_steel_track.py")
 spec = importlib.util.spec_from_file_location("tracker3", path)
@@ -37,17 +47,20 @@ def spawn(c, R, v, vc, f0, s=-25.0):
     nid[0] += 1
     bub.append(dict(id=nid[0], s=s, c=c, A=math.pi * R * R, v=v, vc=vc, f_merge=None, e0=0.0, cls="small" if R < 12 else "large"))
 spawn_small, spawn_large = 9, 16
+lanes = ([dict(c=c, R=R_SMALL, v=V_SMALL, vc=0.0, period=spawn_small) for c in small_lanes]
+         + [dict(c=c, R=R_LARGE, v=V_LARGE, vc=a.drift, period=spawn_large) for c in large_lanes])
+for L in lanes:                                            # 줄마다 첫 생성 프레임(흩기: 0~주기−1)
+    L["next"] = 0 if a.no_stagger else int(rng.integers(0, L["period"]))
 log_merge = []
 yy, xx = np.mgrid[0:H, 0:W]
 names = []
 dets_all = []
 for f in range(a.nf):
-    if f % spawn_small == 0:
-        for c in small_lanes:
-            spawn(c + rng.normal(0, 2), R_SMALL, V_SMALL * (1 + 0.03 * rng.standard_normal()), 0.0, f)
-    if f % spawn_large == 0:
-        for c in large_lanes:
-            spawn(c + rng.normal(0, 2), R_LARGE, V_LARGE * (1 + 0.03 * rng.standard_normal()), a.drift, f)
+    for L in lanes:
+        if f >= L["next"]:
+            spawn(L["c"] + rng.normal(0, 2), L["R"], L["v"] * (1 + 0.03 * rng.standard_normal()), L["vc"], f)
+            jit = L["period"] // 4                         # 다음 생성까지 주기 ±25%
+            L["next"] += L["period"] if a.no_stagger else L["period"] + int(rng.integers(-jit, jit + 1))
     # 이동
     for b in bub:
         b["s"] += b["v"]; b["c"] += b["vc"]
@@ -94,8 +107,12 @@ for f in range(a.nf):
     np.savez_compressed(os.path.join(a.out, "instances", f"frame{f:04d}.npz"), inst=inst)
     names.append(name); dets_all.append(dets)
 rows = T.run_laptrack(dets_all, image_size=(H, W))
-T.compute_velocity_ema(rows, a.nf)
+if len(inspect.signature(T.compute_velocity_ema).parameters) >= 3:
+    T.compute_velocity_ema(rows, a.nf, dets_all)          # 철 추적기: 화면 끝에서 선단이 잘리면 후단부 차분
+else:
+    T.compute_velocity_ema(rows, a.nf)
 T.write_tracking_csv(os.path.join(a.out, "result_tracking.csv"), rows, names, dets_all)
 json.dump(dict(flow=flow, H=H, W=W, V_small=V_SMALL, V_large=V_LARGE, R_small=R_SMALL, R_large=R_LARGE, drift_large=a.drift,
-               tau=a.tau, e0=a.e0, n_merge=len(log_merge), merges=log_merge[:400]), open(os.path.join(a.out, "truth.json"), "w"), indent=1)
+               tau=a.tau, e0=a.e0, stagger=not a.no_stagger, n_merge=len(log_merge), merges=log_merge[:400]),
+          open(os.path.join(a.out, "truth.json"), "w"), indent=1)
 print("merges", len(log_merge), "frames", a.nf, "->", a.out)
