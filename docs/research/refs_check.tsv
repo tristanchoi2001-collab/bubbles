@@ -315,7 +315,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2020.4	OK	filella	2020	Interaction of two oscillating bubbles rising in a thin-gap cell: vertical entrainment and interaction with vortices	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/jfm.2020.844	OK	gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,9_data,check
 10.1017/jfm.2022.1008	OK	booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	Journal of Fluid Mechanics	0_estimates,10_ideas,12_ideas3,3_pressure_drop,9_data,check
-10.1017/jfm.2022.361	OK	monnet	2022	Bubble rise in a Hele-Shaw cell: bridging the gap between viscous and inertial regimes	Journal of Fluid Mechanics	10_ideas,1_adiabatic_gap,check
+10.1017/jfm.2022.361	OK	monnet	2022	Bubble rise in a Hele-Shaw cell: bridging the gap between viscous and inertial regimes	Journal of Fluid Mechanics	10_ideas,14_jstage,1_adiabatic_gap,check
 10.1017/jfm.2022.492	OK	ruiz-rus	2022	Coalescence of bubbles in a high Reynolds number confined swarm	Journal of Fluid Mechanics	10_ideas,8_iate_coalescence,9_data,check
 10.1017/jfm.2022.618	OK	keeler	2022	The interaction of multiple bubbles in a Hele-Shaw channel	Journal of Fluid Mechanics	10_ideas,1_adiabatic_gap,8_iate_coalescence,9_data,check
 10.1017/jfm.2025.10951	OK	booth	2025	The motion of a surfactant-laden bubble in a channel or a Hele-Shaw cell	Journal of Fluid Mechanics	3_pressure_drop,9_data,check
@@ -505,7 +505,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1115/icmm2004-2383	OK	yang	2004	Flow Boiling Heat Transfer and Flow Pattern in Rectangular Channel of Mini-Gap	ASME 2nd International Conference on Microchannels and Minichannels	4_heat_transfer,9_data,check
 10.1115/icnmm2007-30216	OK	bar-cohen	2007	Modeling and Prediction of Two-Phase Refrigerant Flow Regimes and Heat Transfer Characteristics in Microgap Channels	ASME 5th International Conference on Nanochannels, Microchannels, and Minichannels	4_heat_transfer,check
 10.1115/icnmm2009-82113	OK	koizumi	2009	Study on Boiling Heat Transfer in Narrow Channel and Horizontal-Narrow-Flat Space	ASME 2009 7th International Conference on Nanochannels, Microchannels and Minichannels	2_boiling_gap,9_data,check
-10.1115/icnmm2009-82244	OK	zhang	2009	Characteristics of Microlayer Thickness Formed During Boiling in Microgaps	ASME 2009 7th International Conference on Nanochannels, Microchannels and Minichannels	14_jstage
+10.1115/icnmm2009-82244	OK	zhang	2009	Characteristics of Microlayer Thickness Formed During Boiling in Microgaps	ASME 2009 7th International Conference on Nanochannels, Microchannels and Minichannels	14_jstage,check
 10.1115/icnmm2011-58237	OK	talimi	2011	A Numerical Study on Shear Stress and Heat Transfer of Segmented Flow Between Parallel Plates	ASME 2011 9th International Conference on Nanochannels, Microchannels, and Minichannels, Volume 1	10_ideas,check
 10.1115/icone16-48123	OK	oshikawa	2008	Study on Boiling Heat Transfer in Narrow and Flat Space	Volume 2: Fuel Cycle and High Level Waste Management; Computational Fluid Dynamics, Neutronics Methods and Coupled Codes; Student Paper Competition	2_boiling_gap,9_data,check
 10.1115/icone21-16562	OK	huang	2013	Experimental and Prediction Methods Investigation of Two-Phase Frictional Pressure Drop in Rectangular Narrow Channel	Volume 4: Thermal Hydraulics	3_pressure_drop,check
@@ -555,7 +555,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1299/kikaib.61.201	OK	ohta	1995	Experiments on Bubble Behavior in a Horizontal Narrow Divergent Passage.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	9_data,check
 10.1299/kikaib.61.4412	OK	fujita	1995	Gas-Liquid Flows in Narrow Flat Channels. Influences of Liquid Properties.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	9_data,check
 10.1299/kikaib.64.2563	OK	murakami	1998	Study on Boiling in Horizontatal Channel with Rectangular Section. In the case of Heated Bottom Wall.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	14_jstage,check
-10.1299/kikaib.78.1572	OK	zhang	2012	Formation Characteristics of Microlayer between Elongated Bubble and Heating Surface in Mini-Gap Boiling System	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	14_jstage
+10.1299/kikaib.78.1572	OK	zhang	2012	Formation Characteristics of Microlayer between Elongated Bubble and Heating Surface in Mini-Gap Boiling System	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	14_jstage,check
 10.13182/nt95-a35111	OK	hibiki	1995	Application of High-Frame-Rate Neutron Radiography with a Steady Thermal Neutron Beam to Two-Phase Flow Measurements in 	Nuclear Technology	6_measurement,check
 10.1364/ao.12.000555	OK	hale	1973	Optical Constants of Water in the 200-nm to 200-μm Wavelength Region	Applied Optics	6_measurement,check
 10.1364/ao.25.000431	OK	twomey	1986	Reflectance and albedo differences between wet and dry surfaces	Applied Optics	6_measurement,check
