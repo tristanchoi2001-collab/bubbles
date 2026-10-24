@@ -4,10 +4,14 @@
     앞(β₁ 3.88)·뒤(β₂ −1.13) 메니스커스의 동적 점프 (2σ/H)·β·(3Ca_V|cos θ|)^(2/3)의 2번 모드를 평면 곡률 (π/4)σκ가 받는다.
     → ε = −0.417·f·(R/H)·(3Ca_V)^(2/3)(음수 = 흐름 방향으로 눌림), Ca_V = μV/σ(그 기포의 속도).
     마찰이 D ∝ V^m이면 |ε| ∝ V^m.
+    단, 이 식은 막 압력이 지배하는 작은 δ(Booth 매개변수 δ = 1.12·(d/H)·Ca^(1/3) ≲ 1.5)에서만 맞는다. Wu 외 2024(PRF 9:123603,
+    저자 공개본)의 전체 이론·실험(실리콘유)은 모양이 δ에 대해 비단조다: 작은 기포는 눌리고(가로/길이 최소 약 1.06~1.09),
+    큰 기포는 바깥 점성 압력 때문에 늘어나며, A = 1(원형)을 지나는 δ가 이론(ε 0.05)에서 약 2.5, 실험 그림에서 대략 2~3이다. → 이 도구는 기울기를 δ_V < --delta_max
+    관측으로만 맞추고, ε_x가 음에서 양으로 바뀌는 δ_V(모양 영점)를 함께 낸다. 오염 배율 f는 막 항을 키우므로 모양 영점도 약 f배로 옮긴다(가설).
 
 쓰는 법
     python shape_flatten.py --csv result_tracking.csv --masks_dir OUTPUT_FOLDER/instances --px_mm 0.02 --fps 500 --H_mm 0.3 --flow up --out sf_out
-        [--k 2] [--dH_bins 5,10,20,50] [--quiet 3] [--min_gap 1.0] [--mu 1e-3] [--sigma 0.072]
+        [--k 2] [--dH_bins 5,10,20,50] [--quiet 3] [--min_gap 1.0] [--delta_max 1.5] [--mu 1e-3] [--sigma 0.072]
     python shape_flatten.py --demo --out sf_demo      # f 1.5, m 2/3로 그린 합성 타원 마스크로 스스로 점검
 
 계산
@@ -15,8 +19,10 @@
     2. 그 프레임 라벨 지도에서 기포 마스크(중심 3 px·면적 비 0.8~1.25로 짝지음)의 흐름 방향·가로 2차 모멘트 σ_ss, σ_cc로
        ε_x = (√σ_ss − √σ_cc)/(√σ_ss + √σ_cc)(정렬된 타원이면 (A − B)/(A + B)). 이웃 쌍극자 장의 변형은 방향이 무작위라 평균에서 빠진다.
        가장 가까운 이웃과의 틈이 --min_gap × 반경보다 좁은 관측은 뺀다(접촉 변형).
-    3. X = (R/H)(3Ca_V)^(2/3)마다 ε_x의 중앙값을 내고, 원점을 지나는 기울기 c(ε_x = −c·X)를 맞춘다 → f = c/0.417.
-       d/H 구간마다 ln|ε_x|를 ln V에 회귀한 기울기가 m이다(속도 범위가 2배 이상일 때만).
+    3. δ_V = 1.12·(d/H)·Ca_V^(1/3)(국소장 대신 기포 속도로 잰 Booth 매개변수, δ보다 s^(1/3)배 큼)이 --delta_max 아래인 관측만으로
+       X = (R/H)(3Ca_V)^(2/3)마다 ε_x의 중앙값을 내고, 원점을 지나는 기울기 c(ε_x = −c·X)를 맞춘다 → f = c/0.417.
+       d/H 구간마다 ln|ε_x|를 ln V에 회귀한 기울기가 m이다(속도 범위가 2배 이상일 때만, 같은 δ 제한).
+    4. 모든 관측을 δ_V 분위 구간으로 나눠 ε_x 중앙값이 음에서 양으로 바뀌는 δ_V(모양 영점)를 보간한다. 깨끗한 실리콘유(Wu 2024)는 대략 2~3.
 출력: sf_obs.csv(관측별), sf_classes.csv(구간별 요약), 요약 출력.
 주의: 관성(We = ρV²H/σ ≳ 0.1)도 기포를 누른다 → We가 큰 관측은 따로 본다(출력의 We 열). |ε| > 0.15는 선형 식 밖이다.
 """
@@ -100,12 +106,31 @@ def collect(rows, masks, flow, k, H_px, px_m, fps, mu, sigma, rho=998.0, quiet=3
             V = v_px * px_m * fps
             Ca = mu * V / sigma
             obs.append(dict(track=tid, frame=f, dH=2 * R / H_px, R_over_H=R / H_px, V=V, Ca=Ca,
-                            We=rho * V * V * (H_px * px_m) / sigma, X=(R / H_px) * (3 * Ca) ** (2 / 3), eps_x=e))
+                            We=rho * V * V * (H_px * px_m) / sigma, X=(R / H_px) * (3 * Ca) ** (2 / 3),
+                            delta_V=1.12 * (2 * R / H_px) * Ca ** (1 / 3), eps_x=e))
     return obs
 
 
-def analyse(obs, bins, n_x=8):
+def shape_zero(obs, n_d=10):
+    """ε_x 중앙값이 음에서 양으로 바뀌는 δ_V(모양 영점). 없으면 nan."""
+    if len(obs) < 30:
+        return float("nan")
+    d = np.array([o["delta_V"] for o in obs]); e = np.array([o["eps_x"] for o in obs])
+    q = np.quantile(d, np.linspace(0, 1, n_d + 1))
+    dm, em = [], []
+    for i in range(n_d):
+        m = (d >= q[i]) & (d <= q[i + 1])
+        if m.sum() >= 5:
+            dm.append(float(np.median(d[m]))); em.append(float(np.median(e[m])))
+    for i in range(len(dm) - 1):
+        if em[i] < 0 <= em[i + 1]:
+            return dm[i] + (dm[i + 1] - dm[i]) * (-em[i]) / (em[i + 1] - em[i])
+    return float("nan")
+
+
+def analyse(obs_all, bins, n_x=8, delta_max=1.5):
     out = []
+    obs = [o for o in obs_all if o["delta_V"] < delta_max]
     X = np.array([o["X"] for o in obs]); E = np.array([o["eps_x"] for o in obs])
     if len(X) >= 20:
         edges = np.quantile(X, np.linspace(0, 1, n_x + 1))
@@ -117,7 +142,8 @@ def analyse(obs, bins, n_x=8):
         xm, em = np.array(xm), np.array(em)
         c = float(-(xm @ em) / (xm @ xm)) if len(xm) else float("nan")
         out.append(dict(cls="all", n=len(obs), slope_c=c, f=c / K_FLAT, m=float("nan"),
-                        X_bins=";".join(f"{v:.4g}" for v in xm), eps_bins=";".join(f"{v:.4g}" for v in em)))
+                        X_bins=";".join(f"{v:.4g}" for v in xm), eps_bins=";".join(f"{v:.4g}" for v in em),
+                        delta_zero=shape_zero(obs_all), n_all=len(obs_all)))
     for lo, hi in bins:
         sel = [o for o in obs if lo <= o["dH"] < hi]
         if len(sel) < 20:
@@ -208,6 +234,7 @@ def main():
     ap.add_argument("--csv"); ap.add_argument("--masks_dir"); ap.add_argument("--px_mm", type=float); ap.add_argument("--fps", type=float, default=500.0)
     ap.add_argument("--H_mm", type=float); ap.add_argument("--flow", default="up", choices=["up", "down", "right", "left"])
     ap.add_argument("--k", type=int, default=2); ap.add_argument("--quiet", type=int, default=3); ap.add_argument("--min_gap", type=float, default=1.0)
+    ap.add_argument("--delta_max", type=float, default=1.5, help="막 압력이 지배하는 작은 δ만 기울기 맞춤에 쓴다(Wu 2024)")
     ap.add_argument("--dH_bins", default="5,10,20,50"); ap.add_argument("--mu", type=float, default=1.0e-3); ap.add_argument("--sigma", type=float, default=0.072)
     ap.add_argument("--out", default="sf_out"); ap.add_argument("--demo", action="store_true")
     a = ap.parse_args()
@@ -219,7 +246,7 @@ def main():
     obs = collect(read_rows(a.csv), FlowMasks(a.masks_dir), a.flow, a.k, a.H_mm / a.px_mm, a.px_mm * 1e-3, a.fps, a.mu, a.sigma,
                   quiet=a.quiet, min_gap=a.min_gap)
     edges = [float(v) for v in a.dH_bins.split(",")]
-    res = analyse(obs, list(zip(edges[:-1], edges[1:])))
+    res = analyse(obs, list(zip(edges[:-1], edges[1:])), delta_max=a.delta_max)
     if obs:
         with open(os.path.join(a.out, "sf_obs.csv"), "w", encoding="utf-8", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=list(obs[0].keys()))
@@ -235,9 +262,11 @@ def main():
                 w.writerow({kk: (f"{v:.5g}" if isinstance(v, float) else v) for kk, v in r.items()})
     print(f"관측 {len(obs)}개")
     for r in res:
-        print(f"  {r['cls']}: n {r['n']}, 기울기 c {r['slope_c']:.3f} → f {r['f']:.2f}" + (f", m {r['m']:.2f}" if r["m"] == r["m"] else "")
-              + (f", We 중앙값 {r['We_med']:.3f}" if "We_med" in r else ""))
+        print(f"  {r['cls']}: n {r['n']}(δ_V < {a.delta_max:g}), 기울기 c {r['slope_c']:.3f} → f {r['f']:.2f}" + (f", m {r['m']:.2f}" if r["m"] == r["m"] else "")
+              + (f", We 중앙값 {r['We_med']:.3f}" if "We_med" in r else "")
+              + (f"; 모양 영점 δ_V {r['delta_zero']:.2f}(전체 {r['n_all']}개)" if "delta_zero" in r else ""))
     print("읽는 법: 깨끗한 막이면 f ≈ 1, m ≈ 2/3. 실험실 물은 f > 1(I90 k_fit/16.85, I104 d*와 비교). We ≳ 0.1이면 관성도 누른다(I109).")
+    print("         모양 영점(눌림 → 늘어남)은 깨끗한 실리콘유에서 대략 δ 2~3(Wu 외 2024 그림). 더 크면 막 마찰이 큰 것(오염) 후보다.")
 
 
 if __name__ == "__main__":

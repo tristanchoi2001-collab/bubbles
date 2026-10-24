@@ -476,7 +476,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevfluids.6.093605	OK	pavlov	2021	Kinematics of a bubble freely rising in a thin-gap cell with additional in-plane confinement	Physical Review Fluids	1_adiabatic_gap,check
 10.1103/physrevfluids.9.073601	OK	monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	Physical Review Fluids	10_ideas,15_velocity,1_adiabatic_gap,7_closest_novelty,check
 10.1103/physrevfluids.9.093605	OK	lawless	2024	Stable bubble formations in a depth-perturbed Hele-Shaw channel	Physical Review Fluids	10_ideas,12_ideas3,1_adiabatic_gap,8_iate_coalescence,9_data,check
-10.1103/physrevfluids.9.123603	OK	wu	2024	Motion and deformation of a bubble in a Hele-Shaw cell	Physical Review Fluids	10_ideas,3_pressure_drop,7_closest_novelty,9_data,check
+10.1103/physrevfluids.9.123603	OK	wu	2024	Motion and deformation of a bubble in a Hele-Shaw cell	Physical Review Fluids	10_ideas,17_relax,3_pressure_drop,7_closest_novelty,9_data,check
 10.1103/physrevlett.100.024501	OK	bremond	2008	Decompressing Emulsion Droplets Favors Coalescence	Physical Review Letters	8_iate_coalescence,check
 10.1103/physrevlett.100.044501	OK	schindler	2008	Droplet Traffic in Microfluidic Networks: A Simple Model for Understanding and Designing	Physical Review Letters	12_ideas3,check
 10.1103/physrevlett.106.068301	OK	biance	2011	How Topological Rearrangements and Liquid Fraction Control Liquid Foam Stability	Physical Review Letters	8_iate_coalescence,check
@@ -634,7 +634,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.3389/fenrg.2021.636813	OK	chu	2021	Study on Measure Approach of Void Fraction in Narrow Channel Based on Fully Convolutional Neural Network	Frontiers in Energy Research	6_measurement,check
 10.3389/fenrg.2023.1224306	OK	lv	2023	Experimental investigation on the evolution of bubble behavior in subcooled flow boiling in narrow rectangular channel b	Frontiers in Energy Research	2_boiling_gap,check
 10.3389/fmech.2017.00016	OK	shinmoto	2017	Heat Transfer Characteristics during Boiling of Immiscible Liquids Flowing in Narrow Rectangular Heated Channels	Frontiers in Mechanical Engineering	7_closest_novelty,9_data,check
-10.3389/fphy.2023.1112304	OK	ramadugu	2023	Energy spectra of buoyancy-driven bubbly flow in a vertical Hele-Shaw cell	Frontiers in Physics	16_drift
+10.3389/fphy.2023.1112304	OK	ramadugu	2023	Energy spectra of buoyancy-driven bubbly flow in a vertical Hele-Shaw cell	Frontiers in Physics	16_drift,check
 10.3390/e23091106	OK	chen	2021	Interfacial Area Transport Equation for Bubble Coalescence and Breakup: Developments and Comparisons	Entropy	8_iate_coalescence,check
 10.3390/en12173368	OK	klugmann	2019	Flow Boiling in Minigap in the Reversed Two-Phase Thermosiphon Loop	Energies	7_closest_novelty,9_data,check
 10.3390/en14113180	OK	masiukiewicz	2021	Precise Evaluation of Gas–Liquid Two-Phase Flow Pattern in a Narrow Rectangular Channel with Stereology Method	Energies	6_measurement,check
