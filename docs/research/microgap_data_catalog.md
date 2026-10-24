@@ -200,6 +200,8 @@
 | M26 | Ruiz-Rus, Ern, Roig & Martínez-Bazán (2022) [lit_8] | J. Fluid Mech. 944:A13 | 10.1017/jfm.2022.492 | 갭 1 mm, 정지 증류수 팬케이크 무리, 250 fps, 자체 추적 | 크기 쌍별 충돌 빈도, 합체 효율 λ ≈ 80% | 그림 | [K] **합체 빈도의 유일한 직접 비교 값** | C+F |
 | M27 | Cantat, Poloni & Delannay (2006) [lit_1 G5] | Phys. Rev. E 73(1):011505 | 10.1103/physreve.73.011505 | 2차원 이분산 거품(Hele-Shaw) | 큰 기포가 문턱을 넘으면 평균보다 빠름, 줄을 이룸 | 그림 | [V] 고기공률 0.3 mm | C+A |
 | M28 | Yin, Jia, Yuan, Luo & Zhang (2023) | Ind. Eng. Chem. Res. 62(37):15255-15267 | 10.1021/acs.iecr.3c01121 | Hele-Shaw 셀 기포 상승 | 자료 기반 추적(DMD)으로 기포 거동 예측 | 그림 + ACS 보충 자료(s001) | [E][V] 추적 방법 비교 | C(제목) |
+| M29 | Klettner & Smith (2022) | J. Fluid Mech. 934:A8 (CC BY) | 10.1017/jfm.2021.1128 | Hele-Shaw 속 고체 원기둥, 이론 + 직접 수치 계산 | 관성 Λ_KS = (U_cR/ν)(h/R)²와 갭 비 ε = h/R의 네 영역: 선형, 경계층 비선형 I(Λ_KS ~ ε)·II(~ ε^½), 바깥 비선형 III(~ 1). Λ_KS = 1에서 뒤 소용돌이 약 0.6R, 3에서 박리 | 식·그림 | [Λ] 우리 Λ = 0.133·Λ_KS. 고체(미끄럼 없음)의 기준선 — 기포 테두리와의 차이가 I87 | C+F(2026-10-24 Cambridge 공개본) |
+| M30 | Klettner, Dang & Smith (2023) | J. Fluid Mech. 971:A12 | 10.1017/jfm.2023.527 | Hele-Shaw 속 얇은 타원(고체), 받음각 | 꼭짓점의 Stokes 영역, 관성 Λ = O(ε)를 넘을 때 변화 | 식·그림 | [Λ] 납작한 물체의 관성 기준 | C+A |
 
 ## 4. 공개 데이터셋
 - "확인" 열: `D+F` = DataCite(또는 저장소 API) 기록 + 파일 목록·크기 확인 / `D` = DataCite 기록(설명·라이선스)만 / `W` = 웹페이지·검색 요약만.

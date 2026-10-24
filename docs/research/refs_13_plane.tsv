@@ -26,3 +26,5 @@ doi	first_author	year	short_title	level	note
 10.1088/0957-0233/25/9/095301	Valiorgue	2014	Design of a non-intrusive electrical impedance-based void fraction sensor for microchannel two-phase flows	C	I85. Meas Sci Technol 25:095301
 10.1007/s00348-011-1105-3	Ito	2011	Dynamic film thickness between bubbles and wall in a narrow channel	C	I85·I77. Exp Fluids. 좁은 직사각 유로에서 전도법으로 기포-벽 사이 막 두께
 10.1103/PhysRevE.91.042301	Yazhgur	2015	Electrical conductivity of quasi-two-dimensional foams	C+A	I85. PRE 91:042301. 두 판 사이 단층 거품(정지)의 면내 전도도, 마디 액체 포함 모형. 젖음 막 기여를 빼는 처리(검색 요약) — 움직이는 기포·압력과의 비교는 없음
+10.1017/jfm.2021.1128	Klettner	2022	The effect of inertia and vertical confinement on the flow past a circular cylinder in a Hele-Shaw configuration	C+F	I75·I87. JFM 934:A8, CC BY. Λ_KS = (U_cR/ν)(h/R)², ε = h/R. 선형, 경계층 비선형 I(Λ ~ ε)·II(~ ε^1/2), 바깥 비선형 III(Λ ~ 1). 우리 Λ = 0.133 Λ_KS
+10.1017/jfm.2023.527	Klettner	2023	On the flow past ellipses in a Hele-Shaw cell	C+A	I75·I87. JFM 971:A12. 얇은 타원, 관성이 Λ = O(ε)를 넘을 때 변화
