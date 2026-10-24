@@ -3,8 +3,8 @@
 (a) I82 원판 계산 재해석: 전도 원판(ε = s/(2 − s))은 선형 마찰 D = HAV/(εK)를 가진 기포와 같아서,
     힘 균형(초과 압력 강하 = 기포 마찰 합)은 E = B/ε가 된다. 원판 하나로 정한 격자 상수로 나눈 비 E·ε/B를
     공극률 폐합(같은 격자 상수 C로 보정)의 상대 오차와 함께 α에 대해 그린다.
-(b) 예상: 단분산 기포면 E/B = δ = K·D/(VAH)(기포 하나의 마찰 매개변수). 깨끗한 Bretherton 막 D ≈ 6.7c·σ·a·Ca^(2/3)(c 2.5,
-    Booth 이동도와 맞춤)과 굳은 계면(막 두께·마찰 4^(2/3)배로 가정)을 0.3 mm 물, j_L 0.05·0.1 m/s에서. 묽은 극한(국소 유속 = j_L).
+(b) 예상: 단분산 기포면 E/B = δ = K·D/(VAH)(기포 하나의 마찰 매개변수). 깨끗한 Bretherton 막 D ≈ 6.7c·σ·a·Ca^(2/3)(c 2.5 =
+    평면 Bretherton 앞·뒤 계수 3.88·1.13의 평균, Booth 2023의 1.12와 같음)과 굳은 계면(막 두께·마찰 4^(2/3)배로 가정)을 0.3 mm 물, j_L 0.05·0.1 m/s에서. 묽은 극한(국소 유속 = j_L).
 자료: data/i82_sweep.json, data/i82_gap4.json.
 """
 import json
@@ -86,7 +86,7 @@ fig.suptitle("Tracked velocities close the pressure drop exactly: in Darcy flow 
              x=0.01, ha="left", fontsize=10, color=INK)
 fig.text(0.01, -0.08, "(a) Conducting discs (ε = s/(2 − s)) are bubbles with linear friction D = HAV/(εK), for which the force balance gives E = B/ε; "
          "both predictions use the same single-disc grid constant.\n"
-         "(b) δ = K·D/(V·A·H) with D ≈ 6.7c·σ·a·Ca^(2/3), c = 2.5 (fitted to the Booth mobility used elsewhere), dilute limit (local flow = j_L); "
+         "(b) δ = K·D/(V·A·H) with D ≈ 6.7c·σ·a·Ca^(2/3), c = 2.5 = mean of the planar Bretherton front/rear coefficients 3.88 and 1.13 (= Booth et al. 2023), dilute limit; "
          "polydisperse flows give the gas-flux-weighted mean of δ.\nRigid-interface factor 4^(2/3) is the Bretherton/Ratulowski–Chang scaling, assumed here. Prediction only — no data.",
          fontsize=7.0, color=MUTED)
 fig.tight_layout()
