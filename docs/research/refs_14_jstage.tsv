@@ -3,5 +3,5 @@ doi	first_author	year	short_title	level	note
 10.3811/jjmf.2023.007	Ito	2023	Visualization of gas-liquid interfacial behavior in a narrow channel by neutron imaging	C+A	불투명(금속) 유로 투과 가시화 후보. 混相流 2023.007. 좁은 직사각 유로의 공기-물 계면·액막을 고속 중성자 영상으로(가열 조건에도 적용 가능)
 10.1299/kikaib.64.2563	Murakami	1998	Boiling in a horizontal rectangular channel heated at the bottom wall	C+A	논문 2(비등 시). Trans JSME B 64:2563. 아래 벽 가열 수평 직사각 유로, 유로 높이·가열 길이 변화, 고속 촬영으로 기포 성장 3유형, 바닥 액막이 얇아지면 증기 돔 아래 핵비등
 10.3811/jjmf.23.436	Sukawa	2009	Pressure drop fluctuation characteristics of gas-liquid two-phase flow in a narrow channel	C+A	I46·I67 참고. 混相流 23:436. 2 mm 정사각 유로(연료전지 분리판), 직선부 ΔP 변동은 L-M 매개변수로 정리, 급 180° 굽힘·발수 처리 영향
-10.11368/nhts.2010.0.221.0	Harada	2010	Heat flux distribution on a heat transfer surface with coexisting wet and dry areas	C+A	I59 방법 선례. 전열 심포지엄 2010. 표면 아래 0.5 mm 열전대 약 70개 + 1 kHz + 고속 영상 동기, 3차원 비정상 순문제 + 1차원 비정상 역문제로 표면 열유속(제한 풀 비등)
-10.3811/jjmf.2020.012	Toriyama	2020	Gas-liquid two-phase flow image analysis using a bubble detection algorithm	C+A	영상 AI 선례(일본). 混相流 2020.012. 기계학습으로 고속 영상에서 기포 특성 검출, 흐름 양식 식별 자동화
+10.11368/nhts.2010.0.221.0	原村	2010	Heat flux distribution on a heat transfer surface with coexisting wet and dry areas	C+A	I59 방법 선례. 전열 심포지엄 2010. 표면 아래 0.5 mm 열전대 약 70개 + 1 kHz + 고속 영상 동기, 3차원 비정상 순문제 + 1차원 비정상 역문제로 표면 열유속(제한 풀 비등)
+10.3811/jjmf.2020.012	Torisaki	2020	Gas-liquid two-phase flow image analysis using a bubble detection algorithm	C+A	영상 AI 선례(일본). 混相流 2020.012. 기계학습으로 고속 영상에서 기포 특성 검출, 흐름 양식 식별 자동화
