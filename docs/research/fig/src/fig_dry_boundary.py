@@ -57,6 +57,19 @@ ax1.text(0.0056, 300, "late rupture at the thin side ravines:\ndry above the blu
 ax1.text(0.0056, 45, "left of a vertical line:\ndry at every size", color=INK2, fontsize=7.6, ha="left", va="center",
          bbox=dict(facecolor=SURF, edgecolor="none", pad=1.5), zorder=4)
 ax1.text(0.19, 2.2, "wet film", color=INK2, fontsize=8.4, ha="center", va="bottom")
+# 운전점의 기포들: 젖은 막 Booth 곡선 V(d) = U·s(1.12·(d/H)·Ca_U^(1/3)), f = 1. 경계와 두 번 만나면 가운데 크기만 젖는다.
+ld = np.linspace(np.log(1e-5), np.log(1e5), 4001)
+dl = np.exp(ld); lo_, hi_ = np.full_like(dl, 1e-12), np.full_like(dl, 2 - 1e-12)
+for _ in range(90):
+    mid = 0.5 * (lo_ + hi_); big = mid ** (2 / 3) / (2 - mid) > dl
+    hi_ = np.where(big, mid, hi_); lo_ = np.where(big, lo_, mid)
+st = 0.5 * (lo_ + hi_)
+dd = np.logspace(0, np.log10(400), 200)                   # mm
+for U, yl in ((0.02, 300), (0.05, 300), (0.12, 300)):
+    sv = np.interp(np.log(1.12 * (dd / (H * 1e3)) * (MU * U / SIG) ** (1 / 3)), ld, st)
+    ax1.plot(U * sv, dd, color=INK2, lw=0.9, ls="-", alpha=0.75, zorder=2)
+    k = int(np.argmin(np.abs(dd - 160)))
+    ax1.text(U * sv[k] * 1.04, 160, f"run U {U:g}", color=INK2, fontsize=7.0, ha="left", va="center")
 frame(ax1)
 ax1.set_ylabel("footprint length d (mm)")
 ax1.set_title("(a) Adiabatic: roughness, forced dewetting, late rupture", fontsize=9.5, color=INK, loc="left")
@@ -81,7 +94,8 @@ fig.suptitle("Where steel footprints should dry: four mechanisms, four boundary 
 fig.text(0.01, -0.02,
          "Film 0.669·H·Ca^(2/3). Roughness: film thinner than Rz, V_c ∝ H^(−3/2). Forced dewetting: V* ≈ (σ/μ)θ_r³/(9 ln(ℓ/λ)), independent of H (Snoeijer 2006). "
          "Late rupture: L_w ∝ Ca^(1.7–2) (Khodaparast 2018, microchannels).\n"
-         "Read the boundary as the size where mobility drops below the Booth curve, at 4–6 flow rates. Vertical → roughness or dewetting (a gap shim separates them); "
+         "Grey: one run's bubbles lie on its Booth curve, which can cross a sloped boundary twice (slow small and long large bubbles dry, a wet window between).\n"
+         "Read the boundary from mobility kinks at ≥ 5 flow rates (tools/mobility_kink.py). Vertical (kink speed constant) → roughness or dewetting (a gap shim separates them); "
          "sloped → late rupture or evaporation (two or three heat fluxes separate them).",
          fontsize=7.0, color=MUTED, va="top")
 fig.tight_layout(rect=(0, 0, 1, 0.95))
