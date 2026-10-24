@@ -2,3 +2,5 @@ doi	first_author	year	short_title	level	note
 10.1098/rsif.2010.0545	Zaid	2011	Lévy fluctuations and mixing in dilute suspensions of algae and bacteria	C+A	I99. J R Soc Interface 8:1314-1331. 묽은 유영체 현탁액의 속도장이 잘린 레비(안정) 통계를 따름. 쌍극자 장 합의 안정 분포 선례(우리: 2차원 1/r² → 코시)
 10.1103/physrevlett.111.118301	Desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	C+A	I99. PRL 111:118301. Hele-Shaw 액적 무리의 밀도 요동 전파(쌍극자 상호작용 + 충돌). 속도 분포 폭은 아님
 10.1039/c3sm52543k	Brosseau	2014	Microfluidic Dynamic Interfacial Tensiometry (μDIT)	C+A	I103. Soft Matter 10:3066. 미세유로에서 액적 변형으로 동적 계면장력(ms 분해능). 기포 나이–이동도로 흡착을 재는 I103의 비교 대상
+10.1103/physrevfluids.9.073601	Monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	C+A	I92 덧붙임 2·I102. PRF 9:073601. 기울인 Hele-Shaw에서 갭을 가로지르는 부력이 위 막만 Bretherton, 아래 막은 아님, 상승 속도 감소(arXiv 2407.13916 초록)
+10.1017/jfm.2016.403	Sarig	2016	Interaction forces between microfluidic droplets in a Hele-Shaw cell	C+A	I99·I101. JFM. 두 액적의 정확한 Hele-Shaw 상호작용(쌍극 좌표), 쌍극자 근사와 비교(arXiv 1510.04797 초록)

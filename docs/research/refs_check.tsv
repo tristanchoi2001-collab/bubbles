@@ -316,7 +316,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2015.469	OK	vasconcelos	2015	Multiple bubbles and fingers in a Hele-Shaw channel: complete set of steady solutions	Journal of Fluid Mechanics	13_plane,check
 10.1017/jfm.2016.131	OK	franco-gomez	2016	Sensitivity of Saffman–Taylor fingers to channel-depth perturbations	Journal of Fluid Mechanics	10_ideas,check
 10.1017/jfm.2016.357	OK	zhu	2016	A pancake droplet translating in a Hele-Shaw cell: lubrication film and flow field	Journal of Fluid Mechanics	1_adiabatic_gap,3_pressure_drop,check
-10.1017/jfm.2016.403	OK	sarig	2016	Interaction forces between microfluidic droplets in a Hele-Shaw cell	Journal of Fluid Mechanics	13_plane,check
+10.1017/jfm.2016.403	OK	sarig	2016	Interaction forces between microfluidic droplets in a Hele-Shaw cell	Journal of Fluid Mechanics	13_plane,15_velocity,check
 10.1017/jfm.2018.213	OK	gvozdic	2018	Experimental investigation of heat transport in homogeneous bubbly flow	Journal of Fluid Mechanics	4_heat_transfer,check
 10.1017/jfm.2018.240	OK	keiser	2018	Dynamics of non-wetting drops confined in a Hele-Shaw cell	Journal of Fluid Mechanics	9_data,check
 10.1017/jfm.2018.457	OK	reichert	2018	Topography of the lubrication film under a pancake droplet travelling in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,3_pressure_drop,6_measurement,9_data,check
@@ -387,7 +387,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1039/c0sm01535k	OK	eri	2011	Viscous drag friction acting on a fluid drop confined in between two plates	Soft Matter	3_pressure_drop,check
 10.1039/c1lc20534j	OK	jakiela	2011	Speed of flow of individual droplets in microfluidic channels as a function of the capillary number, volume of droplets 	Lab on a Chip	1_adiabatic_gap,3_pressure_drop,check
 10.1039/c3lc00013c	OK	fisher	2013	Equilibrium gas–oil ratio measurements using a microfluidic technique	Lab on a Chip	11_ideas2,check
-10.1039/c3sm52543k	OK	brosseau	2014	Microfluidic Dynamic Interfacial Tensiometry (μDIT)	Soft Matter	15_velocity
+10.1039/c3sm52543k	OK	brosseau	2014	Microfluidic Dynamic Interfacial Tensiometry (μDIT)	Soft Matter	15_velocity,check
 10.1039/c4ra15163a	OK	musterd	2015	Calculating the volume of elongated bubbles and droplets in microchannels from a top view image	RSC Advances	11_ideas2,6_measurement,check
 10.1039/c5lc01417d	OK	huerre	2016	Absolute 3D reconstruction of thin films topography in microfluidic channels by interference reflection microscopy	Lab on a Chip	12_ideas3,check
 10.1039/c7sm01478c	OK	franco-gomez	2017	Bubble propagation on a rail: a concept for sorting bubbles by size	Soft Matter	10_ideas,12_ideas3,check
@@ -447,7 +447,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1088/1742-6596/2605/1/012024	OK	ito	2023	Measurements of gas-liquid two-phase flow dynamics using high-speed neutron imaging	Journal of Physics: Conference Series	6_measurement,check
 10.1093/oxfordjournals.aje.a112510	OK	rogan	1978	ESTIMATING PREVALENCE FROM THE RESULTS OF A SCREENING TEST	American Journal of Epidemiology	8_iate_coalescence,check
 10.1093/qjmam/12.3.265	OK	taylor	1959	A NOTE ON THE MOTION OF BUBBLES IN A HELE-SHAW CELL AND POROUS MEDIUM	The Quarterly Journal of Mechanics and Applied Mathematics	0_estimates,1_adiabatic_gap,3_pressure_drop,7_closest_novelty,9_data,check
-10.1098/rsif.2010.0545	OK	zaid	2011	Lévy fluctuations and mixing in dilute suspensions of algae and bacteria	Journal of The Royal Society Interface	15_velocity
+10.1098/rsif.2010.0545	OK	zaid	2011	Lévy fluctuations and mixing in dilute suspensions of algae and bacteria	Journal of The Royal Society Interface	15_velocity,check
 10.1098/rsos.252426	OK	booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	Royal Society Open Science	10_ideas,3_pressure_drop,9_data,check
 10.1098/rspa.1932.0169	OK	taylor	1932	The viscosity of a fluid containing small drops of another fluid	Proceedings of the Royal Society of London. Series A, Containing Papers of a Mathematical and Physical Character	10_ideas,check
 10.1098/rspa.1979.0160	OK	perrins	1979	Transport properties of regular arrays of cylinders	Proceedings of the Royal Society of London. A. Mathematical and Physical Sciences	13_plane,check
@@ -466,14 +466,14 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevfluids.4.113602	OK	reichert	2019	Predicting droplet velocity in a Hele-Shaw cell	Physical Review Fluids	10_ideas,1_adiabatic_gap,3_pressure_drop,9_data,check
 10.1103/physrevfluids.5.093301	OK	shmakova	2020	Quasi-two-dimensional foam flow through and around a permeable obstacle	Physical Review Fluids	12_ideas3,check
 10.1103/physrevfluids.6.093605	OK	pavlov	2021	Kinematics of a bubble freely rising in a thin-gap cell with additional in-plane confinement	Physical Review Fluids	1_adiabatic_gap,check
-10.1103/physrevfluids.9.073601	OK	monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	Physical Review Fluids	10_ideas,1_adiabatic_gap,7_closest_novelty,check
+10.1103/physrevfluids.9.073601	OK	monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	Physical Review Fluids	10_ideas,15_velocity,1_adiabatic_gap,7_closest_novelty,check
 10.1103/physrevfluids.9.093605	OK	lawless	2024	Stable bubble formations in a depth-perturbed Hele-Shaw channel	Physical Review Fluids	10_ideas,12_ideas3,1_adiabatic_gap,8_iate_coalescence,9_data,check
 10.1103/physrevfluids.9.123603	OK	wu	2024	Motion and deformation of a bubble in a Hele-Shaw cell	Physical Review Fluids	10_ideas,3_pressure_drop,7_closest_novelty,9_data,check
 10.1103/physrevlett.100.024501	OK	bremond	2008	Decompressing Emulsion Droplets Favors Coalescence	Physical Review Letters	8_iate_coalescence,check
 10.1103/physrevlett.100.044501	OK	schindler	2008	Droplet Traffic in Microfluidic Networks: A Simple Model for Understanding and Designing	Physical Review Letters	12_ideas3,check
 10.1103/physrevlett.106.068301	OK	biance	2011	How Topological Rearrangements and Liquid Fraction Control Liquid Foam Stability	Physical Review Letters	8_iate_coalescence,check
 10.1103/physrevlett.107.124501	OK	dangla	2011	Trapping Microfluidic Drops in Wells of Surface Energy	Physical Review Letters	12_ideas3,check
-10.1103/physrevlett.111.118301	OK	desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	Physical Review Letters	15_velocity
+10.1103/physrevlett.111.118301	OK	desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	Physical Review Letters	15_velocity,check
 10.1103/physrevlett.115.064501	OK	huerre	2015	Droplets in Microchannels: Dynamical Properties of the Lubrication Film	Physical Review Letters	12_ideas3,1_adiabatic_gap,check
 10.1103/physrevlett.79.1265	OK	kelley	1997	Path Instabilities of Rising Air Bubbles in a Hele-Shaw Cell	Physical Review Letters	9_data,check
 10.1103/physrevlett.98.244501	OK	ritacco	2007	Lifetime of Bubble Rafts: Cooperativity and Avalanches	Physical Review Letters	8_iate_coalescence,check
