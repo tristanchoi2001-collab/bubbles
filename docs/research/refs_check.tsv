@@ -529,7 +529,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1209/epl/i2003-10169-0	OK	cantat	2004	Dissipation in foam flowing through narrow channels	Europhysics Letters (EPL)	3_pressure_drop,7_closest_novelty,check
 10.1209/epl/i2005-10583-2	OK	terriac	2006	Viscous force exerted on a foam at a solid boundary: Influence of the liquid fraction and of the bubble size	Europhysics Letters (EPL)	3_pressure_drop,check
 10.1214/ss/1009213286	OK	brown	2001	Interval Estimation for a Binomial Proportion	Statistical Science	5_ai_image,check
-10.1252/kakoronbunshu.2.228	OK	iida	1976	Gas-Liquid Two-Phase Flow through Channels with Narrow Spaces	KAGAKU KOGAKU RONBUNSHU	13_plane
+10.1252/kakoronbunshu.2.228	OK	iida	1976	Gas-Liquid Two-Phase Flow through Channels with Narrow Spaces	KAGAKU KOGAKU RONBUNSHU	13_plane,check
 10.1299/jsme1958.20.638	OK	katto	1977	Nucleate and Transition Boiling in a Narrow Space between Two Horizontal, Parallel Disk-Surfaces	Bulletin of JSME	2_boiling_gap,9_data,check
 10.1299/jsmeb1988.31.3_513	OK	fujita	1988	Heat Transfer in Nucleate Boiling within a Vertical Narrow Space	JSME international journal. Ser. 2, Fluids engineering, heat transfer, power, combustion, thermophysical properties	2_boiling_gap,7_closest_novelty,9_data,check
 10.1299/jsmekansai.2025.100.20304	OK	shen	2025	Advanced Prediction Method of Interfacial Area Concentration in Gas-Liquid Two-Phase Flow Analysis	The Proceedings of Conference of Kansai Branch	8_iate_coalescence,check
@@ -543,12 +543,13 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1299/kikaib.55.2030	OK	monde	1989	Enhancement of heat transfer due to bubbles passing through a narrow vertical rertical rectangular channel. Theoretical 	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	10_ideas,4_heat_transfer,check
 10.1299/kikaib.55.483	OK	monde	1989	Enhancement of heat transfer due to a bubble passing through a narrow vertical rectangular channel. Effect of subcooling	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	10_ideas,4_heat_transfer,check
 10.1299/kikaib.57.3499	OK	monde	1991	Measurement of Liquid Film Thickness during Pass of Bubble in a Vertical Rectangular Channel.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	4_heat_transfer,check
-10.1299/kikaib.58.393	OK	moriyama	1992	The Thermohydraulic Characteristics of Two-Phase Flow in Extremely Narrow Channels. The Frictional Pressure Drop and Hea	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane
+10.1299/kikaib.58.393	OK	moriyama	1992	The Thermohydraulic Characteristics of Two-Phase Flow in Extremely Narrow Channels. The Frictional Pressure Drop and Hea	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane,check
 10.1299/kikaib.58.401	OK	moriyama	1992	The Thermohydraulic Characteristics of Two-Phase Flow in Extremely Narrow Channels. The Frictional Pressure Drop and Voi	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane,3_pressure_drop,check
 10.1299/kikaib.58.408	OK	sadatomi	1992	Effects of Gap Width and Orientation on Two-Phase Flow in a Narrow Passage between Two-Flat Plates.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane,1_adiabatic_gap,6_measurement,9_data,check
-10.1299/kikaib.59.1003	OK	moriyama	1993	Study on a Single Flattened Bubble in a Narrow Channel.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane
+10.1299/kikaib.59.1003	OK	moriyama	1993	Study on a Single Flattened Bubble in a Narrow Channel.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane,check
 10.1299/kikaib.61.201	OK	ohta	1995	Experiments on Bubble Behavior in a Horizontal Narrow Divergent Passage.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	9_data,check
 10.1299/kikaib.61.4412	OK	fujita	1995	Gas-Liquid Flows in Narrow Flat Channels. Influences of Liquid Properties.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	9_data,check
+10.1299/kikaib.64.2563	OK	murakami	1998	Study on Boiling in Horizontatal Channel with Rectangular Section. In the case of Heated Bottom Wall.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	14_jstage,check
 10.13182/nt95-a35111	OK	hibiki	1995	Application of High-Frame-Rate Neutron Radiography with a Steady Thermal Neutron Beam to Two-Phase Flow Measurements in 	Nuclear Technology	6_measurement,check
 10.1364/ao.12.000555	OK	hale	1973	Optical Constants of Water in the 200-nm to 200-μm Wavelength Region	Applied Optics	6_measurement,check
 10.1364/ao.25.000431	OK	twomey	1986	Reflectance and albedo differences between wet and dry surfaces	Applied Optics	6_measurement,check
@@ -604,6 +605,9 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.3390/s24113363	OK	schepperle	2024	Computer-Vision- and Deep-Learning-Based Determination of Flow Regimes, Void Fraction, and Resistance Sensor Data in Mic	Sensors	5_ai_image,check
 10.36253/substantia-823	OK	ninham	2021	A Review and Update of Bubble Column Evaporator Processes	Substantia	11_ideas2,check
 10.3795/ksme-b.2006.30.11.1035	OK	huh	2006	Two-phase Pressure Drop in a Horizontal Rectangular Microchannel	Transactions of the Korean Society of Mechanical Engineers B	0_estimates,check
+10.3811/jjmf.10.146	OK	tomiyama	1996	Terminal Velocity and Drag Coefficient of Single Air Bubbles in Stagnant Water Filling in Narrow Parallel Walls.	JAPANESE JOURNAL OF MULTIPHASE FLOW	14_jstage,check
+10.3811/jjmf.2023.007	OK	ito	2023	Visualization of Gas-Liquid Interfacial Behavior in a Narrow Channel Using High-Speed Neutron Imaging	JAPANESE JOURNAL OF MULTIPHASE FLOW	14_jstage,check
+10.3811/jjmf.23.436	OK	sukawa	2009		JAPANESE JOURNAL OF MULTIPHASE FLOW	14_jstage,check
 10.3811/jjmf.24.611	OK	ide	2011		JAPANESE JOURNAL OF MULTIPHASE FLOW	9_data,check
 10.3811/jjmf.27.168	OK	fukasawa	2013	Effect of Small Rectangular Channel Height on Bubble Moving Velocity in Gas-liquid Two-phase Flow through Sudden Contrac	JAPANESE JOURNAL OF MULTIPHASE FLOW	0_estimates,9_data,check
 10.3811/pmfr.2.117	OK	shinmoto	2007	Critical Heat Flux in Cold Plates of Narrow Channels with Structures for Additional Liquid Supply	Progress in Multiphase Flow Research	7_closest_novelty,check
