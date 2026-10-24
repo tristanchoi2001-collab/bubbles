@@ -22,6 +22,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1007/s00231-019-02604-2	OK	kapitz	2019	Impact of surface parameters on confined boiling heat transfer in a Hele-Shaw cell	Heat and Mass Transfer	2_boiling_gap,check
 10.1007/s00348-005-0068-7	OK	ouellette	2006	A quantitative study of three-dimensional Lagrangian particle tracking algorithms	Experiments in Fluids	8_iate_coalescence,check
 10.1007/s00348-008-0490-8	OK	kitagawa	2008	Heat transfer enhancement for laminar natural convection along a vertical plate due to sub-millimeter-bubble injection	Experiments in Fluids	4_heat_transfer,check
+10.1007/s00348-011-1105-3	OK	ito	2011	Dynamic film thickness between bubbles and wall in a narrow channel	Experiments in Fluids	13_plane
 10.1007/s00348-014-1728-2	OK	shen	2014	Dynamics of a small number of droplets in microfluidic Hele–Shaw cells	Experiments in Fluids	1_adiabatic_gap,check
 10.1007/s00348-020-02991-x	OK	kearney	2020	Lagrangian tracking of colliding droplets	Experiments in Fluids	8_iate_coalescence,check
 10.1007/s00348-020-03016-3	OK	alipour	2020	Concentration-based velocity reconstruction in convective Hele–Shaw flows	Experiments in Fluids	10_ideas,check
@@ -37,6 +38,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1007/s10404-023-02633-8	OK	ronshin	2023	Experimental study of two-phase flow regimes in slit microchannels	Microfluidics and Nanofluidics	9_data,check
 10.1007/s10665-021-10146-y	OK	thompson	2021	Bifurcations of drops and bubbles propagating in variable-depth Hele-Shaw channels	Journal of Engineering Mathematics	9_data,check
 10.1007/s11012-020-01300-4	OK	kadam	2021	Bubble dynamics in microchannel: An overview of the state-of-the-art	Meccanica	7_closest_novelty,check
+10.1007/s11242-011-9745-6	OK	li	2011	Interrelationship between Resistivity Index, Capillary Pressure and Relative Permeability	Transport in Porous Media	13_plane
 10.1007/s11263-020-01375-2	OK	luiten	2021	HOTA: A Higher Order Metric for Evaluating Multi-object Tracking	International Journal of Computer Vision	5_ai_image,check
 10.1007/s12217-011-9284-3	OK	bar-cohen	2012	Two-Phase Thermal Transport in Microgap Channels—Theory, Experimental Results, and Predictive Relations	Microgravity Science and Technology	2_boiling_gap,check
 10.1007/s12217-019-09747-1	OK	ronshin	2019	Experimental Investigation of Adiabatic Gas-Liquid Flow Regimes and Pressure Drop in Slit Microchannel	Microgravity Science and Technology	3_pressure_drop,9_data,check
@@ -202,15 +204,15 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijheatmasstransfer.2023.124887	OK	chen	2024	Experimental study on turbulent characteristics of dispersed bubbly flow in a narrow rectangular channel by two-phase PI	International Journal of Heat and Mass Transfer	1_adiabatic_gap,check
 10.1016/j.ijheatmasstransfer.2023.125130	OK	rukhsar	2024	Effects of cover plate wettability on pool boiling heat transfer in a narrow gap	International Journal of Heat and Mass Transfer	2_boiling_gap,check
 10.1016/j.ijheatmasstransfer.2024.125270	OK	rassame	2024	Drift-flux model for dispersed adiabatic and boiling two-phase flows in rectangular channels	International Journal of Heat and Mass Transfer	1_adiabatic_gap,9_data,check
-10.1016/j.ijheatmasstransfer.2024.125376	OK	al-zaidi	2024	Flow boiling pressure drop correlation in small to micro passages	International Journal of Heat and Mass Transfer	13_plane
+10.1016/j.ijheatmasstransfer.2024.125376	OK	al-zaidi	2024	Flow boiling pressure drop correlation in small to micro passages	International Journal of Heat and Mass Transfer	13_plane,check
 10.1016/j.ijheatmasstransfer.2024.125471	OK	omisanya	2024	Enhanced flow boiling heat transfer in narrow gap with different widths using different-mode-interacting boiling	International Journal of Heat and Mass Transfer	7_closest_novelty,9_data,check
 10.1016/j.ijheatmasstransfer.2024.126025	OK	yan	2024	A comprehensive analysis of the gap size influence on boiling crisis in narrow rectangular channels	International Journal of Heat and Mass Transfer	2_boiling_gap,9_data,check
 10.1016/j.ijheatmasstransfer.2024.126207	OK	khunsrimek	2024	Two-group drift-flux model for dispersed gas-liquid flow in rectangular channel	International Journal of Heat and Mass Transfer	1_adiabatic_gap,9_data,check
-10.1016/j.ijheatmasstransfer.2025.126830	OK	al-zaidi	2025	Bubble nucleation site density, generation frequency and departure diameter in flow boiling of HFE-7100	International Journal of Heat and Mass Transfer	13_plane
+10.1016/j.ijheatmasstransfer.2025.126830	OK	al-zaidi	2025	Bubble nucleation site density, generation frequency and departure diameter in flow boiling of HFE-7100	International Journal of Heat and Mass Transfer	13_plane,check
 10.1016/j.ijheatmasstransfer.2025.126956	OK	rukhsar	2025	Boiling heat transfer with a microporous heating surface in a narrow gap with cover plates of different wettability	International Journal of Heat and Mass Transfer	2_boiling_gap,check
 10.1016/j.ijheatmasstransfer.2025.127453	OK	han	2025	Two-group bubble interfacial area concentration correlation for two-phase flows in narrow rectangular flow channels	International Journal of Heat and Mass Transfer	1_adiabatic_gap,check
 10.1016/j.ijheatmasstransfer.2025.127894	OK	zhang	2026	Generalizable physical descriptors of pool boiling heat transfer from unsupervised learning of images	International Journal of Heat and Mass Transfer	5_ai_image,check
-10.1016/j.ijheatmasstransfer.2026.129327	OK	costa	2026	Effect of flow orientation on the thermohydraulic performance of a tapered open-manifold microgap heat sink during flow 	International Journal of Heat and Mass Transfer	13_plane
+10.1016/j.ijheatmasstransfer.2026.129327	OK	costa	2026	Effect of flow orientation on the thermohydraulic performance of a tapered open-manifold microgap heat sink during flow 	International Journal of Heat and Mass Transfer	13_plane,check
 10.1016/j.ijmultiphaseflow.2003.11.006	OK	satitchaicharoen	2004	Two-phase flow pattern maps for vertical upward gas–liquid flow in mini-gap channels	International Journal of Multiphase Flow	1_adiabatic_gap,7_closest_novelty,9_data,check
 10.1016/j.ijmultiphaseflow.2003.11.010	OK	ursenbacher	2004	Interfacial measurements in stratified types of flow. Part I: New optical measurement technique and dry angle measuremen	International Journal of Multiphase Flow	4_heat_transfer,check
 10.1016/j.ijmultiphaseflow.2004.05.002	OK	chung	2004	The effect of channel diameter on adiabatic two-phase flow characteristics in microchannels	International Journal of Multiphase Flow	1_adiabatic_gap,3_pressure_drop,5_ai_image,check
@@ -228,6 +230,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijmultiphaseflow.2010.12.007	OK	van ommen	2011	Time-series analysis of pressure fluctuations in gas–solid fluidized beds – A review	International Journal of Multiphase Flow	11_ideas2,check
 10.1016/j.ijmultiphaseflow.2011.11.012	OK	kim	2012	Measurement of two-phase flow and heat transfer parameters using infrared thermometry	International Journal of Multiphase Flow	4_heat_transfer,check
 10.1016/j.ijmultiphaseflow.2012.02.007	OK	alam	2012	Experimental investigation of local flow boiling heat transfer and pressure drop characteristics in microgap channel	International Journal of Multiphase Flow	9_data,check
+10.1016/j.ijmultiphaseflow.2012.02.010	OK	paranjape	2012	Electrical impedance-based void fraction measurement and flow regime identification in microchannel flows under adiabati	International Journal of Multiphase Flow	13_plane
 10.1016/j.ijmultiphaseflow.2014.05.015	OK	gangloff	2014	A model of two-phase resin and void flow during composites processing	International Journal of Multiphase Flow	1_adiabatic_gap,check
 10.1016/j.ijmultiphaseflow.2015.03.006	OK	youn	2015	The effect of initial flow velocity on the liquid film thickness in micro tube accelerated slug flow	International Journal of Multiphase Flow	4_heat_transfer,check
 10.1016/j.ijmultiphaseflow.2015.11.006	OK	chinnov	2016	Two-phase flow patterns in short horizontal rectangular microchannels	International Journal of Multiphase Flow	7_closest_novelty,9_data,check
@@ -432,6 +435,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1080/01621459.1927.10502953	OK	wilson	1927	Probable Inference, the Law of Succession, and Statistical Inference	Journal of the American Statistical Association	5_ai_image,check
 10.1088/0957-0233/16/10/009	OK	ryu	2005	Use of bubble image velocimetry for measurement of plunging wave impinging on structure and associated greenwater	Measurement Science and Technology	10_ideas,11_ideas2,check
 10.1088/0957-0233/24/3/032001	OK	van oudheusden	2013	PIV-based pressure measurement	Measurement Science and Technology	12_ideas3,check
+10.1088/0957-0233/25/9/095301	OK	valiorgue	2014	Design of a non-intrusive electrical impedance-based void fraction sensor for microchannel two-phase flows	Measurement Science and Technology	13_plane
 10.1088/0957-0233/6/6/013	OK	keane	1995	Super-resolution particle imaging velocimetry	Measurement Science and Technology	5_ai_image,check
 10.1088/0960-1317/16/1/019	OK	chio	2006	Transient pressure drops of gas bubbles passing through liquid-filled microchannel contractions: an experimental study	Journal of Micromechanics and Microengineering	11_ideas2,check
 10.1088/1361-6501/ab1db8	OK	sciacchitano	2019	Uncertainty quantification in particle image velocimetry	Measurement Science and Technology	5_ai_image,7_closest_novelty,check
@@ -582,7 +586,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1615/ihtc12.1010	OK	malayeri	2002	Prediction of void fraction in air/water two-phase flows at elevated temperatures	Proceeding of International Heat Transfer Conference 12	12_ideas3,check
 10.1615/ihtc15.fbl.009930	OK	kawanami	2014	Experimental Investigations of Flow Boiling Heat Transfer and Flow Behaviors in Microgap Channel	Proceedings of the 15th International Heat Transfer Conference	9_data,check
 10.1615/ihtc17.150-60	OK	ronshin	2023	FLOW BOILING OF FC-72 IN A FLAT MICROCHANNEL	Proceeding of International Heat Transfer Conference 17	9_data,check
-10.1615/ihtc17.490-100	OK	al-zaidi	2023	FLOW BOILING IN A MICROGAP AND MICRO MULTI-CHANNEL HEAT EXCHANGER	Proceeding of International Heat Transfer Conference 17	13_plane
+10.1615/ihtc17.490-100	OK	al-zaidi	2023	FLOW BOILING IN A MICROGAP AND MICRO MULTI-CHANNEL HEAT EXCHANGER	Proceeding of International Heat Transfer Conference 17	13_plane,check
 10.1615/ihtc5.430	OK	saha	1974	POINT OF NET VAPOR GENERATION AND VAPOR VOID FRACTION IN SUBCOOLED BOILING	Proceeding of International Heat Transfer Conference 5	11_ideas2,check
 10.1615/ihtc9.40	OK	kurul	1990	MULTIDIMENSIONAL EFFECTS IN FORCED CONVECTION SUBCOOLED BOILING	Proceeding of International Heat Transfer Conference 9	4_heat_transfer,check
 10.1615/interfacphenomheattransfer.2023047135	OK	dementyev	2023	AN EXPERIMENTAL INVESTIGATION OF TWO-PHASE GAS-LIQUID FLOW PATTERNS IN EXTREMELY SMALL GAP MICROCHANNEL	Interfacial Phenomena and Heat Transfer	9_data,check

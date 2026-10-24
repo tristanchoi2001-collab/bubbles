@@ -21,3 +21,7 @@ doi	first_author	year	short_title	level	note
 10.1615/ihtc17.490-100	Al-Zaidi	2023	Flow boiling in a microgap and micro multi-channel heat exchanger	C	데이터 목록 B40. IHTC-17
 10.1016/j.ijheatmasstransfer.2024.125376	Al-Zaidi	2024	Flow boiling pressure drop correlation in small to micro passages	C+A	데이터 목록 B41. 자료집 D_h 0.46~4.26 mm, 네 냉매. CC BY
 10.1016/j.ijheatmasstransfer.2026.129327	Costa	2026	Effect of flow orientation on the thermohydraulic performance of a tapered open-manifold microgap heat sink during flow boiling of HFO1336mzz(Z)	C	데이터 목록 B42. CC BY
+10.1007/s11242-011-9745-6	Li	2011	Interrelationship between Resistivity Index, Capillary Pressure and Relative Permeability	C	I85. Transp Porous Media. 다공질에서 전기 저항 지수 ↔ 상대 투과율의 정적 비유
+10.1016/j.ijmultiphaseflow.2012.02.010	Paranjape	2012	Electrical impedance-based void fraction measurement and flow regime identification in microchannel flows under adiabatic conditions	C	I85. IJMF 42. 미세유로 임피던스 기공률(가로 방향), 수치로 관계 정함
+10.1088/0957-0233/25/9/095301	Valiorgue	2014	Design of a non-intrusive electrical impedance-based void fraction sensor for microchannel two-phase flows	C	I85. Meas Sci Technol 25:095301
+10.1007/s00348-011-1105-3	Ito	2011	Dynamic film thickness between bubbles and wall in a narrow channel	C	I85·I77. Exp Fluids. 좁은 직사각 유로에서 전도법으로 기포-벽 사이 막 두께
