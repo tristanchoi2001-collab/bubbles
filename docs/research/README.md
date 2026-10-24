@@ -5,7 +5,7 @@
 ## 먼저 볼 것 (10분)
 1. 보고서 ① 결론 요약(`../research_microgap_paper.md`).
 2. 아래 "핵심 결과".
-3. 그림 세 장: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양).
+3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상).
 
 ## 핵심 결과
 1. **어디가 비어 있나**
@@ -23,7 +23,8 @@
 4. **논문 2(가열)**
    - 공기 기포로의 증발(기체 부피 1.26/1.69/4.0배, 50/70/90 °C)과 기포 속 열관(1 mm에서 0.3~4 kW/m²K)을 빼면 h 해석이 틀린다.
    - 영상이 경계조건의 모양을, 열전대가 크기를 정하는 역열전도(I59).
-   - 열적 유효 매질: h_TP/h_1φ ≈ (1 − φ_c)·max[1, 0.42·Fo^(−1/2)].
+   - 열적 유효 매질: h_TP/h_1φ ≈ (1 − φ_c)·max[1, 0.42·Fo^(−1/2)] + φ_c·r_b(T).
+   - r_b(발자국 열관 전도 ÷ 단상 h)는 갭과 무관하고 온도로만 정해진다 → 저빈도에서 공기 주입의 득실이 약 75~80 °C에서 뒤집힌다(그림 r8, I65).
 5. **위험과 대책**
    - 저유량 기체 유량계 → 계단 응답(I58)이나 영상 β_f.
    - 윤곽 규약 → 합체 면적 수지(I48).
