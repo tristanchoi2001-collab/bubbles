@@ -45,7 +45,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/0009-2509(95)00199-f	OK	kovscek	1995	A mechanistic population balance model for transient and steady-state foam flow in Boise sandstone	Chemical Engineering Science	3_pressure_drop,check
 10.1016/0017-9310(67)90047-6	OK	chisholm	1967	A theoretical basis for the Lockhart-Martinelli correlation for two-phase flow	International Journal of Heat and Mass Transfer	3_pressure_drop,check
 10.1016/0017-9310(69)90153-7	OK	ishibashi	1969	Saturated boiling heat transfer in narrow spaces	International Journal of Heat and Mass Transfer	2_boiling_gap,4_heat_transfer,7_closest_novelty,9_data,check
-10.1016/0017-9310(72)90099-3	OK	kenning	1972	Convective heat transfer to water containing bubbles: Enhancement not dependent on thermocapillarity	International Journal of Heat and Mass Transfer	10_ideas,4_heat_transfer,check
+10.1016/0017-9310(72)90099-3	OK	kenning	1972	Convective heat transfer to water containing bubbles: Enhancement not dependent on thermocapillarity	International Journal of Heat and Mass Transfer	0_estimates,10_ideas,4_heat_transfer,check
 10.1016/0017-9310(85)90213-3	OK	del valle	1985	Subcooled flow boiling at high heat flux	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/0017-9310(88)90004-x	OK	fujita	1988	Nucleate boiling heat transfer and critical heat flux in narrow space between rectangular surfaces	International Journal of Heat and Mass Transfer	2_boiling_gap,7_closest_novelty,9_data,check
 10.1016/0017-9310(90)90193-x	OK	cornwell	1990	The influence of bubbly flow on boiling from a tube in a bundle	International Journal of Heat and Mass Transfer	4_heat_transfer,check
@@ -151,8 +151,8 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijheatmasstransfer.2009.09.011	OK	zhang	2010	Correlations of two-phase frictional pressure drop and void fraction in mini-channel	International Journal of Heat and Mass Transfer	3_pressure_drop,5_ai_image,check
 10.1016/j.ijheatmasstransfer.2010.02.029	OK	li	2010	A general correlation for adiabatic two-phase pressure drop in micro/mini-channels	International Journal of Heat and Mass Transfer	3_pressure_drop,check
 10.1016/j.ijheatmasstransfer.2010.02.039	OK	harirchian	2010	A comprehensive flow regime map for microchannel flow boiling with quantitative transition criteria	International Journal of Heat and Mass Transfer	2_boiling_gap,7_closest_novelty,9_data,check
-10.1016/j.ijheatmasstransfer.2010.03.007	OK	walsh	2010	Heat transfer model for gas–liquid slug flows under constant flux	International Journal of Heat and Mass Transfer	4_heat_transfer,7_closest_novelty,check
-10.1016/j.ijheatmasstransfer.2010.04.016	OK	betz	2010	Can segmented flow enhance heat transfer in microchannel heat sinks?	International Journal of Heat and Mass Transfer	10_ideas,4_heat_transfer,7_closest_novelty,check
+10.1016/j.ijheatmasstransfer.2010.03.007	OK	walsh	2010	Heat transfer model for gas–liquid slug flows under constant flux	International Journal of Heat and Mass Transfer	0_estimates,4_heat_transfer,7_closest_novelty,check
+10.1016/j.ijheatmasstransfer.2010.04.016	OK	betz	2010	Can segmented flow enhance heat transfer in microchannel heat sinks?	International Journal of Heat and Mass Transfer	0_estimates,10_ideas,4_heat_transfer,7_closest_novelty,check
 10.1016/j.ijheatmasstransfer.2010.05.041	OK	gerardi	2010	Study of bubble growth in water pool boiling through synchronized, infrared thermometry and high-speed video	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/j.ijheatmasstransfer.2010.07.035	OK	choi	2010	Adiabatic two-phase flow in rectangular microchannels with different aspect ratios: Part II – bubble behaviors and press	International Journal of Heat and Mass Transfer	11_ideas2,check
 10.1016/j.ijheatmasstransfer.2011.01.010	OK	ozer	2011	The effect of sliding bubbles on nucleate boiling of a subcooled liquid flowing in a narrow channel	International Journal of Heat and Mass Transfer	4_heat_transfer,check
@@ -325,7 +325,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/s0022112095001455	OK	wong	1995	The motion of long bubbles in polygonal capillaries. Part 2. Drag, fluid pressure and fluid flow	Journal of Fluid Mechanics	3_pressure_drop,check
 10.1021/acs.iecr.3c01121	OK	yin	2023	Data-Driven Bubble Tracking DMD Method for Predicting Bubble Rising Behaviors in a Hele-Shaw Cell	Industrial & Engineering Chemistry Research	9_data,check
 10.1021/acs.iecr.5b01368	OK	chakraborty	2015	Inverse Problems in Population Balances. Determination of Aggregation Kernel by Weighted Residuals	Industrial & Engineering Chemistry Research	10_ideas,check
-10.1021/ie200610k	OK	leung	2012	Effect of Flow Characteristics on Taylor Flow Heat Transfer	Industrial & Engineering Chemistry Research	4_heat_transfer,check
+10.1021/ie200610k	OK	leung	2012	Effect of Flow Characteristics on Taylor Flow Heat Transfer	Industrial & Engineering Chemistry Research	0_estimates,4_heat_transfer,check
 10.1021/ie50498a055	OK	danckwerts	1951	Significance of Liquid-Film Coefficients in Gas Absorption	Industrial & Engineering Chemistry	4_heat_transfer,check
 10.1021/jp901801k	OK	francis	2009	Application of a Bubble Column for Evaporative Cooling and a Simple Procedure for Determining the Latent Heat of Vaporiz	The Journal of Physical Chemistry B	11_ideas2,check
 10.1029/2004wr003837	OK	chen	2006	Two‐phase flow in rough‐walled fractures: Experiments and a flow structure model	Water Resources Research	0_estimates,10_ideas,9_data,check
@@ -527,7 +527,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.14278/rodare.827	OK	liu	2021	Data for: Experimental studies on bubble aspect ratio and corresponding correlations under bubble swarm condition		9_data,check
 10.14279/depositonce-17868	OK	buscher	2023	Supplementary measurement values and processed images to: Visualization, measurement, and modelling of adiabatic gas-liq		11_ideas2,check
 10.1515/tp-2026-0081	OK	dunlap	2026	Open datasets and machine learning for two-phase heat transfer: a review following a spatial-temporal taxonomy	Transport Phenomena	11_ideas2,5_ai_image,check
-10.15377/2409-5826.2018.05.5	OK	guangfei wang	2018	An Evaluation of Correlations for Predicting Pressure Drop of Air-Water Flow in Narrow Rectangular Duct	Journal of Advanced Thermal Science Research	0_estimates
+10.15377/2409-5826.2018.05.5	OK	guangfei wang	2018	An Evaluation of Correlations for Predicting Pressure Drop of Air-Water Flow in Narrow Rectangular Duct	Journal of Advanced Thermal Science Research	0_estimates,check
 10.1590/s1678-58782005000100004	OK	ghajar	2005	Non-boiling heat transfer in gas-liquid flow in pipes: a tutorial	Journal of the Brazilian Society of Mechanical Sciences and Engineering	4_heat_transfer,check
 10.1615/0-8493-9925-4.70	OK	mishima	2023	A STUDY OF AIR-WATER FLOW IN A NARROW RECTANGULAR DUCT USING AN IMAGE PROCESSING TECHNIQUE	Proceeding of Dynamics of Two-Phase Flows	6_measurement,check
 10.1615/ihtc15.fbl.009930	OK	kawanami	2014	Experimental Investigations of Flow Boiling Heat Transfer and Flow Behaviors in Microgap Channel	Proceedings of the 15th International Heat Transfer Conference	9_data,check
