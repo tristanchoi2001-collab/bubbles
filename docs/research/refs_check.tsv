@@ -202,12 +202,15 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijheatmasstransfer.2023.124887	OK	chen	2024	Experimental study on turbulent characteristics of dispersed bubbly flow in a narrow rectangular channel by two-phase PI	International Journal of Heat and Mass Transfer	1_adiabatic_gap,check
 10.1016/j.ijheatmasstransfer.2023.125130	OK	rukhsar	2024	Effects of cover plate wettability on pool boiling heat transfer in a narrow gap	International Journal of Heat and Mass Transfer	2_boiling_gap,check
 10.1016/j.ijheatmasstransfer.2024.125270	OK	rassame	2024	Drift-flux model for dispersed adiabatic and boiling two-phase flows in rectangular channels	International Journal of Heat and Mass Transfer	1_adiabatic_gap,9_data,check
+10.1016/j.ijheatmasstransfer.2024.125376	OK	al-zaidi	2024	Flow boiling pressure drop correlation in small to micro passages	International Journal of Heat and Mass Transfer	13_plane
 10.1016/j.ijheatmasstransfer.2024.125471	OK	omisanya	2024	Enhanced flow boiling heat transfer in narrow gap with different widths using different-mode-interacting boiling	International Journal of Heat and Mass Transfer	7_closest_novelty,9_data,check
 10.1016/j.ijheatmasstransfer.2024.126025	OK	yan	2024	A comprehensive analysis of the gap size influence on boiling crisis in narrow rectangular channels	International Journal of Heat and Mass Transfer	2_boiling_gap,9_data,check
 10.1016/j.ijheatmasstransfer.2024.126207	OK	khunsrimek	2024	Two-group drift-flux model for dispersed gas-liquid flow in rectangular channel	International Journal of Heat and Mass Transfer	1_adiabatic_gap,9_data,check
+10.1016/j.ijheatmasstransfer.2025.126830	OK	al-zaidi	2025	Bubble nucleation site density, generation frequency and departure diameter in flow boiling of HFE-7100	International Journal of Heat and Mass Transfer	13_plane
 10.1016/j.ijheatmasstransfer.2025.126956	OK	rukhsar	2025	Boiling heat transfer with a microporous heating surface in a narrow gap with cover plates of different wettability	International Journal of Heat and Mass Transfer	2_boiling_gap,check
 10.1016/j.ijheatmasstransfer.2025.127453	OK	han	2025	Two-group bubble interfacial area concentration correlation for two-phase flows in narrow rectangular flow channels	International Journal of Heat and Mass Transfer	1_adiabatic_gap,check
 10.1016/j.ijheatmasstransfer.2025.127894	OK	zhang	2026	Generalizable physical descriptors of pool boiling heat transfer from unsupervised learning of images	International Journal of Heat and Mass Transfer	5_ai_image,check
+10.1016/j.ijheatmasstransfer.2026.129327	OK	costa	2026	Effect of flow orientation on the thermohydraulic performance of a tapered open-manifold microgap heat sink during flow 	International Journal of Heat and Mass Transfer	13_plane
 10.1016/j.ijmultiphaseflow.2003.11.006	OK	satitchaicharoen	2004	Two-phase flow pattern maps for vertical upward gas–liquid flow in mini-gap channels	International Journal of Multiphase Flow	1_adiabatic_gap,7_closest_novelty,9_data,check
 10.1016/j.ijmultiphaseflow.2003.11.010	OK	ursenbacher	2004	Interfacial measurements in stratified types of flow. Part I: New optical measurement technique and dry angle measuremen	International Journal of Multiphase Flow	4_heat_transfer,check
 10.1016/j.ijmultiphaseflow.2004.05.002	OK	chung	2004	The effect of channel diameter on adiabatic two-phase flow characteristics in microchannels	International Journal of Multiphase Flow	1_adiabatic_gap,3_pressure_drop,5_ai_image,check
@@ -307,10 +310,10 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2014.100	OK	thompson	2014	Multiple finger propagation modes in Hele-Shaw channels of variable depth	Journal of Fluid Mechanics	10_ideas,check
 10.1017/jfm.2014.544	OK	bouche	2014	Homogeneous swarm of high-Reynolds-number bubbles rising within a thin gap. Part 2. Liquid dynamics	Journal of Fluid Mechanics	11_ideas2,1_adiabatic_gap,check
 10.1017/jfm.2015.355	OK	filella	2015	Oscillatory motion and wake of a bubble rising in a thin-gap cell	Journal of Fluid Mechanics	1_adiabatic_gap,check
-10.1017/jfm.2015.469	OK	vasconcelos	2015	Multiple bubbles and fingers in a Hele-Shaw channel: complete set of steady solutions	Journal of Fluid Mechanics	13_plane
+10.1017/jfm.2015.469	OK	vasconcelos	2015	Multiple bubbles and fingers in a Hele-Shaw channel: complete set of steady solutions	Journal of Fluid Mechanics	13_plane,check
 10.1017/jfm.2016.131	OK	franco-gomez	2016	Sensitivity of Saffman–Taylor fingers to channel-depth perturbations	Journal of Fluid Mechanics	10_ideas,check
 10.1017/jfm.2016.357	OK	zhu	2016	A pancake droplet translating in a Hele-Shaw cell: lubrication film and flow field	Journal of Fluid Mechanics	1_adiabatic_gap,3_pressure_drop,check
-10.1017/jfm.2016.403	OK	sarig	2016	Interaction forces between microfluidic droplets in a Hele-Shaw cell	Journal of Fluid Mechanics	13_plane
+10.1017/jfm.2016.403	OK	sarig	2016	Interaction forces between microfluidic droplets in a Hele-Shaw cell	Journal of Fluid Mechanics	13_plane,check
 10.1017/jfm.2018.213	OK	gvozdic	2018	Experimental investigation of heat transport in homogeneous bubbly flow	Journal of Fluid Mechanics	4_heat_transfer,check
 10.1017/jfm.2018.240	OK	keiser	2018	Dynamics of non-wetting drops confined in a Hele-Shaw cell	Journal of Fluid Mechanics	9_data,check
 10.1017/jfm.2018.457	OK	reichert	2018	Topography of the lubrication film under a pancake droplet travelling in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,3_pressure_drop,6_measurement,9_data,check
@@ -352,7 +355,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1038/nmat1962	OK	steinberger	2007	High friction on a bubble mattress	Nature Materials	10_ideas,check
 10.1038/nmat3025	OK	tambe	2011	Collective cell guidance by cooperative intercellular forces	Nature Materials	12_ideas3,check
 10.1038/nmeth.1237	OK	jaqaman	2008	Robust single-particle tracking in live-cell time-lapse sequences	Nature Methods	5_ai_image,8_iate_coalescence,check
-10.1038/nphys432	OK	beatus	2006	Phonons in a one-dimensional microfluidic crystal	Nature Physics	13_plane
+10.1038/nphys432	OK	beatus	2006	Phonons in a one-dimensional microfluidic crystal	Nature Physics	13_plane,check
 10.1038/s41467-022-35084-w	OK	xie	2022	Data-driven discovery of dimensionless numbers and governing laws from scarce measurements	Nature Communications	5_ai_image,check
 10.1038/s41467-023-37899-7	OK	zhang	2023	A unifying criterion of the boiling crisis	Nature Communications	5_ai_image,check
 10.1038/s41524-024-01223-8	OK	suh	2024	Recent progress of artificial intelligence for liquid-vapor phase change heat transfer	npj Computational Materials	5_ai_image,check
@@ -573,12 +576,13 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.14279/depositonce-17868	OK	buscher	2023	Supplementary measurement values and processed images to: Visualization, measurement, and modelling of adiabatic gas-liq		11_ideas2,check
 10.1515/tp-2026-0081	OK	dunlap	2026	Open datasets and machine learning for two-phase heat transfer: a review following a spatial-temporal taxonomy	Transport Phenomena	11_ideas2,5_ai_image,check
 10.15377/2409-5826.2018.05.5	OK	guangfei wang	2018	An Evaluation of Correlations for Predicting Pressure Drop of Air-Water Flow in Narrow Rectangular Duct	Journal of Advanced Thermal Science Research	0_estimates,check
-10.1553/etna_vol63s150	OK	nasser	2025	A computational method for multiple steady Hele-Shaw bubbles in planar domains	ETNA - Electronic Transactions on Numerical Analysis	13_plane
+10.1553/etna_vol63s150	OK	nasser	2025	A computational method for multiple steady Hele-Shaw bubbles in planar domains	ETNA - Electronic Transactions on Numerical Analysis	13_plane,check
 10.1590/s1678-58782005000100004	OK	ghajar	2005	Non-boiling heat transfer in gas-liquid flow in pipes: a tutorial	Journal of the Brazilian Society of Mechanical Sciences and Engineering	4_heat_transfer,check
 10.1615/0-8493-9925-4.70	OK	mishima	2023	A STUDY OF AIR-WATER FLOW IN A NARROW RECTANGULAR DUCT USING AN IMAGE PROCESSING TECHNIQUE	Proceeding of Dynamics of Two-Phase Flows	6_measurement,check
 10.1615/ihtc12.1010	OK	malayeri	2002	Prediction of void fraction in air/water two-phase flows at elevated temperatures	Proceeding of International Heat Transfer Conference 12	12_ideas3,check
 10.1615/ihtc15.fbl.009930	OK	kawanami	2014	Experimental Investigations of Flow Boiling Heat Transfer and Flow Behaviors in Microgap Channel	Proceedings of the 15th International Heat Transfer Conference	9_data,check
 10.1615/ihtc17.150-60	OK	ronshin	2023	FLOW BOILING OF FC-72 IN A FLAT MICROCHANNEL	Proceeding of International Heat Transfer Conference 17	9_data,check
+10.1615/ihtc17.490-100	OK	al-zaidi	2023	FLOW BOILING IN A MICROGAP AND MICRO MULTI-CHANNEL HEAT EXCHANGER	Proceeding of International Heat Transfer Conference 17	13_plane
 10.1615/ihtc5.430	OK	saha	1974	POINT OF NET VAPOR GENERATION AND VAPOR VOID FRACTION IN SUBCOOLED BOILING	Proceeding of International Heat Transfer Conference 5	11_ideas2,check
 10.1615/ihtc9.40	OK	kurul	1990	MULTIDIMENSIONAL EFFECTS IN FORCED CONVECTION SUBCOOLED BOILING	Proceeding of International Heat Transfer Conference 9	4_heat_transfer,check
 10.1615/interfacphenomheattransfer.2023047135	OK	dementyev	2023	AN EXPERIMENTAL INVESTIGATION OF TWO-PHASE GAS-LIQUID FLOW PATTERNS IN EXTREMELY SMALL GAP MICROCHANNEL	Interfacial Phenomena and Heat Transfer	9_data,check

@@ -17,3 +17,7 @@ doi	first_author	year	short_title	level	note
 10.1017/jfm.2016.403	Sarig	2016	Interaction forces between microfluidic droplets in a Hele-Shaw cell	C+A	I83. JFM 800:264. 두 액적 사이 힘의 정확해(쌍극 좌표), 쌍극자 모형과 비교. 무리 평균 압력 강하는 없음
 10.1017/jfm.2015.469	Vasconcelos	2015	Multiple bubbles and fingers in a Hele-Shaw channel: complete set of steady solutions	C+A	I83·I82. JFM 780:299. 표면장력 없는 여러 기포·주기 배열의 정상 해(Schottky–Klein). 배치 Q 식을 높은 α에서 점검할 기준 후보
 10.1553/etna_vol63s150	Nasser	2025	A computational method for multiple steady Hele-Shaw bubbles in planar domains	C	I82. ETNA 63:150-170. 여러 정상 기포의 수치 해법
+10.1016/j.ijheatmasstransfer.2025.126830	Al-Zaidi	2025	Bubble nucleation site density, generation frequency and departure diameter in flow boiling of HFE-7100	C+F	데이터 목록 B39. 1 mm 마이크로갭(20 × 25 mm, 구리, 폴리카보네이트 덮개), 위 촬영 1800 fps, 열전대 표면 아래 3.5 mm. 이탈 지름 0.09~0.33 mm, 빈도 143~500 Hz. CC BY
+10.1615/ihtc17.490-100	Al-Zaidi	2023	Flow boiling in a microgap and micro multi-channel heat exchanger	C	데이터 목록 B40. IHTC-17
+10.1016/j.ijheatmasstransfer.2024.125376	Al-Zaidi	2024	Flow boiling pressure drop correlation in small to micro passages	C+A	데이터 목록 B41. 자료집 D_h 0.46~4.26 mm, 네 냉매. CC BY
+10.1016/j.ijheatmasstransfer.2026.129327	Costa	2026	Effect of flow orientation on the thermohydraulic performance of a tapered open-manifold microgap heat sink during flow boiling of HFO1336mzz(Z)	C	데이터 목록 B42. CC BY

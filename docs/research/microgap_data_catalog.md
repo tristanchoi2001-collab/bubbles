@@ -155,6 +155,10 @@
 | B36 | Kumagai, Kaino & Takeyama (1979) | Trans. JSME B 45(399):1723-1731 | 10.1299/kikaib.45.1723 | 냉각판을 가열면에 접근시킨 얇은 틈의 비등(1보, 주위 개방) | 제목 수준 | 그림 | [H] 갭 축의 고전 | C(제목) |
 | B37 | Koizumi T, Kamiya, Ito & Tange (2014) | Proc. Thermal Eng. Conf. 2014, A125 | 10.1299/jsmeted.2014._A125-1_ | 준2차원 공간 비등, 흐름 구조·액막 가시화로 열전달 평가 | 제목 수준(2쪽 강연 초록) | 그림 | [H] 영상 → 열전달 | C(제목) |
 | B38 | 기타 갇힌 풀 비등 [lit_2 #20~29] | Bonjour & Lallemand 1998, Passos 2004, Geisler & Bar-Cohen 2009, Kapitz 2019, Nunes 2020(물·1 mm·Bo_s 0.4), Kim JS 2020, Rukhsar 2024·2025(덮개 젖음성), Utaka 2009 | lit_2 표 참고 | 0.1~13 mm, 여러 유체 | 갇힘 지도, h·CHF | 그림 | [H][C] | lit_2 기준 |
+| B39 | Al-Zaidi, Mahmoud, Ivanov & Karayiannis (2025) | Int. J. Heat Mass Transfer 242:126830 (CC BY, Brunel 공개본) | 10.1016/j.ijheatmasstransfer.2025.126830 | **1(갭)** × 20(폭) × 25(길이) mm, 수평, HFE-7100, 무산소 구리 가열 블록(Ra 0.12 µm), 폴리카보네이트 단열 덮개 | 위에서 고속 촬영(Phantom Miro-C210, 1800 fps, 1280 × 1024, 현미경), 열전대는 표면 아래 3.5 mm 한 줄. 입구 과냉 5 K, 1·2 bar, G 100~200 kg/m²s, q ≤ 84 kW/m²(출구 건도 ≤ 0.13, 합체 시작 전). 활성 핵 밀도·기포 빈도 143~500 Hz·이탈 지름 0.09~0.33 mm, 새 상관식(MAE 6~15%) | 그림·식 | [H] 논문 2의 시험부와 가장 비슷한 비등 선례(1 mm, 위 촬영, 매립 열전대). 이탈 지름이 갭보다 훨씬 작다(HFE-7100 σ 작음). 물은 모세관 길이가 약 3배라 1 mm에서 곧 팬케이크 | C+F(2026-10-24 원문) |
+| B40 | Al-Zaidi, Mahmoud, Ivanov & Karayiannis (2023); 같은 그룹 MHMT 2025 ENFHT 151 | Proc. IHTC-17, 10.1615/ihtc17.490-100; Avestia 학회 논문 | 10.1615/ihtc17.490-100 | 같은 1 mm 마이크로갭 대 미세 다채널(·미세 핀) | 흐름 비등 h·ΔP·불안정 비교. 마이크로갭과 핀은 불안정이 덜함(검색 요약) | 학회 | [H] 갭 유로와 다채널의 비교 선례 | C(검색 요약) |
+| B41 | Al-Zaidi, Mahmoud & Karayiannis (2024) | Int. J. Heat Mass Transfer 224:125376 (CC BY) | 10.1016/j.ijheatmasstransfer.2024.125376 | 자료집: R134a·R245fa·HFE-7100·HFE-7200, D_h 0.46~4.26 mm, 가열 길이 20~500 mm, 1~14 bar | 흐름 비등 ΔP 상관식 평가와 새 상관식(가속·마찰·중력 분리, L–M, 기공률) | 식 | [P] 가열 운전 ΔP 비교 기준 후보(형식은 원문 확인 필요) | C(Brunel 초록) |
+| B42 | Costa, Moreira & Ribatski (2026) | Int. J. Heat Mass Transfer 271:129327 (CC BY) | 10.1016/j.ijheatmasstransfer.2026.129327 | 테이퍼 열린 매니폴드 마이크로갭, HFO1336mzz(Z), 흐름 방향 변화 | 흐름 비등 열·수력 성능 대 방향 | 그림 | [H] 방향(수평/수직) 영향의 최신 자료 | C(메타데이터만) |
 
 ## 3. Hele-Shaw 기포 — 크기 대 속도(이동도) 자료
 
