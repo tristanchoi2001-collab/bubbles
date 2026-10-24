@@ -23,6 +23,7 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
     s̄        B(1 − α)/α (B = jG/jL, 유량계), s̄_T = B_f(1 − α)/α (B_f = 영상 기체 유량 / jL, 추적)
     E        dp_tp/dp_l − 1,  y = E(1 − α)/α,  x = 1 − s̄
     예측     원형 폐합 y = 1 + x, 모양 폐합 y = 1 + (b/a)x, 분리류 y = 1, 균질류 y = 1 − x
+             기포별 y_track = ΣA_i[1 + (b/a)_i(1 − s_i)]/ΣA_i, s_i = u_i(1 − α)/jL (추적 속도, 유량계 불필요)
     Re_B     ρH²u_B²/(μ w_B u_L) (Moriyama & Inoue 1993), Λ = ρ u_L H²/(10 μ d̄)
 쐐기 보정(β_f)과 배치 보정(I74)은 넣지 않았다. 숫자를 논문에 쓰기 전에 윤곽 규약(I48)과 기체 유량 폐합으로 α를 점검한다.
 """
@@ -77,6 +78,7 @@ def analyse_point(p):
 
     alpha_t, flux_t = [], []
     w_area = w_ba = w_u = w_d = w_w = 0.0
+    per_bubble = []                                         # (A, b/a, u) — 기포마다의 예측 y_track용
     for f, rs in frames.items():
         a_sum = flux = a_known = 0.0
         for r in rs:
@@ -104,6 +106,7 @@ def analyse_point(p):
             w_u += A_px * u
             w_d += A_px * d
             w_w += A_px * 2 * A_px / (math.pi * a_px) * px
+            per_bubble.append((A_px, ba, u))
         alpha_t.append(a_sum / roi)
         flux_t.append(flux / roi * (a_sum / a_known) if a_known > 0 else float("nan"))
 
@@ -123,10 +126,13 @@ def analyse_point(p):
     u_l = jl / (1 - alpha)
     re_b = rho * H * H * u_b * u_b / (mu * w_b * u_l) if w_area else float("nan")
     lam = rho * u_l * H * H / (10 * mu * d_bar) if w_area else float("nan")
+    # 기포마다: s_i = u_i/U_m(U_m = jL/(1 − α)), y_track = ΣA_i[1 + (b/a)_i(1 − s_i)]/ΣA_i (유량계 없이, 모양–이동도 상관 포함)
+    y_track = (sum(A * (1 + ba_i * (1 - u / u_l)) for A, ba_i, u in per_bubble) / sum(A for A, _, _ in per_bubble)
+               if per_bubble else float("nan"))
     return {
         "name": p["name"], "H_mm": H * 1e3, "alpha": alpha, "B": B, "B_f": B_f, "s_bar": s_bar, "s_bar_T": s_bar_t,
         "E": E, "x": x, "y": y, "b_over_a": ba,
-        "y_circle": 1 + x, "y_shape": 1 + ba * x, "y_separated": 1.0, "y_homogeneous": 1 - x,
+        "y_circle": 1 + x, "y_shape": 1 + ba * x, "y_track": y_track, "y_separated": 1.0, "y_homogeneous": 1 - x,
         "u_bubble": u_b, "d_bar_mm": d_bar * 1e3, "Re_B": re_b, "Lambda": lam, "frames": len(alpha_t),
     }
 
@@ -219,7 +225,7 @@ def main():
     plot(res, os.path.join(a.out, "plane.png"))
     for r in res:
         print(f"{r['name']}: α {r['alpha']:.3f}, b/a {r['b_over_a']:.2f}, s̄ {r['s_bar']:.2f} (추적 {r['s_bar_T']:.2f}), "
-              f"x {r['x']:.2f}, y {r['y']:.2f} (원형 {r['y_circle']:.2f}, 모양 {r['y_shape']:.2f}), Re_B {r['Re_B']:.2f}, Λ {r['Lambda']:.3f}")
+              f"x {r['x']:.2f}, y {r['y']:.2f} (원형 {r['y_circle']:.2f}, 모양 {r['y_shape']:.2f}, 기포별 {r['y_track']:.2f}), Re_B {r['Re_B']:.2f}, Λ {r['Lambda']:.3f}")
 
 
 if __name__ == "__main__":
