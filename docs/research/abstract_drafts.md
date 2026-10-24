@@ -63,3 +63,21 @@ Air injection can raise or lower heat transfer in narrow channels, and image-bas
 - "영상 → 열전달은 이미 있다(Huang 2024 등)" → 그들은 채널 하나·비등·회귀다. 우리는 갭 여러 개·비등 없음·물리 모델·역열전도다.
 - "증발이 작으면?" → 50 °C 이하 결과만으로도 접촉·갱신 모델이 선다. 증발은 70 °C 이상의 추가 결과로 둔다.
 - "가열 운전의 ΔP 차이는 점성 변화 때문 아니냐" → 기포가 벽 온도를 1 K 바꿀 때 마찰이 약 0.5~0.9% 바뀌어 E로 0.005~0.03이 된다(판별력과 같은 크기). 그래서 증발 판정은 거의 등온 운전으로 한다.
+
+## 논문 2 — 속도 중심판 (2026-10-24, I90·I92·I94·I96·I97)
+
+**제목 후보**
+- Bubble velocities from image tracking predict film, evaporation and heat transfer of air injection in heated narrow gaps
+- From friction to heat: tracked pancake-bubble velocities set the wall films that govern heat transfer in heated microgaps
+
+**초록 (영문 초안)**
+Injecting air into a heated narrow gap changes heat transfer through three bubble-scale processes: conduction and evaporation through the thin liquid film under each bubble footprint, renewal of the thermal boundary layer between bubbles, and evaporation into the bubbles. All three are set by bubble kinematics. The capillary number of a tracked bubble sets its film thickness (h_f ≈ 0.67·H·Ca^(2/3) for clean interfaces). The friction coefficient measured from the adiabatic pressure drop with the same tracked velocities [paper 1] tells whether the interfaces are clean or rigid, and hence the film thickness to within [..]%. Passage statistics from tracking give the residence and renewal times at every wall point. The downstream growth of the imaged gas flux, Σ A·h_g·V, measures the evaporation rate along the channel without a model of the gas phase. In gaps of [0.3, 0.7, 1] mm at wall temperatures of 50–90 °C, a kinematic model built from these quantities predicts the local heat transfer coefficients obtained by image-informed inverse conduction from embedded thermocouples within [..]%, and the latent fraction of the heat input within [..]. Velocity fluctuations of tracked bubbles act as an in-situ flowmeter and reveal the onset of flow oscillations before the pressure signal does. On the steel heater, velocity modulation over machined grooves gives the pinning force per groove, which [does/does not] correlate with the dark footprint contrast that would indicate dry patches.
+
+**초록 (한국어 대역)**
+가열된 좁은 갭에 공기를 넣으면 기포 크기의 세 과정이 열전달을 바꾼다. 각 기포 발자국 밑 얇은 액막을 통한 전도와 증발, 기포 사이 열경계층의 재생, 기포 안으로의 증발이다. 셋 모두 기포 운동학이 정한다.
+- 추적한 기포의 모세관 수가 막 두께(깨끗한 계면이면 h_f ≈ 0.67·H·Ca^(2/3))를 정한다.
+- 같은 추적 속도로 단열 압력 강하에서 잰 마찰 계수[논문 1]가 계면이 깨끗한지 굳었는지, 따라서 막 두께를 [..]% 안으로 알려 준다.
+- 추적의 통과 통계는 벽 위 모든 점의 머무름·재생 시간을 준다.
+- 영상 기체 유량 Σ A·h_g·V의 하류 증가는 기체상 모형 없이 길이 방향 증발률을 잰다.
+[0.3, 0.7, 1] mm 갭, 벽 온도 50~90 °C에서 이 양들로 만든 운동학 모형이 매립 열전대의 영상 정보 역열전도로 얻은 국소 열전달 계수를 [..]% 안으로, 열 입력 중 잠열 몫을 [..] 안으로 예측한다. 추적 기포의 속도 요동은 시험부 안 유량계가 되어, 압력 신호보다 먼저 유량 진동의 시작을 보여 준다. 철 가열면에서는 가공 홈 위의 속도 변조로 홈 하나의 고정력을 재고, 그것이 마른 자리를 뜻하는 어두운 발자국 대비와 상관이 [있는지/없는지] 본다.
+
