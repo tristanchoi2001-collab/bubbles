@@ -274,6 +274,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/s0017-9310(83)80108-2	OK	yao	1983	Pool boiling heat transfer in a confined space	International Journal of Heat and Mass Transfer	2_boiling_gap,check
 10.1016/s0017-9310(96)85017-4	OK	houston	1996	Heat transfer to sliding bubbles on a tube under evaporating and non-evaporating conditions	International Journal of Heat and Mass Transfer	10_ideas,4_heat_transfer,check
 10.1016/s0017-9310(97)00167-1	OK	wu	1998	One-group interfacial area transport in vertical bubbly flow	International Journal of Heat and Mass Transfer	8_iate_coalescence,check
+10.1016/s0017-9310(99)00297-5	OK	bao	2000	An experimental study of gas–liquid flow in a narrow conduit	International Journal of Heat and Mass Transfer	14_jstage
 10.1016/s0017-9310(99)00325-7	OK	hibiki	2000	One-group interfacial area transport of bubbly flows in vertical round tubes	International Journal of Heat and Mass Transfer	8_iate_coalescence,check
 10.1016/s0029-5493(00)00286-7	OK	hibiki	2000	Two-group interfacial area transport equations at bubbly-to-slug flow transition	Nuclear Engineering and Design	8_iate_coalescence,check
 10.1016/s0029-5493(00)00306-x	OK	hibiki	2001	Flow regime transition criteria for upward two-phase flow in vertical narrow rectangular channels	Nuclear Engineering and Design	10_ideas,1_adiabatic_gap,7_closest_novelty,9_data,check
@@ -285,6 +286,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/s0255-2701(02)00208-8	OK	malayeri	2003	Neural network analysis of void fraction in air/water two-phase flows at elevated temperatures	Chemical Engineering and Processing: Process Intensification	12_ideas3,check
 10.1016/s0301-9322(00)00050-1	OK	ju lee	2001	Pressure drop correlations for two-phase flow within horizontal rectangular channels with small heights	International Journal of Multiphase Flow	1_adiabatic_gap,3_pressure_drop,7_closest_novelty,9_data,check
 10.1016/s0301-9322(01)00054-4	OK	lee	2001	Heat transfer correlation for boiling flows in small rectangular horizontal channels with low aspect ratios	International Journal of Multiphase Flow	2_boiling_gap,4_heat_transfer,7_closest_novelty,9_data,check
+10.1016/s0301-9322(02)00010-1	OK	vlasogiannis	2002	Air–water two-phase flow and heat transfer in a plate heat exchanger	International Journal of Multiphase Flow	14_jstage
 10.1016/s0301-9322(02)00037-x	OK	kawahara	2002	Investigation of two-phase flow pattern, void fraction and pressure drop in a microchannel	International Journal of Multiphase Flow	1_adiabatic_gap,3_pressure_drop,6_measurement,check
 10.1016/s0301-9322(02)00129-5	OK	takamasa	2003	Interfacial area transport of bubbly flow under microgravity environment	International Journal of Multiphase Flow	8_iate_coalescence,check
 10.1016/s0301-9322(97)00055-4	OK	hetsroni	1998	Heat transfer in intermittentair–water flows—Part I	International Journal of Multiphase Flow	4_heat_transfer,check
@@ -414,6 +416,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1073/pnas.1517384113	OK	brunton	2016	Discovering governing equations from data by sparse identification of nonlinear dynamical systems	Proceedings of the National Academy of Sciences	5_ai_image,check
 10.1080/00221681003726262	OK	pozos	2010	Experimental investigation of air pockets in pumping pipeline systems	Journal of Hydraulic Research	12_ideas3,check
 10.1080/00295450.2026.2619821	OK	khandelwal	2026	Two Phase Flows in Narrow Rectangular Channels	Nuclear Technology	7_closest_novelty,check
+10.1080/01457630118144	OK	c. tribbe, h. m. muller-steinhagen	2001	Gas/Liquid Flow in Plate-and-Frame Heat Exchangers - Part I: Pressure Drop Measurements	Heat Transfer Engineering	14_jstage
 10.1080/01457630500523980	OK	english	2006	An Experimental Investigation into the Effect of Surfactants on Air-Water Two-Phase Flow in Minichannels	Heat Transfer Engineering	3_pressure_drop,check
 10.1080/01457630802656678	OK	bar-cohen	2009	Modeling and Prediction of Two-Phase Microgap Channel Heat Transfer Characteristics	Heat Transfer Engineering	7_closest_novelty,9_data,check
 10.1080/01457630903500833	OK	ghajar	2010	Importance of Non-Boiling Two-Phase Flow Heat Transfer in Pipes for Industrial Applications	Heat Transfer Engineering	4_heat_transfer,7_closest_novelty,check

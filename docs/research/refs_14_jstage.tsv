@@ -5,3 +5,6 @@ doi	first_author	year	short_title	level	note
 10.3811/jjmf.23.436	Sukawa	2009	Pressure drop fluctuation characteristics of gas-liquid two-phase flow in a narrow channel	C+A	I46·I67 참고. 混相流 23:436. 2 mm 정사각 유로(연료전지 분리판), 직선부 ΔP 변동은 L-M 매개변수로 정리, 급 180° 굽힘·발수 처리 영향
 10.11368/nhts.2010.0.221.0	原村	2010	Heat flux distribution on a heat transfer surface with coexisting wet and dry areas	C+A	I59 방법 선례. 전열 심포지엄 2010. 표면 아래 0.5 mm 열전대 약 70개 + 1 kHz + 고속 영상 동기, 3차원 비정상 순문제 + 1차원 비정상 역문제로 표면 열유속(제한 풀 비등)
 10.3811/jjmf.2020.012	Torisaki	2020	Gas-liquid two-phase flow image analysis using a bubble detection algorithm	C+A	영상 AI 선례(일본). 混相流 2020.012. 기계학습으로 고속 영상에서 기포 특성 검출, 흐름 양식 식별 자동화
+10.1016/s0017-9310(99)00297-5	Bao	2000	An experimental study of gas-liquid flow in a narrow conduit	C	논문 2 배경. IJHMT 43:2313-2324. 좁은 관의 공기-물 비비등 흐름·열전달(원문 미확인)
+10.1016/s0301-9322(02)00010-1	Vlasogiannis	2002	Air-water two-phase flow and heat transfer in a plate heat exchanger	C	논문 2 배경. IJMF 28:757-772. 판형 열교환기(좁은 주름 유로) 공기-물 혼합 냉측 열전달(원문 미확인, 저유량에서 공기 주입 효과가 크다는 2차 언급)
+10.1080/01457630118144	Tribbe	2001	Gas/liquid flow in plate-and-frame heat exchangers - Part I: pressure drop measurements	C	판형 열교환기 기액 ΔP(Part II는 10.1080/01457630150215686, 이상류 배율·양식)
