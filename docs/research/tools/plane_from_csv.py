@@ -15,6 +15,7 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
     fps           촬영 속도(frame/s)
     flow          영상에서 흐름 방향: up(투명 채널 기본, y가 줄어드는 쪽) / down / right(철 채널 기본) / left
     mu, rho       액체 점도(Pa·s)·밀도(kg/m³). 비우면 물 20 °C
+    T_tp, T_l     (선택) 이상류·단상 측정 때 수온(°C). 둘 다 있으면 dp_l을 물 점도 비 μ(T_tp)/μ(T_l)로 보정
 
 계산 (모두 "갭을 채운 기포", 즉 등가직경 d > 2H만 쓴다)
     α        프레임마다 Σ ROI内面積 / ROI 면적의 평균
@@ -36,7 +37,12 @@ from collections import defaultdict
 import numpy as np
 
 WATER = (1.0e-3, 998.0)
-COLS = ["name", "H_mm", "jL", "jG", "dp_tp", "dp_l", "tracking_csv", "roi_area_px", "px_mm", "fps", "flow", "mu", "rho"]
+COLS = ["name", "H_mm", "jL", "jG", "dp_tp", "dp_l", "tracking_csv", "roi_area_px", "px_mm", "fps", "flow", "mu", "rho", "T_tp", "T_l"]
+
+
+def mu_water(t_c):
+    """물 점도(Pa·s), Vogel형 근사 A·10^(B/(T − C)). 비(ratio) 보정용."""
+    return 2.414e-5 * 10 ** (247.8 / (t_c + 273.15 - 140.0))
 
 
 def _f(v, default=float("nan")):
@@ -64,7 +70,10 @@ def analyse_point(p):
     px = _f(p["px_mm"]) * 1e-3
     fps = _f(p["fps"])
     roi = _f(p["roi_area_px"])
-    mu = _f(p.get("mu"), WATER[0])
+    mu = _f(p.get("mu"), float("nan"))
+    if mu != mu:
+        t0 = _f(p.get("T_tp"))
+        mu = mu_water(t0) if t0 == t0 else WATER[0]
     rho = _f(p.get("rho"), WATER[1])
     ax, sgn = axis_of((p.get("flow") or "up").strip())
     rows, speed_col = read_tracking(p["tracking_csv"])
@@ -116,7 +125,11 @@ def analyse_point(p):
     B_f = jg_img / jl
     kappa = (1 - alpha) / alpha if alpha > 0 else float("nan")
     s_bar, s_bar_t = B * kappa, B_f * kappa
-    E = _f(p["dp_tp"]) / _f(p["dp_l"]) - 1
+    dp_l = _f(p["dp_l"])
+    t_tp, t_l = _f(p.get("T_tp")), _f(p.get("T_l"))
+    if t_tp == t_tp and t_l == t_l:
+        dp_l *= mu_water(t_tp) / mu_water(t_l)           # 수온 1 K 차이 = 약 2.4 %
+    E = _f(p["dp_tp"]) / dp_l - 1
     y = E * kappa
     x = 1 - s_bar
     ba = w_ba / w_area if w_area else float("nan")
