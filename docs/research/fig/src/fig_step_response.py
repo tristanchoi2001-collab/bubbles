@@ -90,7 +90,7 @@ for ax in axs:
     ax.grid(axis="y", color=GRID, lw=0.8)
     ax.set_axisbelow(True)
     ax.set_xlabel("time after switching the gas (s)")
-axs[0].text(4.6, 1 / (1 - BETA) - 0.006, "jump = 1/(1 \u2212 \u03b2) while the tap section is still\nliquid-only \u2192 \u03b2 without a flowmeter (0.3\u20130.7 mm)",
+axs[0].text(4.6, 1 / (1 - BETA) - 0.006, "jump = 1/(1 \u2212 \u03b2) while the tap section is still\nliquid-only \u2192 \u03b2 without a flowmeter",
             fontsize=8, color=INK2, va="top")
 axs[0].text(5.2, 1.0 + 0.012, "liquid only, j_L", fontsize=8, color=INK2, va="bottom")
 axs[1].text(3.0, 0.93, "s\u0304 > 1: dips below the liquid-only value", fontsize=8, color=INK2, va="center")
@@ -102,7 +102,7 @@ axs[1].set_xlim(0, 10)
 axs[0].legend(frameon=False, fontsize=8, loc="lower right")
 fig.suptitle("Expected \u0394P transient (toy model): the curve shape shows whether bubbles outrun the mixture (s\u0304 > 1), lag it, or are mixed",
              fontsize=10, color=INK, x=0.01, ha="left")
-fig.text(0.01, -0.08, f"Model: 1D bubble transport, two size classes sharing the gas flux 50/50, j_L = {J_L} m/s, \u03b2 = {BETA}, injector-to-tap {X1*1000:.0f} mm, tap spacing {L*1000:.0f} mm, mobility s fixed per class.\n"
+fig.text(0.01, -0.08, f"Model: 1D bubble transport, two size classes sharing the gas flux 50/50, j_L = {J_L} m/s, \u03b2 = {BETA}, injector-to-tap {X1*1000:.0f} mm, tap spacing {L*1000:.0f} mm, mobility s fixed per class; the jump gives useful \u03b2 precision at 0.3\u20130.7 mm.\n"
          "Local closure G/G_L(j_L) = [U(1 + \u03b1) \u2212 \u03a3\u03b1V]/j_L (2D effective medium); each bubble adds 2(1 \u2212 V/j_tot), so fast bubbles lower \u0394P and mixed sizes give non-monotonic curves.\n"
          "s\u0304 > 1 depends on bubble size and Ca as well as contamination (small clean pancakes have s < 1). (1 \u2212 \u03b2)\u00b7ON(t) + OFF(t/(1 \u2212 \u03b2)) = const if bubbles do not interact. Shapes only.",
          fontsize=7.2, color=MUTED)
