@@ -76,10 +76,11 @@
    - `groove_spectrum.csv`: 봉우리/주변 비가 크고 δV/V̄가 몇 % 이상이면 홈이 기포를 붙잡는다. F_pin은 홈 하나의 고정력 진폭이고, 유속이 느릴수록 커질 것으로 예상한다(I51의 An ∝ 1/Ca).
 4. 속도–크기 곡선(I95): result_tracking.csv의 속도를 크기 구간별 중앙값으로 그려 꺾임을 본다. 폭을 채우면 평탄해진다.
 5. 압력계가 같이 있으면 `plane_from_csv.py`(흐름 right)로 힘 균형 E_vel과 k_fit을 본다. 1 mm는 기포당 수 Pa라 차압 분해능 0.5 Pa 근처가 필요하다(I89).
-6. 속도 요동(I99·I100, 압력 불필요): `python docs/research/tools/velocity_fluctuations.py --csv <OUTPUT_FOLDER>/result_tracking.csv --px_mm <화소 크기> --fps <촬영 속도> --H_mm 1 --flow right --k 4 --out vf_out`
+6. 속도 요동(I99는 압력·국소장 불필요, I100은 국소장 필요): `python docs/research/tools/velocity_fluctuations.py --csv <OUTPUT_FOLDER>/result_tracking.csv --px_mm <화소 크기> --fps <촬영 속도> --H_mm 1 --flow right --k 4 --out vf_out`
    - 먼저 `--demo`로 자가 시험(약 1분)을 돌린다.
-   - 가로 요동 폭(코시 척도 γ_c)은 Σα|λ|를 말한다. d/H ≈ 10(이동도 1)에서 가장 작아야 한다.
-   - 국소장 U_loc(m/s)을 알면(차압이 거칠면 U_loc = j_L/(1 − α): 원형 평균장 폐합을 넣으면 (U_P + J)/2가 정확히 이 값이 된다. j_L = Q_L/(W·H), 유량계 L/min을 m³/s로, α는 영상) `--U_loc <값> --regress --walls <두 측벽의 가로 좌표 px>`로 회귀형 비 R_reg와 마찰 지수 m_reg를 낸다. 막(m 2/3)이면 R_reg 1.1~1.4, 마른 접촉선(m ≈ 0)이면 1 + Δ(2~6)다. I98(밝기)과 독립인 두 번째 증거다.
+   - 가로 요동 폭(코시 척도 γ_c)은 Σα|λ|를 말한다. d/H ≈ 10(이동도 1)에서 가장 작아야 한다. 크기별 |λ|는 `abs_lambda_fwd`(실제 배치의 λ = 1 장으로 나눔)를 본다. `abs_lambda_eff`(g 식)는 큰 기포에서 절반쯤 틀린다(검토 7).
+   - 위치 잡음이 프레임 사이에 상관이 있으면(카메라 진동 등) 2차 차분이 잡음을 작게 낸다 → 정지 기포로 잰 잡음을 `--noise_px`로 준다. 잡음이 가로 폭의 절반을 넘으면 경고가 나온다.
+   - 국소장 U_loc(m/s)을 알면(차압이 거칠면 U_loc = j_L/(1 − α): 원형 평균장 폐합을 넣으면 (U_P + J)/2가 정확히 이 값이 된다. j_L = Q_L/(W·H), 유량계 L/min을 m³/s로, α는 영상) `--U_loc <값> --regress --walls <두 측벽의 가로 좌표 px>`로 회귀형 비 R_reg와 마찰 지수 m_reg를 낸다. 막(m 2/3)이면 R_reg 1.1~1.4, 마른 접촉선(m ≈ 0)이면 1 + Δ(2~6)다. I98(밝기)과 독립인 두 번째 증거다. 합성 시험의 편향은 −0.6%(m 0.672 대 0.667)다. `--walls`면 측벽 자기 거울상을 뺀 `R_reg_noself`도 나온다. 가로 기울기가 s와 20%쯤 어긋나는 것은 막 기억일 수 있다(U_loc 오류로 바로 읽지 않는다).
    - 철 바닥 홈이 흐름 방향 요동을 더하면 `--smooth <홈 한 주기의 프레임 수>`로 지운다(두 방향에 똑같이 건다).
 7. 표류 지도(I105, 압력 불필요): `python docs/research/tools/drift_map.py --csv <OUTPUT_FOLDER>/result_tracking.csv --px_mm <화소 크기> --fps <촬영 속도> --H_mm <갭> --flow right --U_loc <j_L/(1 − α)> --walls <두 측벽 px> --out dm_out`
    - 저유속 운전부터 본다(표류각 ∝ 1/U). tanφ가 가운데를 향하는 반대칭이면 덮개 처짐, 한쪽으로 균일하면 기울임 또는 갭 쐐기다. 투명 채널 자료에도 똑같이 쓴다.
@@ -107,7 +108,7 @@
 | `tools/added_mass_bem.py` | 기포 윤곽 또는 마스크 → 2차원 부가질량 계수 C_A(폐합 모양 인자 c = 1 + C_A, I81). 원·타원·45° 타원 이론과 일치. 마스크는 marching squares + 푸리에 평활(화소 원판 R ≥ 10 px에서 0.4% 안), 흐름 방향 회전(flow) |
 | `tools/darcy_disks.py` | 주기 상자 속 무작위 원판(국소장의 s배로 움직이는 원 = 전도도 s/(2 − s) 원판)의 2차원 Darcy 계산 → E, B, 배치마다 Q(주기 상). `--sweep out.json`이 α 0.05~0.4 × s 3개 × 배치 2개(약 9분). 그림 r13(I82)의 계산 |
 | `tools/steel_velocity_checks.py` | 철 채널 기존 영상(추적 CSV + instances npz + 원본·배경)으로 속도 시험 두 가지. I98: 같은 크기·같은 화면 위치에서 기포 안쪽 밝기 ΔI 대 속도 잔차(트랙 단위 부트스트랩 구간) → 마른 자리/막 광학/갇힌 빛. I96: 트랙별 속도 스펙트럼의 홈 주파수 V̄/λ_g 진폭 → δV/V̄와 홈 고정력 F_pin ≈ (2/3)·D·δV/V̄. `--demo`(합성: 기울기 +20, 변조 8% 되돌림) |
-| `tools/velocity_fluctuations.py` | 추적 CSV만으로 속도 요동의 폭(I99: Σα|λ|)과 흐름/가로 비(I100: 마찰 지수 m)를 낸다. 중심 좌표 차분, 프레임·구분 공통 요동 제거, 위치 잡음(2차 차분) 추정, 코시⊗정규 분위수 맞춤, 트랙 부트스트랩. `--regress`는 프레임마다 계산한 쌍극자 장(측벽 거울상)에 회귀해 배치 비등방을 지운다. `--demo`: 쌍극자 상호작용을 넣은 합성 추적 331개 × 260프레임으로 12개 항목 점검 |
+| `tools/velocity_fluctuations.py` | 추적 CSV만으로 속도 요동의 폭(I99: Σα|λ|)과 흐름/가로 비(I100: 마찰 지수 m)를 낸다. 중심 좌표 차분, 프레임·구분 공통 요동 제거, 위치 잡음(2차 차분) 추정, 코시⊗정규 분위수 맞춤, 트랙 부트스트랩. `--regress`는 프레임마다 계산한 쌍극자 장(측벽 거울상: 다른 기포 n = −4…4, 자기 거울상 닫힌 식)에 회귀해 배치 비등방을 지운다. 순방향 |λ|_fwd(λ = 1 장 폭으로 환산), 공통 요동은 모든 구분의 프레임 편차에 대한 회귀, 구분 안 크기 의존은 Theil–Sen. `--demo`: 합성 추적 331개 × 260프레임(주기 경계 접촉 필터)으로 13개 항목 점검(R_reg 2%, m ±0.03) |
 | `tools/drift_map.py` | 추적 CSV로 가로 위치별·크기별 표류각 tanφ(I105)와 흐름 방향 속도 분포를 내고, 표류각을 적분한 갭 분포 ΔH(c)가 흐름 방향 속도 ∝ H²를 함께 설명하는지 본다. 균일 성분(기울임 대 갭 쐐기)은 흐름 방향 속도의 가로 경향으로 가른다. `--demo`: 덮개 처짐 3 µm + 기울임 20 mrad 합성 자가 시험 |
 | `../refs_microgap.bib`, `refs_check.tsv`, `make_bib.py` | 참고문헌(Crossref·DataCite·doi.org 대조) |
 | `PROGRESS.md` | 작업 기록, 비용 규칙, 접속 상태 |

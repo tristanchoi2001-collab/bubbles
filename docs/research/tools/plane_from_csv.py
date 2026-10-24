@@ -62,6 +62,7 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
                온전한 프레임이 없는 트랙은 보이는 면적 그대로 세고 그 면적 비를 cut_noref_alpha로 낸다.
              갭보다 작은 기포(d ≤ 2H): 마찰 법칙이 다르므로 빼고 그 면적 비를 alpha_subgap으로 낸다.
              속도 없는 기포(새 트랙 등): 마찰 둘레 항은 둘레(Σw·a) 비로, 유량·멈춘 몫·면적 항은 면적 비로 채운다.
+               모든 기포의 속도가 없는 프레임(영상 첫 프레임 등)은 P_m·α_멈춤 평균에서 빠지고 α 평균에는 들어간다(무작위 결측이면 무해, 검토 7 #17).
              k_fit = (E − E_stuck)/P_2/3는 측정 ΔP가 말하는 마찰 계수다(17 근처 깨끗, 21~43 잘 녹는 계면활성제).
              모양 배율(검토 6 #16d): 메니스커스 마찰은 둘레의 ∫|n_x|^(m+1)ds라 같은 면적이라도 가로로 넓은 기포가 더 크다.
                타원(흐름 방향 반축 a, 가로 반축 b)에서 등가 반경 원 대비 S(b/a) = 0.69(0.6), 0.86(0.8), 1.17(1.27), 1.30(1.5),
@@ -70,8 +71,11 @@ points.csv (UTF-8, 운전점 한 줄씩. 열 이름은 영어)
                (오염 신호 ×1.26과 같은 크기). k_fit_circle = 원 공식의 값(비교용). D형·총알 모양은 타원이 아니라 몇 % 다르다.
              P_area = (H/(12μ j_L))·σ·⟨Σ w·(a²/H)·Ca^(1/3)⟩/A_ROI는 굳은 막 미끄럼의 발자국 막 전단 항이다(계수 6.86).
              여러 운전점이면 friction_fit.csv(m 격자마다 로그 잔차)와 friction_fit_summary.csv를 낸다.
+               모든 점에 se_E가 있으면(점 표의 dp_tp_se 등) 로그 공간에서 1/σ²_lnE로 가중한다(요약의 weighted).
                m = 2/3 고정 k(2점 이상), 지수 맞춤과 2항 맞춤 k1·P_2/3 + k2·P_area(5점 이상, 운전점 부트스트랩 95% 구간).
                m과 k는 거의 완전히 상관한다. "굳은 계면 = 지수 1/2"은 근거가 없어 지웠다(검토 6).
+             측벽(I101, 검토 7): 폭 W 채널의 가로 위치 y₀에 있는 기포는 자기 거울상 때문에 국소장이 −λG(G = (πa/2W)²[1/sin²(πy₀/W) + 1/3])만큼
+               바뀌고 접선 이동도로 응답한다 → s_starW_* = 그것을 뺀 이동도(m 2/3 가정). 폭 20 mm에서 d/H 30(0.3 mm) 기포는 가운데서도 약 −9%.
              이동도 붕괴: s* = 2u/(U_P + J)(원형), s*_C = u(1 + C)/(U_P + C·J)(모양 국소장, C = 기포의 b/a), U_P = j_L(1 + E),
                J = j_L + j_G. d/H 구간별 면적 가중 평균, 같은 구간의 V/J와 Booth 좌표 δ_B = 1.12·Ca_loc^(1/3)·d/H
                (Ca_loc = μ(U_P + J)/(2σ))를 함께 낸다. 깨끗한 막이면 s^(2/3)/(2 − s) = δ_B 한 곡선에 놓인다.
@@ -121,6 +125,34 @@ def _shape_table():
             rows.append([trap(r ** (m + 1) * c ** (m + 1) * (s2 + r * r * c2) ** (-m / 2)) / (ref * np.sqrt(r)) for r in _SR])
         _ST = np.array(rows)
     return _ST
+
+
+def wall_G(a_px, y0_px, W_px):
+    """두 측벽 사이 원형 기포의 자기 거울상 인자 G = (πa/2W)²[1/sin²(πy₀/W) + 1/3](I101, 거울상 직접 합과 일치).
+    국소장 변화 u'_x/U = −λG(λ = s − 1). 벽 하나 극한(y₀ → 0)은 (a/2y₀)²."""
+    y0 = min(max(y0_px, 1e-6 * W_px), W_px * (1 - 1e-6))
+    return (math.pi * a_px / (2 * W_px)) ** 2 * (1 / math.sin(math.pi * y0 / W_px) ** 2 + 1 / 3)
+
+
+def s_wall_correct(s_m, G, m=2 / 3):
+    """측정 이동도 s_m에서 측벽 자기 거울상을 뺀 무한 폭 이동도 s를 푼다(검토 7 #13).
+    s_m = s·(1 − R(s)·(s − 1)·G), R = (1 + Δ)/(1 + mΔ), Δ = 2/s − 1: 흐름 방향 국소장 변화에는 접선 이동도로 응답한다(I100).
+    m은 깨끗한 막 2/3을 기본으로 둔다(R 1.08~1.4). 보정이 95%를 넘는 근거리(a/W ≳ 0.2, 벽 바로 옆)는 풀지 않고 s_m을 돌려준다.
+    그 범위는 Booth 외 2023의 정확해(원형 기포, Hele-Shaw 채널)를 써야 한다."""
+    if not (G == G and G > 1e-12 and s_m == s_m and s_m > 0):
+        return s_m
+    s = s_m
+    for _ in range(100):
+        dl = max(2 / s - 1, 0.0)
+        R = (1 + dl) / (1 + m * dl)
+        den = 1 - R * (s - 1) * G
+        if den < 0.05:
+            return s_m
+        s_new = s_m / den
+        if abs(s_new - s) < 1e-12:
+            return s_new
+        s = 0.5 * s + 0.5 * s_new
+    return s
 
 
 def shape_factors(ba):
@@ -336,7 +368,7 @@ def analyse_point(p, out_dir=None):
     use_shape = (p.get("shape_friction") or "1").strip() not in ("0", "no", "false")
     stuck_t, subgap_t = [], []                              # 멈춘 기포(s* < stuck_s)와 갭보다 작은 기포(d ≤ 2H)의 면적 비
     frame_rows = []
-    vel_bub = []                                            # [A, d/H, u, b/a] — 이동도 붕괴용(I91), 움직이고 잘리지 않은 기포
+    vel_bub = []                                            # [A, d/H, u, b/a, 가로 위치] — 이동도 붕괴용(I91), 움직이고 잘리지 않은 기포
     n_cut = n_cut_fixed = 0
     cut_noref = 0.0
     w_area = w_ba = w_u = w_d = w_w = 0.0
@@ -409,7 +441,7 @@ def analyse_point(p, out_dir=None):
                 continue
             kv = -1
             if moving:
-                vel_bub.append([A_px, d / H, u, float("nan")])
+                vel_bub.append([A_px, d / H, u, float("nan"), c_c])
                 kv = len(vel_bub) - 1
             lead = _f(r.get(f"先端部{ax}"))
             cen = _f(r.get(f"中心{ax}"))
@@ -549,6 +581,14 @@ def analyse_point(p, out_dir=None):
     P23_circle = pref * float(np.nanmean(fricc_t)) if fricc_t else float("nan")
     k_fit_circle = (E - E_stuck) / P23_circle if P23_circle > 0 else float("nan")
     ca_loc = mu * (U_P + J) / 2 / sigma
+    W_side = walls[1] - walls[0] if walls[0] == walls[0] and walls[1] == walls[1] else float("nan")
+
+    def s_wall(b):
+        """측벽 자기 거울상을 뺀 이동도(I101 닫힌 식 + 접선 이동도, 검토 7 #13). 측벽 위치를 모르면 보정하지 않는다."""
+        s_m = 2 * b[2] / (U_P + J)
+        if not (W_side == W_side and W_side > 0 and b[4] == b[4]):
+            return s_m
+        return s_wall_correct(s_m, wall_G(math.sqrt(b[0] / math.pi), b[4] - walls[0], W_side))
     coll = {}
     for lo, hi in DH_BINS:
         tag = f"dH_{lo:g}_{hi:g}" if hi < 1e8 else f"dH_{lo:g}_up"
@@ -562,6 +602,7 @@ def analyse_point(p, out_dir=None):
         coll[f"s_starC_{tag}"] = _bin(lambda b: b[2] * (1 + (b[3] if b[3] == b[3] else 1.0)) / (U_P + (b[3] if b[3] == b[3] else 1.0) * J))
         coll[f"V_over_J_{tag}"] = _bin(lambda b: b[2] / J)
         coll[f"deltaB_{tag}"] = _bin(lambda b: 1.12 * ca_loc ** (1 / 3) * b[1])     # Booth 붕괴 좌표 δ_B
+        coll[f"s_starW_{tag}"] = _bin(s_wall)                                       # 측벽 자기 거울상을 뺀 이동도(I101)
     if out_dir and frame_rows:
         safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in p["name"])
         with open(os.path.join(out_dir, f"frames_{safe}.csv"), "w", encoding="utf-8", newline="") as fh:
@@ -690,7 +731,9 @@ def friction_fit(res, out_dir=None, n_boot=2000, seed=0):
     (1) m = 2/3 고정(운전점 2개 이상): ln k = 평균(ln E_mov − ln P_2/3), 상대 표준오차 = 표준편차/√N.
     (2) 지수 맞춤(5개 이상): 격자의 m마다 로그 잔차 ln E_mov − ln P_m의 표준편차가 가장 작은 m. 운전점 부트스트랩으로 95% 구간.
     (3) 2항(5개 이상): E_mov = k1·P_2/3 + k2·P_area(둘레 항 + 굳은 막 미끄럼의 면적 항), 상대 잔차 최소, k ≥ 0, 부트스트랩 구간.
-    m과 k는 거의 완전히 상관한다(검토 6: d/H 10·차압 ±13 Pa면 sd(m) 0.22, corr > 0.99)."""
+    m과 k는 거의 완전히 상관한다(검토 6: d/H 10·차압 ±13 Pa면 sd(m) 0.22, corr > 0.99).
+    모든 운전점에 E의 표준오차(se_E, 점 표의 dp_tp_se·dp_l_se·T_se·B_rel_se에서)가 있으면 로그 공간에서 1/σ²_lnE로 가중한다
+    (σ_lnE = se_E/E_mov). 하나라도 없으면 같은 무게다(검토 7 #17: 앞 판은 설명과 달리 가중하지 않았다). 요약의 weighted 열."""
     pts = [r for r in res if r.get("P_m0.67", float("nan")) > 0 and (r["E"] - r["E_stuck"]) > 0]
     n = len(pts)
     if n < 2:
@@ -698,8 +741,17 @@ def friction_fit(res, out_dir=None, n_boot=2000, seed=0):
     Em = np.array([r["E"] - r["E_stuck"] for r in pts])
     P = {m: np.array([r[f"P_m{m:.2f}"] for r in pts]) for m in M_GRID}
     S = np.array([r["P_area"] for r in pts])
+    sig_ln = np.array([r.get("se_E", float("nan")) for r in pts], float) / Em
+    weighted = bool(np.all(np.isfinite(sig_ln)) and np.all(sig_ln > 0))
+    wts = 1 / sig_ln ** 2 if weighted else np.ones(n)
+
+    def wstats(rr, w):
+        mu_ = float(np.sum(w * rr) / np.sum(w))
+        return mu_, float(math.sqrt(np.sum(w * (rr - mu_) ** 2) / np.sum(w)))
     r23 = np.log(Em) - np.log(P[2 / 3])
-    out = {"n_points": n, "k_m23": float(np.exp(r23.mean())), "k_m23_rel_se": float(r23.std(ddof=1) / math.sqrt(n))}
+    mu23, _ = wstats(r23, wts)
+    se23 = math.sqrt(float(np.sum(wts * (r23 - mu23) ** 2)) / ((n - 1) * float(np.sum(wts)))) if n > 1 else float("nan")
+    out = {"n_points": n, "weighted": int(weighted), "k_m23": float(np.exp(mu23)), "k_m23_rel_se": se23}
 
     def best_m(idx):
         best = None
@@ -707,14 +759,15 @@ def friction_fit(res, out_dir=None, n_boot=2000, seed=0):
             if np.any(P[m][idx] <= 0):
                 continue
             rr = np.log(Em[idx]) - np.log(P[m][idx])
-            sd = float(rr.std())
+            mu_, sd = wstats(rr, wts[idx])
             if best is None or sd < best[1] - 1e-12:
-                best = (m, sd, float(np.exp(rr.mean())))
+                best = (m, sd, float(np.exp(mu_)))
         return best
 
     def two_term(idx):
-        X = np.column_stack([P[2 / 3][idx] / Em[idx], S[idx] / Em[idx]])
-        y = np.ones(len(idx))
+        sw = np.sqrt(wts[idx])
+        X = np.column_stack([P[2 / 3][idx] / Em[idx], S[idx] / Em[idx]]) * sw[:, None]
+        y = sw.copy()
         sol = np.linalg.lstsq(X, y, rcond=None)[0]
         if sol[0] >= 0 and sol[1] >= 0:
             return float(sol[0]), float(sol[1])
@@ -730,7 +783,8 @@ def friction_fit(res, out_dir=None, n_boot=2000, seed=0):
     for m in M_GRID:
         if np.all(P[m] > 0):
             rr = np.log(Em) - np.log(P[m])
-            grid.append((m, float(np.exp(rr.mean())), float(rr.std())))
+            mu_, sd = wstats(rr, wts)
+            grid.append((m, float(np.exp(mu_)), sd))
     if n >= 5:
         full = np.arange(n)
         mb = best_m(full)
@@ -775,7 +829,8 @@ def _selftest_vel(out):
     (다) 갭보다 작은 기포는 뺀다  (라) 기포 없는 프레임은 0으로 센다  (마) 프레임 CSV의 순간 식 평균 = E_vel
     (바) E를 16.85·P_2/3로 만들면 k_fit = 16.85, 지수 맞춤 2/3, 2항 (16.85, 0)
     (사) 30·P_0.5로 만들면 지수 맞춤 0.5  (아) 16.85·P_2/3 + 6.86·P_area로 만들면 2항 맞춤이 둘을 되돌린다
-    (자) 타원 기포(b/a 1.5)의 마찰 합에 모양 배율이 들어간다(정답은 타원 다각형 직접 적분으로 따로 셈)."""
+    (자) 타원 기포(b/a 1.5)의 마찰 합에 모양 배율이 들어간다(정답은 타원 다각형 직접 적분으로 따로 셈)
+    (차) 측벽 자기 거울상 보정(I101)의 역산이 정확하다. 마찰 맞춤은 se_E가 있으면 가중한다."""
     os.makedirs(out, exist_ok=True)
     H, px, fps, mu, sig = 0.3e-3, 0.02e-3, 500.0, 1.0e-3, 0.072
     roi = 1000 * 1000
@@ -859,6 +914,15 @@ def _selftest_vel(out):
     print(f"  참고: 앞 판(보이는 면적의 등가 반경)이면 j_L 0.02의 P_2/3이 {old / tr0['P'][2 / 3]:+.1%} 컸다(잘린 관측 1개).")
     fa = friction_fit(resA)
     check("(바) 지수 맞춤 m", fa["m_best"], 2 / 3, 1e-9)
+    for s_true, a_px, y0 in ((0.4, 30.0, 500.0), (1.5, 200.0, 500.0), (1.5, 200.0, 260.0), (0.8, 60.0, 80.0)):
+        G = wall_G(a_px, y0, 1000.0)
+        dl = 2 / s_true - 1
+        s_meas = s_true * (1 - (1 + dl) / (1 + 2 / 3 * dl) * (s_true - 1) * G)
+        check(f"(차) 측벽 거울상 역산 s {s_true}, a {a_px:g} px, y₀ {y0:g}/1000 px(측정 {s_meas:.4f})", s_wall_correct(s_meas, G), s_true, 1e-9)
+    fw = friction_fit([dict(r, se_E=0.02 * (1 + i) * r["E"]) for i, r in enumerate(resA)])
+    check("(바) se_E가 있으면 가중 맞춤(weighted 1)", float(fw["weighted"]), 1.0, 1e-9)
+    check("(바) 가중 맞춤의 지수 m", fw["m_best"], 2 / 3, 1e-9)
+    check("(바) 가중 맞춤의 2항 k1", fw["k1"], 16.85, 1e-6)
     check("(바) 2항 k1", fa["k1"], 16.85, 1e-6)
     check("(바) 2항 k2(0이어야 함)", fa["k2"] + 1.0, 1.0, 1e-6)
     fb = friction_fit(run("B", lambda tr: 30.0 * tr["P"][0.5]))

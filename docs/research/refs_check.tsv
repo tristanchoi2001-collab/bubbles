@@ -266,7 +266,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.nucengdes.2016.10.044	OK	fu	2016	Experimental study of bubbly flow using image processing techniques	Nuclear Engineering and Design	1_adiabatic_gap,check
 10.1016/j.nucengdes.2022.111725	OK	zhang	2022	Bubble size distribution for bubbly-to-slug transition flow in narrow rectangular channel	Nuclear Engineering and Design	9_data,check
 10.1016/j.patter.2023.100804	OK	kapoor	2023	Leakage and the reproducibility crisis in machine-learning-based science	Patterns	5_ai_image,check
-10.1016/j.physd.2007.04.019	OK	meerson	2007	Self-similar asymptotics for a class of Hele–Shaw flows driven solely by surface tension	Physica D: Nonlinear Phenomena	17_relax
+10.1016/j.physd.2007.04.019	OK	meerson	2007	Self-similar asymptotics for a class of Hele–Shaw flows driven solely by surface tension	Physica D: Nonlinear Phenomena	17_relax,check
 10.1016/j.physrep.2012.02.003	OK	beatus	2012	The physics of 2D microfluidic droplet ensembles	Physics Reports	0_estimates,3_pressure_drop,check
 10.1016/j.pnucene.2014.01.003	OK	yan	2014	Investigation of the interfacial parameter distribution in a bubbly flow in a narrow rectangular channel under inclined 	Progress in Nuclear Energy	3_pressure_drop,check
 10.1016/j.pnucene.2020.103601	OK	zhang	2021	Experimental investigation on flow regimes and transitions of steam-water two-phase flow in narrow rectangular horizonta	Progress in Nuclear Energy	7_closest_novelty,9_data,check
@@ -469,7 +469,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physreve.85.027302	OK	huisman	2012	Interaction and coalescence of large bubbles rising in a thin gap	Physical Review E	1_adiabatic_gap,7_closest_novelty,check
 10.1103/physreve.91.042301	OK	yazhgur	2015	Electrical conductivity of quasi-two-dimensional foams	Physical Review E	13_plane,check
 10.1103/physreve.91.063013	OK	piedra	2015	Dynamics of two-dimensional bubbles	Physical Review E	1_adiabatic_gap,check
-10.1103/physreve.94.033101	OK	chinaud	2016	Surfactant effects on the coalescence of a drop in a Hele-Shaw cell	Physical Review E	17_relax
+10.1103/physreve.94.033101	OK	chinaud	2016	Surfactant effects on the coalescence of a drop in a Hele-Shaw cell	Physical Review E	17_relax,check
 10.1103/physrevfluids.10.023301	OK	raufaste	2025	Friction-induced bubble edge curvature in flowing two-dimensional confined foams	Physical Review Fluids	10_ideas,12_ideas3,5_ai_image,7_closest_novelty,check
 10.1103/physrevfluids.4.113602	OK	reichert	2019	Predicting droplet velocity in a Hele-Shaw cell	Physical Review Fluids	10_ideas,1_adiabatic_gap,3_pressure_drop,9_data,check
 10.1103/physrevfluids.5.093301	OK	shmakova	2020	Quasi-two-dimensional foam flow through and around a permeable obstacle	Physical Review Fluids	12_ideas3,check
@@ -485,8 +485,8 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevlett.112.238302	OK	miralles	2014	Foam Drainage Control Using Thermocapillary Stress in a Two-Dimensional Microchamber	Physical Review Letters	16_drift,check
 10.1103/physrevlett.115.064501	OK	huerre	2015	Droplets in Microchannels: Dynamical Properties of the Lubrication Film	Physical Review Letters	12_ideas3,1_adiabatic_gap,check
 10.1103/physrevlett.79.1265	OK	kelley	1997	Path Instabilities of Rising Air Bubbles in a Hele-Shaw Cell	Physical Review Letters	9_data,check
-10.1103/physrevlett.96.044504	OK	vilenkin	2006	Scaling and Self-Similarity in an Unforced Flow of Inviscid Fluid Trapped Inside a Viscous Fluid in a Hele-Shaw Cell	Physical Review Letters	17_relax
-10.1103/physrevlett.97.226101	OK	durand	2006	Relaxation Time of the TopologicalT1Process in a Two-Dimensional Foam	Physical Review Letters	17_relax
+10.1103/physrevlett.96.044504	OK	vilenkin	2006	Scaling and Self-Similarity in an Unforced Flow of Inviscid Fluid Trapped Inside a Viscous Fluid in a Hele-Shaw Cell	Physical Review Letters	17_relax,check
+10.1103/physrevlett.97.226101	OK	durand	2006	Relaxation Time of the TopologicalT1Process in a Two-Dimensional Foam	Physical Review Letters	17_relax,check
 10.1103/physrevlett.98.244501	OK	ritacco	2007	Lifetime of Bubble Rafts: Cooperativity and Avalanches	Physical Review Letters	8_iate_coalescence,check
 10.1103/pm4m-18nt	OK	anonymous	2026	Bubble dynamics in a Hele-Shaw channel and velocity selection without surface tension	Physical Review Fluids	1_adiabatic_gap,check
 10.1109/itherm55375.2024.10709607	OK	huang	2024	Modeling Flow Boiling Utilizing Machine Learning Vision Data	2024 23rd IEEE Intersociety Conference on Thermal and Thermomechanical Phenomena in Electronic Systems (ITherm)	5_ai_image,check
@@ -634,6 +634,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.3389/fenrg.2021.636813	OK	chu	2021	Study on Measure Approach of Void Fraction in Narrow Channel Based on Fully Convolutional Neural Network	Frontiers in Energy Research	6_measurement,check
 10.3389/fenrg.2023.1224306	OK	lv	2023	Experimental investigation on the evolution of bubble behavior in subcooled flow boiling in narrow rectangular channel b	Frontiers in Energy Research	2_boiling_gap,check
 10.3389/fmech.2017.00016	OK	shinmoto	2017	Heat Transfer Characteristics during Boiling of Immiscible Liquids Flowing in Narrow Rectangular Heated Channels	Frontiers in Mechanical Engineering	7_closest_novelty,9_data,check
+10.3389/fphy.2023.1112304	OK	ramadugu	2023	Energy spectra of buoyancy-driven bubbly flow in a vertical Hele-Shaw cell	Frontiers in Physics	16_drift
 10.3390/e23091106	OK	chen	2021	Interfacial Area Transport Equation for Bubble Coalescence and Breakup: Developments and Comparisons	Entropy	8_iate_coalescence,check
 10.3390/en12173368	OK	klugmann	2019	Flow Boiling in Minigap in the Reversed Two-Phase Thermosiphon Loop	Energies	7_closest_novelty,9_data,check
 10.3390/en14113180	OK	masiukiewicz	2021	Precise Evaluation of Gas–Liquid Two-Phase Flow Pattern in a Narrow Rectangular Channel with Stereology Method	Energies	6_measurement,check
