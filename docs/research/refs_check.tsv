@@ -45,6 +45,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1007/s12217-019-09747-1	OK	ronshin	2019	Experimental Investigation of Adiabatic Gas-Liquid Flow Regimes and Pressure Drop in Slit Microchannel	Microgravity Science and Technology	3_pressure_drop,9_data,check
 10.1007/s40430-020-2223-8	OK	nunes	2020	Influence of coated surfaces and gap size on boiling heat transfer of deionized water	Journal of the Brazilian Society of Mechanical Sciences and Engineering	2_boiling_gap,check
 10.1007/s42757-019-0009-y	OK	hibiki	2019	One-dimensional drift-flux correlations for two-phase flow in medium-size channels	Experimental and Computational Multiphase Flow	1_adiabatic_gap,check
+10.1016/0009-2509(67)80048-4	OK	goldman	1967	Slow viscous motion of a sphere parallel to a plane wall—II Couette flow	Chemical Engineering Science	21_profile
 10.1016/0009-2509(77)80222-4	OK	sriram	1977	Dynamic gas disengagement: A new technique for assessing the behaviour of bubble columns	Chemical Engineering Science	12_ideas3,check
 10.1016/0009-2509(80)85127-x	OK	deckwer	1980	On the mechanism of heat transfer in bubble column reactors	Chemical Engineering Science	4_heat_transfer,check
 10.1016/0009-2509(89)85008-0	OK	taitel	1989	Simplified transient solution and simulation of two-phase flow in pipelines	Chemical Engineering Science	12_ideas3,check
@@ -59,6 +60,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/0017-9310(94)90064-7	OK	wilmarth	1994	Two-phase flow regimes in narrow rectangular vertical and horizontal channels	International Journal of Heat and Mass Transfer	1_adiabatic_gap,7_closest_novelty,9_data,check
 10.1016/0017-9310(94)90224-0	OK	tokuhiro	1994	Natural convection heat transfer from a vertical plate—I. Enhancement with gas injection	International Journal of Heat and Mass Transfer	4_heat_transfer,check
 10.1016/0017-9310(96)00006-3	OK	kenning	1996	Pool boiling heat transfer on a thin plate: features revealed by liquid crystal thermography	International Journal of Heat and Mass Transfer	2_boiling_gap,check
+10.1016/0021-9797(74)90337-3	OK	small	1974	Hydrodynamic chromatography a technique for size analysis of colloidal particles	Journal of Colloid and Interface Science	21_profile
 10.1016/0094-5765(78)90048-6	OK	johann	1978	Migration of a bubble with adsorbed film in a Hele-Shaw cell	Acta Astronautica	16_drift,check
 10.1016/0098-1354(92)80021-z	OK	wright	1992	Solutions of inverse problems in population balances—I. Aggregation kinetics	Computers & Chemical Engineering	10_ideas,11_ideas2,check
 10.1016/0098-1354(94)00062-s	OK	sathyagal	1995	Solution of inverse problems in population balances-II. Particle break-up	Computers & Chemical Engineering	11_ideas2,check
@@ -327,7 +329,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2018.213	OK	gvozdic	2018	Experimental investigation of heat transport in homogeneous bubbly flow	Journal of Fluid Mechanics	4_heat_transfer,check
 10.1017/jfm.2018.240	OK	keiser	2018	Dynamics of non-wetting drops confined in a Hele-Shaw cell	Journal of Fluid Mechanics	9_data,check
 10.1017/jfm.2018.457	OK	reichert	2018	Topography of the lubrication film under a pancake droplet travelling in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,3_pressure_drop,6_measurement,9_data,check
-10.1017/jfm.2018.575	OK	green	2018	Approximate solutions to droplet dynamics in Hele-Shaw flows	Journal of Fluid Mechanics	20_review10
+10.1017/jfm.2018.575	OK	green	2018	Approximate solutions to droplet dynamics in Hele-Shaw flows	Journal of Fluid Mechanics	20_review10,check
 10.1017/jfm.2018.834	OK	gao	2019	Forced dewetting in a capillary tube	Journal of Fluid Mechanics	19_review9,check
 10.1017/jfm.2019.453	OK	shukla	2019	Film thickness distribution in gravity-driven pancake-shaped droplets rising in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,check
 10.1017/jfm.2020.4	OK	filella	2020	Interaction of two oscillating bubbles rising in a thin-gap cell: vertical entrainment and interaction with vortices	Journal of Fluid Mechanics	1_adiabatic_gap,check
@@ -365,6 +367,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1021/ie50498a055	OK	danckwerts	1951	Significance of Liquid-Film Coefficients in Gas Absorption	Industrial & Engineering Chemistry	4_heat_transfer,check
 10.1021/j100807a513	OK	frankel	1962	ON THE “DIMPLING” DURING THE APPROACH OF TWO INTERFACES1	The Journal of Physical Chemistry	12_ideas3,check
 10.1021/jp901801k	OK	francis	2009	Application of a Bubble Column for Evaporative Cooling and a Simple Procedure for Determining the Latent Heat of Vaporiz	The Journal of Physical Chemistry B	11_ideas2,check
+10.1021/ma60014a005	OK	dimarzio	1970	Separation by Flow	Macromolecules	21_profile
 10.1029/2004wr003837	OK	chen	2006	Two‐phase flow in rough‐walled fractures: Experiments and a flow structure model	Water Resources Research	0_estimates,10_ideas,9_data,check
 10.1029/93wr01529	OK	fourar	1993	Two‐phase flow in smooth and rough fractures: Measurement and correlation by porous‐medium and pipe flow models	Water Resources Research	0_estimates,13_plane,9_data,check
 10.1029/95wr00171	OK	persoff	1995	Two‐Phase Flow Visualization and Relative Permeability Measurement in Natural Rough‐Walled Rock Fractures	Water Resources Research	0_estimates,9_data,check
@@ -502,7 +505,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevlett.96.174504	OK	snoeijer	2006	Avoided Critical Behavior in Dynamically Forced Wetting	Physical Review Letters	19_review9,check
 10.1103/physrevlett.97.226101	OK	durand	2006	Relaxation Time of the TopologicalT1Process in a Two-Dimensional Foam	Physical Review Letters	17_relax,check
 10.1103/physrevlett.98.244501	OK	ritacco	2007	Lifetime of Bubble Rafts: Cooperativity and Avalanches	Physical Review Letters	8_iate_coalescence,check
-10.1103/physrevx.10.021009	OK	frishman	2020	Learning Force Fields from Stochastic Trajectories	Physical Review X	20_review10
+10.1103/physrevx.10.021009	OK	frishman	2020	Learning Force Fields from Stochastic Trajectories	Physical Review X	20_review10,check
 10.1103/pm4m-18nt	OK	anonymous	2026	Bubble dynamics in a Hele-Shaw channel and velocity selection without surface tension	Physical Review Fluids	1_adiabatic_gap,check
 10.1109/itherm55375.2024.10709607	OK	huang	2024	Modeling Flow Boiling Utilizing Machine Learning Vision Data	2024 23rd IEEE Intersociety Conference on Thermal and Thermomechanical Phenomena in Electronic Systems (ITherm)	5_ai_image,check
 10.1109/tcpmt.2021.3094767	OK	clark	2021	Impact of Pressure Drop Oscillations on Surface Temperature and Critical Heat Flux During Flow Boiling in a Microchannel	IEEE Transactions on Components, Packaging and Manufacturing Technology	6_measurement,check
