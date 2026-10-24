@@ -488,7 +488,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1134/s1063785018040089	OK	ronshin	2018	The Effect of Fluid Properties on Two-Phase Regimes of Flow in a Wide Rectangular Microchannel	Technical Physics Letters	9_data,check
 10.1134/s1810232821040093	OK	ronshin	2021	Influence of Liquid Properties on Gas-Liquid Flow Regimes and Pressure Drop in a Flat Microchannel	Journal of Engineering Thermophysics	9_data,check
 10.1134/s1810232826010169	OK	gasanov	2026	Experimental Investigation into Influence of Channel Gap Size on Heat Transfer during Boiling of Subcooled Water Flow	Journal of Engineering Thermophysics	2_boiling_gap,7_closest_novelty,9_data,check
-10.11395/jjsem.11.s53	OK	oke	2011	Gas-Liquid Two-Phase Flow through an Orifice in Millimeter-Scale Rectangular Channel	Journal of the Japanese Society for Experimental Mechanics	0_estimates
+10.11395/jjsem.11.s53	OK	oke	2011	Gas-Liquid Two-Phase Flow through an Orifice in Millimeter-Scale Rectangular Channel	Journal of the Japanese Society for Experimental Mechanics	0_estimates,check
 10.11395/jjsem.8.s152	OK	kumagai	2008	Effects of Channel Gap and Channel Attitude on Flow Pattern of Air-water Two-phase Flow in Rectangular Millimeter-scale 	Journal of the Japanese Society for Experimental Mechanics	9_data,check
 10.1140/epje/i2004-10154-5	OK	cantat	2005	Dissipative flows of 2D foams	The European Physical Journal E	3_pressure_drop,check
 10.1140/epje/i2007-10298-8	OK	graner	2008	Discrete rearranging disordered patterns, part I: Robust statistical tools in two or three dimensions	The European Physical Journal E	5_ai_image,check
