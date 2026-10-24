@@ -43,30 +43,37 @@ def axis_of(flow):
     return {"up": ("Y", -1), "down": ("Y", +1), "right": ("X", +1), "left": ("X", -1)}[flow]
 
 
-def eps_x_from_mask(mask, flow):
-    """흐름 방향(s)·가로(c) 2차 모멘트로 ε_x = (√σ_ss − √σ_cc)/(√σ_ss + √σ_cc)."""
+def eps_x_from_mask(mask, flow, with_asym=False):
+    """흐름 방향(s)·가로(c) 2차 모멘트로 ε_x = (√σ_ss − √σ_cc)/(√σ_ss + √σ_cc).
+    with_asym이면 앞뒤 비대칭 (중심 − 흐름 방향 중점)/길이도 돌려준다(음수 = 뒤가 넓음, Wu 외 2024의 x_c − x_m)."""
     ys, xs = np.nonzero(mask)
     if len(xs) < 5:
-        return float("nan")
-    ax, _ = axis_of(flow)
+        return (float("nan"), float("nan")) if with_asym else float("nan")
+    ax, sgn = axis_of(flow)
     s_, c_ = (ys, xs) if ax == "Y" else (xs, ys)
     vs, vc = float(np.var(s_)), float(np.var(c_))
     if vs <= 0 or vc <= 0:
-        return float("nan")
-    return (math.sqrt(vs) - math.sqrt(vc)) / (math.sqrt(vs) + math.sqrt(vc))
+        return (float("nan"), float("nan")) if with_asym else float("nan")
+    e = (math.sqrt(vs) - math.sqrt(vc)) / (math.sqrt(vs) + math.sqrt(vc))
+    if not with_asym:
+        return e
+    s = sgn * s_.astype(float)                         # 흐름 방향을 +로
+    L = s.max() - s.min() + 1.0
+    return e, (s.mean() - 0.5 * (s.max() + s.min())) / L
 
 
 class FlowMasks(MaskLookup):
     def eps_x(self, fname, cx, cy, A, flow):
+        """(ε_x, 앞뒤 비대칭)."""
         d = self._load(fname)
         if d is None or not len(d[1]):
-            return float("nan")
+            return float("nan"), float("nan")
         inst, ids, cxs, cys, cnt = d
         d2 = (cxs - cx) ** 2 + (cys - cy) ** 2
         j = int(np.argmin(d2))
         if d2[j] > 9.0 or not 0.8 <= cnt[j] / A <= 1.25:
-            return float("nan")
-        return eps_x_from_mask(inst == ids[j], flow)
+            return float("nan"), float("nan")
+        return eps_x_from_mask(inst == ids[j], flow, with_asym=True)
 
 
 def collect(rows, masks, flow, k, H_px, px_m, fps, mu, sigma, rho=998.0, quiet=3, min_gap=1.0):
@@ -100,14 +107,14 @@ def collect(rows, masks, flow, k, H_px, px_m, fps, mu, sigma, rho=998.0, quiet=3
             gaps = [math.hypot(x - q[0], y - q[1]) - R - q[2] for q in per_frame[f] if not (q[0] == x and q[1] == y)]
             if gaps and min(gaps) < min_gap * R:
                 continue
-            e = masks.eps_x(r.get("ファイル名", ""), x, y, a[1], flow)
+            e, asym = masks.eps_x(r.get("ファイル名", ""), x, y, a[1], flow)
             if e != e:
                 continue
             V = v_px * px_m * fps
             Ca = mu * V / sigma
             obs.append(dict(track=tid, frame=f, dH=2 * R / H_px, R_over_H=R / H_px, V=V, Ca=Ca,
                             We=rho * V * V * (H_px * px_m) / sigma, X=(R / H_px) * (3 * Ca) ** (2 / 3),
-                            delta_V=1.12 * (2 * R / H_px) * Ca ** (1 / 3), eps_x=e))
+                            delta_V=1.12 * (2 * R / H_px) * Ca ** (1 / 3), eps_x=e, asym=asym))
     return obs
 
 
@@ -162,7 +169,8 @@ def analyse(obs_all, bins, n_x=8, delta_max=1.5):
             if len(lv) >= 3:
                 m = float(np.polyfit(lv, le, 1)[0])
         out.append(dict(cls=f"dH_{lo:g}_{hi:g}", n=len(sel), slope_c=c, f=c / K_FLAT, m=m,
-                        X_bins="", eps_bins="", We_med=float(np.median([o["We"] for o in sel]))))
+                        X_bins="", eps_bins="", We_med=float(np.median([o["We"] for o in sel])),
+                        asym_med=float(np.median([o["asym"] for o in sel]))))
     return out
 
 
@@ -217,6 +225,8 @@ def _demo(out):
         res = analyse(obs, [(2, 100)])
         ra = [r for r in res if r["cls"] == "all"][0]
         rc = [r for r in res if r["cls"] != "all"][0]
+        if abs(rc["asym_med"]) > 0.01:
+            fails.append(f"f {f_true:g}: 대칭 타원의 앞뒤 비대칭 {rc['asym_med']:+.4f}(0이어야 함)")
         if abs(m_true - 2 / 3) < 1e-9:
             ok = abs(ra["f"] - f_true) <= 0.12 * f_true and abs(rc["m"] - m_true) <= 0.12
             print(f"  {'통과' if ok else '실패'}  f {f_true:g}, m {m_true:.2f}: 관측 {ra['n']}, 되찾은 f {ra['f']:.3f}, m {rc['m']:.3f}")
@@ -263,10 +273,11 @@ def main():
     print(f"관측 {len(obs)}개")
     for r in res:
         print(f"  {r['cls']}: n {r['n']}(δ_V < {a.delta_max:g}), 기울기 c {r['slope_c']:.3f} → f {r['f']:.2f}" + (f", m {r['m']:.2f}" if r["m"] == r["m"] else "")
-              + (f", We 중앙값 {r['We_med']:.3f}" if "We_med" in r else "")
+              + (f", We 중앙값 {r['We_med']:.3f}, 앞뒤 비대칭 {r['asym_med']:+.4f}" if "We_med" in r else "")
               + (f"; 모양 영점 δ_V {r['delta_zero']:.2f}(전체 {r['n_all']}개)" if "delta_zero" in r else ""))
     print("읽는 법: 깨끗한 막이면 f ≈ 1, m ≈ 2/3. 실험실 물은 f > 1(I90 k_fit/16.85, I104 d*와 비교). We ≳ 0.1이면 관성도 누른다(I109).")
     print("         모양 영점(눌림 → 늘어남)은 깨끗한 실리콘유에서 대략 δ 2~3(Wu 외 2024 그림). 더 크면 막 마찰이 큰 것(오염) 후보다.")
+    print("         앞뒤 비대칭(음수 = 뒤가 넓음)은 깨끗한 막에서 작은 음수(Wu 2024). 크게 음수면 뒤 접촉선이 붙는(마른 발자국) 후보다.")
 
 
 if __name__ == "__main__":
