@@ -49,11 +49,12 @@ ax.fill_between([], [], [], color=C2, alpha=0.22, label="soluble surfactant, f =
 ax.plot([], [], color=C3, lw=1.6, ls="--", label="m = 1/3: slope m − 1 = −2/3 (matched at Ca 7×10⁻⁴)")
 ax.plot([], [], color=C4, lw=1.6, ls=":", label="m = 0 (threshold): slope −1 (matched at Ca 7×10⁻⁴)")
 ax.legend(frameon=False, fontsize=7.2, loc="lower left", bbox_to_anchor=(0.0, 0.07))
-ax.set_title("The size that moves exactly with the liquid reads the friction law without pressure:\n"
-             "its magnitude gives the contamination factor f, its slope against Ca gives m − 1 (expected, I104)",
+ax.set_title("The size that moves exactly with the liquid reads the friction law without pressure taps:\n"
+             "its magnitude gives the contamination factor f (needs Ca_loc, i.e. U_loc), its slope against Ca gives m − 1 (expected, I104)",
              fontsize=10, color=INK, loc="left")
 fig.text(0.01, -0.03, "Circular pancakes, s = 2/(1 + Δ) = 1 ⇔ Δ = 1 ⇔ δ_B = 1.12·Ca^(1/3)·d/H = 1 (Booth et al. 2023). In Darcy flow d*/H is independent of the gap, so 0.3, 0.7 and 1 mm share these lines.\n"
-         "Four signals vanish at d*: mean mobility − 1 (I91), the velocity-fluctuation share (I99), the side-wall speed change (I101) and the tracer dipole signal (I88).\n"
+         "Four signals vanish at d* to O(2h/H): mean mobility − 1 (I91) at s = 1; the velocity-fluctuation share (I99), the side-wall speed change (I101) and the tracer dipole signal (I88)\n"
+         "at s = 1 + 1.34Ca^(2/3), because the deposited films stay on the walls (d* differs by 1.7–4.4%, independent review 8).\n"
          "Bubbles wider than long (b/a 1.27) carry 1.17× the meniscus friction of the equal-area circle, which shifts d* like f; report b/a with d*. Prediction only — no data.",
          fontsize=7.0, color=MUTED, va="top")
 fig.tight_layout()

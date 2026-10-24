@@ -38,8 +38,10 @@ def mobility(aH, u):
 
 
 U = np.logspace(np.log10(0.005), np.log10(0.2), 100)
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.7))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 5.2))
 ax1.fill_between(U, 0.05, 3.0, color=GRID, lw=0, zorder=0)
+ax1.axhspan(300, 1000, color=GRID, alpha=0.6, lw=0, zorder=0)
+ax1.text(0.19, 820, "tan φ ≳ 0.3: crowding, not a small drift", color=MUTED, fontsize=7.2, ha="right", va="top")
 ax1.text(0.19, 0.065, "dipole-noise floor (~3000 bubbles, α|λ| 0.1)", color=MUTED, fontsize=7.2, ha="right", va="bottom")
 ax1.plot(U, 1e3 * SIG * 1.3e-3 / (12 * MU * U), color=C1, lw=1.6, ls="--", zorder=3)
 ax1.plot(U, 1e3 * SIG * 1e-4 / (12 * MU * U), color=C1, lw=2.2, zorder=3)
@@ -47,18 +49,18 @@ for H, ls in ((1e-3, "-"), (0.3e-3, ":")):
     ax1.plot(U, 1e3 * H * H * RHO * G * 1e-3 / (24 * MU * U), color=C2, lw=1.8, ls=ls, zorder=3)
     ax1.plot(U, 1e3 * H * DSDT * 200 / (12 * MU * U), color=C3, lw=1.8, ls=ls, zorder=3)
 ax1.set_xscale("log"); ax1.set_yscale("log")
-ax1.set_xlim(U[0], U[-1]); ax1.set_ylim(0.05, 3000)
+ax1.set_xlim(U[0], U[-1]); ax1.set_ylim(0.05, 1000)
 ax1.set_xlabel("local liquid speed U_loc (m/s)")
 ax1.set_ylabel("lateral drift angle tan φ (mrad)")
 ax1.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
 ax1.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
 ax1.grid(color=GRID, lw=0.8, which="major", axis="y"); ax1.set_axisbelow(True)
-ax1.plot([], [], color=C1, lw=1.6, ls="--", label="cover sag, max slope 1.3×10⁻³ (acrylic 5 mm, 50 kPa)")
+ax1.plot([], [], color=C1, lw=1.6, ls="--", label="cover sag, max slope 1.3×10⁻³ (acrylic 5 mm, 50 kPa, width 50 mm)")
 ax1.plot([], [], color=C1, lw=2.2, label="gap slope 10⁻⁴ (2 µm over 20 mm), any H")
 ax1.plot([], [], color=C3, lw=1.8, label="liquid ∂T/∂y 200 K/m: H 1 mm (solid), 0.3 mm (dotted)")
 ax1.plot([], [], color=C2, lw=1.8, label="tilt 1 mrad: H 1 mm (solid), 0.3 mm (dotted)")
-ax1.legend(frameon=False, fontsize=7.0, loc="upper right")
-ax1.set_title("(a) Every source drifts all bubbles by the same angle (∝ 1/U)", fontsize=9.5, color=INK, loc="left")
+ax1.legend(frameon=False, fontsize=7.0, loc="upper left", bbox_to_anchor=(0.0, -0.13), ncol=1)
+ax1.set_title("(a) Every source drifts all bubbles by nearly the same angle (∝ 1/U)", fontsize=9.5, color=INK, loc="left")
 
 dH = np.logspace(np.log10(2.0), np.log10(40.0), 80)
 D = np.array([mobility(x / 2, 0.05)[1] for x in dH])
@@ -86,7 +88,9 @@ fig.suptitle("Capillary-potential drift Ψ = 2σ(T)/H − ρgζ: gap, tilt and l
              fontsize=10, color=INK, x=0.01, ha="left")
 fig.text(0.01, -0.035, "(a) Circular pancakes in depth-averaged Darcy flow; the lateral response is the secant mobility, so size and friction cancel in tan φ. "
          "Streamwise speed changes carry the factor R of panel (b).\n"
-         "The sign of the temperature term is to be measured: confined experiments (PDMS cells, surfactant systems) reported migration to the cold side. "
+         "To O(H/d): the thermal term gains (1 + 0.82H/d) from the rim Marangoni boundary layer, the tilt term loses 0.43H/d (rim volume); above tan φ ≈ 0.3 bubbles crowd toward the centre within a few widths (review 8).\n"
+         "Sag scales with width⁴: 21 µm at 50 mm becomes 0.55 µm at 20 mm. Gasket or machined-depth expansion adds to the thermal term; only a gap that narrows where hot (e.g. cover bowing) pushes bubbles cold-ward.\n"
+         "The sign of the temperature term is to be measured: confined experiments (PDMS cavity dilation, surfactant systems) reported migration to the cold side. "
          "Water at 20 °C, |dσ/dT| = 1.6×10⁻⁴ N/mK.\n"
          "(b) Δ = 2/s − 1 from the measured mobility (here clean films, 0.3 mm, U_loc 0.05 m/s); R = (1 + Δ)/(1 + mΔ). Prediction only — no data.",
          fontsize=7.0, color=MUTED, va="top")
