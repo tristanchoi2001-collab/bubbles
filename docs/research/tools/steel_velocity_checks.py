@@ -19,6 +19,13 @@ I96  홈 위 속도 변조: 프레임 수가 충분한 트랙마다 흐름 방�
      철 블록 영상(약 48~53 px/frame)이면 홈 간격 약 110 px보다 짧은 홈은 그 fps로는 못 본다. 건너뛴 트랙 수와 필요한 fps를 출력한다.
      더 빠르면 홈 변조가 |f_g − round(f_g)|로 접혀 보이지만 sinc 감쇠가 크고(f_g 1에서 0) 평균 속도와 섞여 쓰지 않는다.
      트랙은 빠진 프레임과 합체·분열(중심 점프) 앞에서 잘라 가장 긴 조각을 쓴다(검토 10 #22).
+I116 홈 위 길이 간섭: 앞끝과 뒤끝은 홈을 2πL/λ_g만큼 어긋난 위상으로 지나므로 중심 속도 변조는
+     δV(L)/V̄ = (δV₁/V̄)·|1 + ρ·e^{−2πiL/λ_g}|다(L = 흐름 방향 길이). 젖은 막의 모세관 기하 힘(보존력)은 앞·뒤 부호가 반대라
+     ρ = −1(정수배 L에서 변조 0), 마른 접촉선 고정(소산력)은 같은 부호라 ρ > 0(정수배에서 최대)이다.
+     트랙마다 δV/V̄(위 I96 값)에서 잡음 진폭(스펙트럼 주변 중앙값)을 제곱으로 빼고, φ = frac(L/λ_g)에 대해
+     (δV/V̄)² = b₀ + b₁cos 2πφ + b₂sin 2πφ를 맞춘다. r = √(b₁² + b₂²)/b₀ = 2|ρ|/(1 + ρ²)에서 |ρ| ≤ 1의 근,
+     위상 ψ = atan2(b₂, b₁)(0 근처면 ρ > 0, π 근처면 ρ < 0). 구간은 트랙 부트스트랩. L은 마스크가 있으면 라벨의 흐름 방향 폭,
+     없으면 CSV의 先端部와 中心으로 2·(앞끝 − 중심)이다.
 
 입력 (추적 프로그램 steel/2_steel_track.py의 출력)
     --csv      result_tracking.csv (중심 위치를 쓴다. 이름에 「速度」가 든 속도 열은 없어도 된다)
@@ -27,8 +34,8 @@ I96  홈 위 속도 변조: 프레임 수가 충분한 트랙마다 흐름 방�
     --px_mm, --fps, --flow(right/left/up/down), (선택) --groove_mm, --H_mm(갭, 기본 1.0), --sigma, --mu
 사용
     python steel_velocity_checks.py --csv result_tracking.csv --masks instances --images frames --bg bg.bmp --px_mm 0.01 --fps 500 --groove_mm 1.0 --out sv_out
-    python steel_velocity_checks.py --demo --out sv_demo     # 합성 자료로 스스로 점검(연속 운동, f_g 0.06·0.25·0.40·0.50, 합체 점프)
-출력: brightness_vs_speed.csv(칸별 기울기·구간), groove_spectrum.csv(트랙별 δV/V̄·F_pin), 요약 출력.
+    python steel_velocity_checks.py --demo --out sv_demo     # 합성 자료로 스스로 점검(연속 운동, f_g 0.06·0.25·0.40·0.50, 합체 점프, I116 젖음·마름)
+출력: brightness_vs_speed.csv(칸별 기울기·구간), groove_spectrum.csv(트랙별 δV/V̄·F_pin·L), groove_interference.csv(I116 φ 칸), 요약 출력.
 주의: 크기와 속도가 강하게 상관하므로 크기 칸 안에서만 비교한다. 화면 위치에 따른 조명 기울기 때문에 흐름 방향 위치도 칸으로 나눈다.
 """
 import argparse
@@ -102,9 +109,17 @@ def collect(rows, speed_col, masks, images, bg_path, flow, load_image=None):
         v = sgn * float(r[speed_col]) if speed_col and r.get(speed_col) else nan
         return r["トラックID"], int(r["フレーム"]), d, v, sgn * float(r[f"中心{ax}"])
 
+    def length_front(r):
+        """흐름 방향 길이 어림 2·(앞끝 − 중심)(px). 先端部 열이 없으면 nan."""
+        try:
+            L = 2 * sgn * (float(r[f"先端部{ax}"]) - float(r[f"中心{ax}"]))
+        except (KeyError, TypeError, ValueError):
+            return nan
+        return L if L > 0 else nan
+
     use = [r for r in rows if _usable(r)]
     if load_image is None and not (images and bg_path and masks):
-        return [base(r) + (nan, r.get("イベント") or "") for r in use]
+        return [base(r) + (nan, r.get("イベント") or "", length_front(r)) for r in use]
     if load_image is None:
         import cv2
         def load_image(p):
@@ -125,7 +140,12 @@ def collect(rows, speed_col, masks, images, bg_path, flow, load_image=None):
             diff -= np.median(diff[inst == 0])              # 액체의 전체 밝기 차(조명 표류)를 뺀다
         for r in rs:
             lab = label_at(inst, float(r["中心X"]), float(r["中心Y"])) if inst is not None else 0
-            out.append(base(r) + (interior_mean(diff, inst, lab) if lab else nan, r.get("イベント") or ""))
+            L = length_front(r)
+            if lab:
+                yy, xx = np.nonzero(inst == lab)
+                c = xx if ax == "X" else yy
+                L = float(c.max() - c.min() + 1)                # 라벨의 흐름 방향 폭(I116)
+            out.append(base(r) + (interior_mean(diff, inst, lab) if lab else nan, r.get("イベント") or "", L))
     return out
 
 
@@ -238,13 +258,78 @@ def groove_spectrum(obs, px_mm, groove_mm, sigma, mu, fps, H_mm=1.0, min_len=32,
         D = 16.85 * sigma * a_m * Ca ** (2 / 3)
         H = H_mm * 1e-3
         Delta = H * H / (12 * mu) * D / (V_ms * math.pi * a_m * a_m * H)
+        Ls = [t[7] for t in seg if len(t) > 7 and t[7] == t[7]]
         res.append(dict(track=tr, frames=n, d_px=d_px, V_px_per_frame=vb, f_groove=f_g, dV_over_V=amp / vb,
                         dV_over_V_raw=amp_raw / vb, sinc=att,
                         peak_to_background=amp_raw / bgn if bgn and bgn == bgn else float("nan"),
+                        noise_over_V=bgn / att / vb if bgn == bgn else float("nan"),
+                        L_px=float(np.median(Ls)) if Ls else float("nan"),
                         Delta=Delta, F_pin_N=D * amp / vb * (2 / 3 + 1 / Delta)))
     if stats is not None:
         stats.update(st)
     return res
+
+
+def _rho_from_r(r):
+    """r = 2|ρ|/(1 + ρ²)의 |ρ| ≤ 1 근."""
+    r = min(abs(r), 1.0)
+    return (1 - math.sqrt(1 - r * r)) / r if r > 1e-12 else 0.0
+
+
+def groove_interference(gs, lam_px, n_bins=5, n_boot=300, seed=0, min_per_bin=3):
+    """I116: φ = frac(L/λ_g)에 대해 (δV/V̄)² − (잡음)² = b₀ + b₁cos 2πφ + b₂sin 2πφ를 최소제곱으로 맞춘다.
+    반환 dict: n, b0, b1, b2, rho(부호 = b₁ 부호, |ρ| ≤ 1), psi(라디안), 부트스트랩 구간, 칸 표, 판정 문구. 조건이 모자라면 None."""
+    tr = [g for g in gs if g.get("L_px", float("nan")) == g.get("L_px", float("nan")) and g["L_px"] > 0]
+    if len(tr) < n_bins * min_per_bin:
+        return None
+    phi = np.array([(g["L_px"] / lam_px) % 1.0 for g in tr])
+    y = np.array([g["dV_over_V"] for g in tr])
+    nz = np.array([g.get("noise_over_V", float("nan")) for g in tr])
+    y2 = y * y - np.where(np.isfinite(nz), nz * nz, 0.0)
+    cnt = np.bincount(np.minimum((phi * n_bins).astype(int), n_bins - 1), minlength=n_bins)
+    if (cnt >= min_per_bin).sum() < max(3, n_bins - 1):
+        return dict(n=len(tr), coverage=cnt.tolist(), verdict="L/λ_g가 한 주기에 고르게 퍼지지 않아 맞추지 않음(칸당 트랙 수 "
+                    + "/".join(str(c) for c in cnt) + ")")
+    X = np.column_stack([np.ones_like(phi), np.cos(2 * np.pi * phi), np.sin(2 * np.pi * phi)])
+
+    def fit(ii):
+        b, *_ = np.linalg.lstsq(X[ii], y2[ii], rcond=None)
+        if b[0] <= 0:
+            return None
+        r = math.hypot(b[1], b[2]) / b[0]
+        psi = math.atan2(b[2], b[1])
+        rho = _rho_from_r(r) * (1 if math.cos(psi) >= 0 else -1)
+        return b, rho, psi, r
+    base = fit(np.arange(len(tr)))
+    if base is None:
+        return dict(n=len(tr), coverage=cnt.tolist(), verdict="평균 변조가 잡음보다 작아 맞추지 않음")
+    rng = np.random.default_rng(seed)
+    rb = []
+    for _ in range(n_boot):
+        f = fit(rng.integers(0, len(tr), len(tr)))
+        if f is not None:
+            rb.append((f[1], f[2], f[3]))
+    rb = np.array(rb) if rb else np.zeros((0, 3))
+    ci = lambda v: (float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5))) if len(v) > 20 else (float("nan"),) * 2
+    b, rho, psi, r = base
+    bins = []
+    for q in range(n_bins):
+        m = (phi >= q / n_bins) & (phi < (q + 1) / n_bins)
+        pc = (q + 0.5) / n_bins
+        model = math.sqrt(max(b[0] + b[1] * math.cos(2 * math.pi * pc) + b[2] * math.sin(2 * math.pi * pc), 0.0))
+        bins.append(dict(phi_lo=q / n_bins, phi_hi=(q + 1) / n_bins, n=int(m.sum()),
+                         dV_over_V_med=float(np.median(y[m])) if m.any() else float("nan"), model=model))
+    rlo, rhi = ci(rb[:, 0]) if len(rb) else (float("nan"),) * 2
+    if rhi < -0.3:
+        verdict = "정수배 L에서 변조가 작다(ρ < 0): 앞·뒤 힘이 반대 부호 → 젖은 막 위 모세관 기하 힘(보존) 쪽"
+    elif rlo > 0.3:
+        verdict = "정수배 L에서 변조가 크다(ρ > 0): 앞·뒤 힘이 같은 부호 → 접촉선 고정(소산, 마름) 쪽"
+    else:
+        verdict = "ρ 구간이 0 근처를 품는다: 한쪽 끝만 걸리거나 섞임, 또는 표본 부족"
+    return dict(n=len(tr), coverage=cnt.tolist(), b0=float(b[0]), b1=float(b[1]), b2=float(b[2]), r=r, rho=rho, psi=psi,
+                rho_lo=rlo, rho_hi=rhi, psi_lo=ci(rb[:, 1])[0] if len(rb) else float("nan"),
+                psi_hi=ci(rb[:, 1])[1] if len(rb) else float("nan"), dV1_over_V=math.sqrt(b[0] / (1 + rho * rho)),
+                bins=bins, verdict=verdict)
 
 
 def run(obs, px_mm, fps, groove_mm, sigma, mu, H_mm, out):
@@ -278,6 +363,16 @@ def run(obs, px_mm, fps, groove_mm, sigma, mu, H_mm, out):
         if any(skipped.values()):
             print(f"  I96 건너뜀(트랙 {st.get('tracks', 0)}개 중): 조각 < 33 프레임 {skipped['short']}, f_g ≥ 0.45 {skipped['fast']}, "
                   f"홈 두 주기 미만 {skipped['slow']}, 역방향 {skipped['back']}")
+        gi = groove_interference(gs, lam_px) if gs else None
+        if gi and "rho" in gi:
+            with open(os.path.join(out, "groove_interference.csv"), "w", encoding="utf-8", newline="") as fh:
+                w = csv.DictWriter(fh, fieldnames=list(gi["bins"][0].keys())); w.writeheader(); w.writerows(gi["bins"])
+            print(f"I116 홈 위 길이 간섭(트랙 {gi['n']}개, φ = frac(L/λ_g) 칸 {'/'.join(str(c) for c in gi['coverage'])}): "
+                  f"ρ {gi['rho']:+.2f} [{gi['rho_lo']:+.2f}~{gi['rho_hi']:+.2f}], 위상 ψ {math.degrees(gi['psi']):+.0f}°, "
+                  f"한 끝 진폭 δV₁/V̄ {gi['dV1_over_V']:.3f} → {gi['verdict']}. 칸별 중앙값: "
+                  + ", ".join(f"φ {bb['phi_lo']:.1f}~{bb['phi_hi']:.1f} {bb['dV_over_V_med']:.3f}(모형 {bb['model']:.3f})" for bb in gi["bins"]))
+        elif gi:
+            print("I116: " + gi["verdict"])
         if st.get("fast"):
             vf = float(np.median(st["v_fast"]))
             print(f"  표본화 한계: 홈 간격 {lam_px:.0f} px가 프레임당 이동 {vf:.1f} px의 2.2배보다 짧다 → fps ≥ 2.2·V/λ_g = "
@@ -385,6 +480,38 @@ def make_demo_fast(out, seed=7):
     return path
 
 
+def make_demo_interf(out, rho, seed=11, n=60, eps=0.04, v0=6.0, lam=100.0, nf=80):
+    """I116 합성(CSV만): 앞끝 힘 + ρ × 뒤끝 힘이 홈 간격 λ로 속도를 흔든다. 연속 운동 RK4(프레임당 20단계).
+    dx/dt = v0·(1 + eps·[sin(k·x_f + ph) + ρ·sin(k·(x_f − L) + ph)]), x_f = x + L/2. L은 1.5λ~4.5λ에서 고르게.
+    CSV의 先端部X = x + L/2라 도구는 L을 2·(앞끝 − 중심)으로 읽는다. 위치 잡음 0.1 px."""
+    rng = np.random.default_rng(seed)
+    k = 2 * math.pi / lam
+    rows = []
+    for tid in range(1, n + 1):
+        L, ph, x = rng.uniform(1.5 * lam, 4.5 * lam), rng.uniform(0, 6.28), rng.uniform(0, lam)
+
+        def fn(x_):
+            xf = x_ + L / 2
+            return v0 * (1 + eps * (math.sin(k * xf + ph) + rho * math.sin(k * (xf - L) + ph)))
+        xs, h = [], 1.0 / 20
+        for _ in range(nf):
+            xs.append(x)
+            for _ in range(20):
+                k1 = fn(x); k2 = fn(x + h * k1 / 2); k3 = fn(x + h * k2 / 2); k4 = fn(x + h * k3)
+                x += h * (k1 + 2 * k2 + 2 * k3 + k4) / 6
+        for f, xc in enumerate(xs):
+            rows.append({"ファイル名": f"h{f:03d}.png", "フレーム": f, "トラックID": tid, "イベント": "new" if f == 0 else "normal",
+                         "親トラックID": "", "面積(px)": f"{math.pi * (L / 2) ** 2:.0f}", "先端部X": f"{xc + L / 2 + rng.normal(0, 0.1):.2f}",
+                         "先端部Y": f"{40.0 * tid:.2f}", "中心X": f"{xc + rng.normal(0, 0.1):.2f}", "中心Y": f"{40.0 * tid:.2f}",
+                         "フレーム接触": "0"})
+    os.makedirs(out, exist_ok=True)
+    path = os.path.join(out, f"demo_interf_{'wet' if rho < 0 else 'dry'}.csv")
+    with open(path, "w", encoding="utf-8-sig", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
+        w.writeheader(); w.writerows(rows)
+    return path
+
+
 def _demo(out):
     fails = []
 
@@ -420,6 +547,17 @@ def _demo(out):
     check(len(jumped) == 10 and all(x["frames"] == 65 for x in jumped) and abs(r - 0.08) <= 0.008, "합체 점프 앞에서 자름",
           f"트랙 {len(jumped)}개, 조각 {sorted({x['frames'] for x in jumped})} 프레임 차분, δV/V̄ {r:.4f}")
     check(st.get("fast") == 20, "f_g 0.50 건너뜀(표본화 한계)", f"{st.get('fast')}개(20개여야 함)")
+    print("[3] I116 홈 위 길이 간섭(CSV만, f_g 0.06, 진폭 4%, L 1.5~4.5 λ_g): 젖은 모세관 기하 ρ = −1, 마른 고정 ρ = +0.6")
+    for rho_t, name in ((-1.0, "젖음"), (0.6, "마름")):
+        sub = os.path.join(out, "interf")
+        rows, speed = read_rows(make_demo_interf(sub, rho_t))
+        obs = collect(rows, speed, None, None, None, "right")
+        gs = groove_spectrum(obs, 0.01, 1.0, 0.072, 1e-3, 500.0)
+        gi = groove_interference(gs, 100.0)
+        ok = gi is not None and "rho" in gi and abs(gi["rho"] - rho_t) <= 0.2 and (gi["rho_hi"] < -0.3 if rho_t < 0 else gi["rho_lo"] > 0.3)
+        msg = (f"ρ {gi['rho']:+.2f} [{gi['rho_lo']:+.2f}~{gi['rho_hi']:+.2f}](참 {rho_t:+.1f}), δV₁/V̄ {gi['dV1_over_V']:.3f}(참 0.040), "
+               f"{gi['verdict']}") if gi and "rho" in gi else (gi or {}).get("verdict", "맞춤 없음")
+        check(ok, f"I116 {name}", msg)
     print("자가 시험 " + ("모두 통과" if not fails else f"실패 {len(fails)}건: " + ", ".join(fails)))
     return not fails
 
