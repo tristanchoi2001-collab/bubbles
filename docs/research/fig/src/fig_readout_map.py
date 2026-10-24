@@ -11,25 +11,29 @@ C1, C2 = "#2a78d6", "#eb6834"
 INK, INK2, MUTED, GRID, SURF = "#0b0b0b", "#52514e", "#8a8986", "#e6e5e1", "#fcfcfb"
 plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 9.0, "figure.facecolor": SURF, "savefig.facecolor": SURF})
 
-gives = ["λ = s − 1", "friction factor f", "friction exponent m", "local field U_loc", "void fraction α", "gap map / tilt", "liquid ∇T"]
+gives = ["λ = s − 1", "friction factor f", "friction exponent m", "local field U_loc", "void fraction α", "gap map / tilt", "liquid ∇T",
+         "pressure drop E", "wet / dry footprint"]
 needs = ["ΔP taps", "U_loc", "new runs", "contour masks"]
 rows = [  # (label, gives set, needs set, tool)
-    ("I89–I91 force balance, mobility collapse", {0, 1, 2}, {0}, "plane_from_csv.py"),
+    ("I89–I91 force balance, mobility collapse", {0, 1, 2, 7}, {0}, "plane_from_csv.py"),
     ("I99 fluctuation width |λ|", {0}, set(), "velocity_fluctuations.py"),
-    ("I100 streamwise/lateral response ratio", {2}, {1}, "velocity_fluctuations.py --regress"),
+    ("I100 streamwise/lateral response ratio", {2, 8}, {1}, "velocity_fluctuations.py --regress"),
     ("I101 side-wall speed change", {0}, set(), "plane_from_csv.py (s_starW)"),
     ("I102 lateral tilt deflection", {3}, {2}, "—"),
     ("I104 invisible size d* (s = 1)", {1, 2}, {1}, "plane_from_csv.py tables"),
     ("I105 capillary-potential drift", {5, 6}, {1}, "drift_map.py"),
     ("I106 tilt along vs across", {2}, {1, 2}, "—"),
-    ("I107 relaxation after merging", {1, 2}, {3}, "merge_relax.py"),
+    ("I107 relaxation after merging", {1, 2, 8}, {3}, "merge_relax.py"),
     ("I108 two-view flow difference vs pressure", {4}, {0, 2}, "—"),
-    ("I109 steady flattening", {1, 2}, {3}, "shape_flatten.py"),
+    ("I109 steady flattening", {1, 2, 8}, {3}, "shape_flatten.py"),
     ("I110 void-wave speed vs bubble speed", {0, 2}, set(), "void_waves.py"),
-    ("I111 regression on unit dipole fields", {0, 2, 3}, set(), "velocity_fluctuations.py"),
+    ("I111 regression on unit dipole fields", {0, 2, 3, 8}, set(), "velocity_fluctuations.py"),
+    ("I112 drying boundary from mobility kinks", {8}, {1}, "mobility_kink.py"),
+    ("I113 pressure drop without taps", {7}, set(), "(from I111 output)"),
+    ("I114 stick–slip intermittency", {8}, set(), "mobility_kink.py"),
 ]
 ncol = len(gives) + len(needs)
-fig, ax = plt.subplots(figsize=(11.6, 6.0))
+fig, ax = plt.subplots(figsize=(12.6, 7.0))
 x0_label, x_cols, x_tool = 0.0, 4.6, 4.6 + 0.62 * ncol + 0.25
 for i, (lab, gv, nd, tool) in enumerate(rows):
     y = len(rows) - 1 - i
@@ -55,10 +59,10 @@ ax.axis("off")
 ax.plot([], [], "o", ms=9, color=C1, label="gives")
 ax.plot([], [], "s", ms=8, color=C2, label="needs (beyond tracking + flowmeters)")
 ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(0.0, 1.0), fontsize=8.2, ncol=2)
-ax.set_title("What each tracked-velocity readout gives and what it needs (velocity-first program, I89–I111)",
+ax.set_title("What each tracked-velocity readout gives and what it needs (velocity-first program, I89–I114)",
              fontsize=10, color=INK, loc="left", pad=2)
 fig.text(0.01, 0.01, "U_loc can come from ΔP + flow rates ((U_P + J)/2), from imaged α and flowmeters (j_L/(1 − α), mean-field closure) or from a lateral tilt (I102). "
-         "Readouts that need neither pressure nor U_loc: I99, I101 (sign of λ), I107, I109, I110 (signed λ), I111 (signed λ and U_loc = V̄/(1 + λ) itself).\n"
+         "Readouts that need neither pressure nor U_loc: I99, I101 (sign of λ), I107, I109, I110 (signed λ), I111 (signed λ and U_loc = V̄/(1 + λ) itself), I113 (E from I111), I114.\n"
          "f is read five ways and m eight ways; agreement between them is the main test (velocity_links.md section 3). I110: pattern speed needs no track IDs, "
          "the reference V̄ does; current fields of view reach only small bubbles at 0.3 mm.\n"
          "Independent reviews 6–9 corrected I90–I110 (review 9: I108 recast as a two-view local mass balance; liquid inertia dominates the single-point phase).",
