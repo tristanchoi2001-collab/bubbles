@@ -1,0 +1,3 @@
+doi	first_author	year	short_title	level	note
+10.1103/physrevx.10.021009	Frishman	2020	Learning Force Fields from Stochastic Trajectories	C	I111 선례(검토 10 #24). PRX 10:021009. 궤적 속도를 기저 함수에 선형 투영해 힘(상호작용)을 추론하는 일반 방법(SFI). I111의 "물리 기저 장에 추적 속도를 회귀"는 이 방법의 한 형태다(Crossref 확인)
+10.1017/jfm.2018.575	Green	2018	Approximate solutions to droplet dynamics in Hele-Shaw flows	C	I111 근접장 위험(검토 10 #24). JFM 853:253-270. 쌍극자를 단순히 더하면 액적 표면의 무유속 조건이 깨진다(근접 쌍에서 쌍극자 중첩 오차, Crossref 확인)
