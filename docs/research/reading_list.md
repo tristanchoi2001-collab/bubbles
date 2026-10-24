@@ -41,7 +41,7 @@
 | Fujita, Ohara, Hirota, Furuta & Sugiyama 1995 Trans JSME B 61:4412 | 수평 폭 10 mm, 갭 0.2~2.0 mm의 α·ΔP·기포 속도(질소 + 물·에탄올). 거대 기포 1차원 폐합의 문헌 대조 대상 | 그림 7(V_b = 1.2j), 그림 9·11·12(α), 그림 13(ΔP), 그림 14(C가 갭과 함께 커짐). 기공률은 중심선 국소값 | J-STAGE 공개 10.1299/kikaib.61.4412 (일본어, 영문 초록) |
 | Kumagai, Okuyama & Iguchi 2008 J JSEM 8:s152 | 수평 0.5~10 mm 공기-물 양식 지도. **우리 갭 묶음의 직접 선례**(신규성 문구를 좁힌 근거) | 그림 6·9(기포 두께 대 갭, 1 mm 막 파열·채널링), 그림 10(0.5/1/2 mm 경계) | J-STAGE 공개 10.11395/jjsem.8.s152 (영문) |
 | Sadatomi, Ali & Kawaji 1992 Trans JSME B 58:408 | 갭 0.778·1.465 mm, 수평판 사이 수평류의 α·마찰 배수. **측정 α 분리류 모델(층류 E = α/(1 − α))이 가장 잘 맞음 = 우리 폐합의 c = 1 경우(2026-10-24 읽음)** | 식 (19)·(20)과 표 2·3(분리류 모델 오차), 그림 3(수평판 사이 리뷸렛 흐름) | J-STAGE 공개 10.1299/kikaib.58.408 (일본어) |
-| Fourar, Bories, Lenormand & Persoff 1993 WRR 29:3699 | 매끈한 1.05 mm 수평 유리판의 기포 양식(사진) + 압력 구배·포화도 등고선 + k_rL·k_rG. **관성 영역(Λ ≈ 1.5~9)의 비교 자료(2026-10-24 읽음)** | 그림 4(기포 사진), 5a(등고선), 6a(k_r) | 퍼듀대 물리학과 공개본 www.physics.purdue.edu/rockphys/docs/publications/micro-model/93WR01529Persoff1997.pdf |
+| Fourar, Bories, Lenormand & Persoff 1993 WRR 29:3699 | 매끈한 1.05 mm 수평 유리판의 기포 양식(사진) + 압력 구배·포화도 등고선 + k_rL·k_rG. **2026-10-24 읽음. 기포 d ≈ 15~33 mm의 D형(축척 추정), Λ ≈ 0.3~3. 판독 E는 Darcy 폐합보다 크지만 k_rL 배율 하나로도 설명돼 판정 불가(독립 검토 3)** | 그림 4(기포 사진), 5a(등고선), 6a(k_r) | 퍼듀대 물리학과 공개본 www.physics.purdue.edu/rockphys/docs/publications/micro-model/93WR01529Persoff1997.pdf |
 
 ## D. 열전달·비등 (논문 2)
 | 문헌 | 왜 읽나 | 무엇을 볼까 | 무료 원문 |

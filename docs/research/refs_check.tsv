@@ -62,6 +62,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/0255-2701(89)90007-x	OK	drahos	1989	Diagnostics of gas—liquid flow patterns in chemical engineering systems	Chemical Engineering and Processing: Process Intensification	6_measurement,check
 10.1016/0301-9322(75)90015-4	OK	jones	1975	The interrelation between void fraction fluctuations and flow patterns in two-phase flow	International Journal of Multiphase Flow	1_adiabatic_gap,check
 10.1016/0301-9322(81)90003-3	OK	sato	1981	Momentum and heat transfer in two-phase bubble flow—I. Theory	International Journal of Multiphase Flow	4_heat_transfer,check
+10.1016/0301-9322(82)90009-x	OK	beattie	1982	A simple two-phase frictional pressure drop calculation method	International Journal of Multiphase Flow	13_plane
 10.1016/0301-9322(82)90068-4	OK	sadatomi	1982	Two-phase flow in vertical noncircular channels	International Journal of Multiphase Flow	1_adiabatic_gap,9_data,check
 10.1016/0301-9322(84)90007-7	OK	matsui	1984	Identification of flow regimes in vertical gas-liquid two-phase flow using differential pressure fluctuations	International Journal of Multiphase Flow	10_ideas,6_measurement,check
 10.1016/0301-9322(89)90042-6	OK	monde	1989	Enhancement of heat transfer due to bubbles passing through a narrow vertical rectangular channel	International Journal of Multiphase Flow	4_heat_transfer,check
@@ -388,7 +389,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1063/1.2976306	OK	bławzdziewicz	2008	An analysis of the far-field response to external forcing of a suspension in the Stokes flow in a parallel-wall channel	Physics of Fluids	0_estimates,10_ideas,12_ideas3,check
 10.1063/1.3109686	OK	labrot	2009	Extracting the hydrodynamic resistance of droplets from their behavior in microchannel networks	Biomicrofluidics	10_ideas,3_pressure_drop,7_closest_novelty,check
 10.1063/1.3142502	OK	raufaste	2009	Dissipation in quasi-two-dimensional flowing foams	Physics of Fluids	3_pressure_drop,5_ai_image,7_closest_novelty,check
-10.1063/1.346276	OK	kim	1990	Determination of the effective conductivity of heterogeneous media by Brownian motion simulation	Journal of Applied Physics	13_plane
+10.1063/1.346276	OK	kim	1990	Determination of the effective conductivity of heterogeneous media by Brownian motion simulation	Journal of Applied Physics	13_plane,check
 10.1063/1.4793544	OK	cantat	2013	Liquid meniscus friction on a wet plate: Bubbles, lamellae, and foams	Physics of Fluids	0_estimates,3_pressure_drop,7_closest_novelty,check
 10.1063/1.4878095	OK	gallaire	2014	Marangoni induced force on a drop in a Hele Shaw cell	Physics of Fluids	1_adiabatic_gap,3_pressure_drop,check
 10.1063/1.4903488	OK	wang	2014	Experimental and numerical study of buoyancy-driven single bubble dynamics in a vertical Hele-Shaw cell	Physics of Fluids	1_adiabatic_gap,check
