@@ -381,7 +381,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1063/1.1149232	OK	shedd	1998	Automated optical liquid film thickness measurement method	Review of Scientific Instruments	6_measurement,check
 10.1063/1.1289396	OK	aussillous	2000	Quick deposition of a fluid on the wall of a tube	Physics of Fluids	0_estimates,3_pressure_drop,6_measurement,check
 10.1063/1.1389861	OK	heil	2001	Finite Reynolds number effects in the Bretherton problem	Physics of Fluids	3_pressure_drop,check
-10.1063/1.1728579	OK	hashin	1962	A Variational Approach to the Theory of the Effective Magnetic Permeability of Multiphase Materials	Journal of Applied Physics	13_plane
+10.1063/1.1728579	OK	hashin	1962	A Variational Approach to the Theory of the Effective Magnetic Permeability of Multiphase Materials	Journal of Applied Physics	13_plane,check
 10.1063/1.1813871	OK	cubaud	2004	Transport of bubbles in square microchannels	Physics of Fluids	1_adiabatic_gap,check
 10.1063/1.2976306	OK	bławzdziewicz	2008	An analysis of the far-field response to external forcing of a suspension in the Stokes flow in a parallel-wall channel	Physics of Fluids	0_estimates,10_ideas,12_ideas3,check
 10.1063/1.3109686	OK	labrot	2009	Extracting the hydrodynamic resistance of droplets from their behavior in microchannel networks	Biomicrofluidics	10_ideas,3_pressure_drop,7_closest_novelty,check
@@ -430,7 +430,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1093/qjmam/12.3.265	OK	taylor	1959	A NOTE ON THE MOTION OF BUBBLES IN A HELE-SHAW CELL AND POROUS MEDIUM	The Quarterly Journal of Mechanics and Applied Mathematics	0_estimates,1_adiabatic_gap,3_pressure_drop,7_closest_novelty,9_data,check
 10.1098/rsos.252426	OK	booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	Royal Society Open Science	10_ideas,3_pressure_drop,9_data,check
 10.1098/rspa.1932.0169	OK	taylor	1932	The viscosity of a fluid containing small drops of another fluid	Proceedings of the Royal Society of London. Series A, Containing Papers of a Mathematical and Physical Character	10_ideas,check
-10.1098/rspa.1979.0160	OK	perrins	1979	Transport properties of regular arrays of cylinders	Proceedings of the Royal Society of London. A. Mathematical and Physical Sciences	13_plane
+10.1098/rspa.1979.0160	OK	perrins	1979	Transport properties of regular arrays of cylinders	Proceedings of the Royal Society of London. A. Mathematical and Physical Sciences	13_plane,check
 10.1098/rspa.2024.0613	OK	booth	2025	The motion of a bubble in a non-uniform Hele-Shaw flow	Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences	3_pressure_drop,9_data,check
 10.1103/7z3l-zpzy	OK	botticini	2026	Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle	Physical Review Fluids	3_pressure_drop,check
 10.1103/physreva.35.2221	OK	jensen	1987	Effect of gravity on the Saffman-Taylor meniscus: Theory and experiment	Physical Review A	0_estimates,check
@@ -529,6 +529,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1209/epl/i2003-10169-0	OK	cantat	2004	Dissipation in foam flowing through narrow channels	Europhysics Letters (EPL)	3_pressure_drop,7_closest_novelty,check
 10.1209/epl/i2005-10583-2	OK	terriac	2006	Viscous force exerted on a foam at a solid boundary: Influence of the liquid fraction and of the bubble size	Europhysics Letters (EPL)	3_pressure_drop,check
 10.1214/ss/1009213286	OK	brown	2001	Interval Estimation for a Binomial Proportion	Statistical Science	5_ai_image,check
+10.1252/kakoronbunshu.2.228	OK	iida	1976	Gas-Liquid Two-Phase Flow through Channels with Narrow Spaces	KAGAKU KOGAKU RONBUNSHU	13_plane
 10.1299/jsme1958.20.638	OK	katto	1977	Nucleate and Transition Boiling in a Narrow Space between Two Horizontal, Parallel Disk-Surfaces	Bulletin of JSME	2_boiling_gap,9_data,check
 10.1299/jsmeb1988.31.3_513	OK	fujita	1988	Heat Transfer in Nucleate Boiling within a Vertical Narrow Space	JSME international journal. Ser. 2, Fluids engineering, heat transfer, power, combustion, thermophysical properties	2_boiling_gap,7_closest_novelty,9_data,check
 10.1299/jsmekansai.2025.100.20304	OK	shen	2025	Advanced Prediction Method of Interfacial Area Concentration in Gas-Liquid Two-Phase Flow Analysis	The Proceedings of Conference of Kansai Branch	8_iate_coalescence,check
@@ -542,8 +543,10 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1299/kikaib.55.2030	OK	monde	1989	Enhancement of heat transfer due to bubbles passing through a narrow vertical rertical rectangular channel. Theoretical 	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	10_ideas,4_heat_transfer,check
 10.1299/kikaib.55.483	OK	monde	1989	Enhancement of heat transfer due to a bubble passing through a narrow vertical rectangular channel. Effect of subcooling	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	10_ideas,4_heat_transfer,check
 10.1299/kikaib.57.3499	OK	monde	1991	Measurement of Liquid Film Thickness during Pass of Bubble in a Vertical Rectangular Channel.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	4_heat_transfer,check
-10.1299/kikaib.58.401	OK	moriyama	1992	The Thermohydraulic Characteristics of Two-Phase Flow in Extremely Narrow Channels. The Frictional Pressure Drop and Voi	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	3_pressure_drop,check
+10.1299/kikaib.58.393	OK	moriyama	1992	The Thermohydraulic Characteristics of Two-Phase Flow in Extremely Narrow Channels. The Frictional Pressure Drop and Hea	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane
+10.1299/kikaib.58.401	OK	moriyama	1992	The Thermohydraulic Characteristics of Two-Phase Flow in Extremely Narrow Channels. The Frictional Pressure Drop and Voi	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane,3_pressure_drop,check
 10.1299/kikaib.58.408	OK	sadatomi	1992	Effects of Gap Width and Orientation on Two-Phase Flow in a Narrow Passage between Two-Flat Plates.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane,1_adiabatic_gap,6_measurement,9_data,check
+10.1299/kikaib.59.1003	OK	moriyama	1993	Study on a Single Flattened Bubble in a Narrow Channel.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane
 10.1299/kikaib.61.201	OK	ohta	1995	Experiments on Bubble Behavior in a Horizontal Narrow Divergent Passage.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	9_data,check
 10.1299/kikaib.61.4412	OK	fujita	1995	Gas-Liquid Flows in Narrow Flat Channels. Influences of Liquid Properties.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	9_data,check
 10.13182/nt95-a35111	OK	hibiki	1995	Application of High-Frame-Rate Neutron Radiography with a Steady Thermal Neutron Beam to Two-Phase Flow Measurements in 	Nuclear Technology	6_measurement,check
@@ -575,7 +578,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.2118/1204-pa	OK	bernard	1965	Effect of Foam on Trapped Gas Saturation and on Permeability of Porous Media to Water	Society of Petroleum Engineers Journal	12_ideas3,check
 10.2118/12129-pa	OK	hirasaki	1985	Mechanisms of Foam Flow in Porous Media: Apparent Viscosity in Smooth Capillaries	Society of Petroleum Engineers Journal	3_pressure_drop,check
 10.2118/170910-pa	OK	molla	2017	Microfluidic PVT--Saturation Pressure and Phase-Volume Measurement of Black Oils	SPE Reservoir Evaluation & Engineering	11_ideas2,check
-10.2118/4316-pa	OK	chierici	1974	Two-Phase Vertical Flow in Oil Wells - Prediction of Pressure Drop	Journal of Petroleum Technology	13_plane
+10.2118/4316-pa	OK	chierici	1974	Two-Phase Vertical Flow in Oil Wells - Prediction of Pressure Drop	Journal of Petroleum Technology	13_plane,check
 10.2139/ssrn.5914773	OK	kharangate	2025	Applying Computer Vision to Flow Boiling Analysis: Feature Extraction and Data-Driven Heat Transfer Coefficient Predicti		0_estimates,5_ai_image,check
 10.2139/ssrn.6505385	OK	kharangate	2026	Large-Scale Vision-Based Characterization of Flow Regimes and Interfacial Distributions for Heat Transfer Prediction in 		0_estimates,check
 10.2139/ssrn.6753968	OK	liu	2026	Void Fraction of Subcooled Flow Boiling within Horizontal Narrow Channel Measured by Capacitance Sensor		2_boiling_gap,6_measurement,7_closest_novelty,9_data,check
