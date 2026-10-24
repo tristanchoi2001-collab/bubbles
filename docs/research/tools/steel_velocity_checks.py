@@ -4,13 +4,15 @@ I98  기포 안쪽 밝기 대 속도: 같은 크기·같은 화면 위치에서 
      회귀한다. 마른 자리면 느린 기포가 다르고, 막 광학이면 ΔI가 V^(2/3)을 따라 매끈하고, 갇힌 빛이면 상관이 없다.
      트랙 단위 부트스트랩으로 기울기의 95% 구간을 낸다. 같은 기포의 ΔI가 화면 안에서 머문 시간과 함께 변하는지도 낸다.
 I96  홈 위 속도 변조: 프레임 수가 충분한 트랙마다 흐름 방향 속도 v(t)의 스펙트럼에서 주파수 V̄/λ_g(홈 간격 λ_g) 근처
-     진폭 δV를 찾는다. 힘 균형에서 홈 하나의 고정력 진폭 F_pin ≈ (2/3)·D·δV/V̄, D = k·σ·a·Ca^(2/3)(k 17, I89).
+     진폭 δV를 찾는다. 힘 균형에서 홈 하나의 고정력 진폭 F_pin ≈ D·(δV/V̄)·(2/3 + 1/Δ)(독립 검토 6 정정).
+     2/3은 마찰 법칙 D = k·σ·a·Ca^(2/3)(k 16.85, I89)의 속도 의존, 1/Δ는 기포가 느려질 때 커지는 Darcy 압력 힘이다.
+     Δ = K·D/(V·A·H), K = H²/12μ, A = πa². 원형(C = 1), 국소 액체 속도가 기포 감속에 흔들리지 않는다고 가정.
 
 입력 (추적 프로그램 steel/2_steel_track.py의 출력)
     --csv      result_tracking.csv (속도 열은 이름에 「速度」가 든 열, 흐름 방향 좌표 변화 px/frame)
     --masks    SAVE_INSTANCE_MASKS = True로 저장한 OUTPUT_FOLDER/instances 폴더(<파일 이름>.npz, 라벨 지도 inst)
     --images   원본 영상 폴더(CSV의 ファイル名), --bg 배경 영상
-    --px_mm, --fps, --flow(right/left/up/down), (선택) --groove_mm, --sigma, --mu
+    --px_mm, --fps, --flow(right/left/up/down), (선택) --groove_mm, --H_mm(갭, 기본 1.0), --sigma, --mu
 사용
     python steel_velocity_checks.py --csv result_tracking.csv --masks instances --images frames --bg bg.bmp --px_mm 0.01 --fps 500 --groove_mm 1.0 --out sv_out
     python steel_velocity_checks.py --demo --out sv_demo     # 합성 자료로 스스로 점검
@@ -134,7 +136,7 @@ def brightness_vs_speed(obs, n_size=4, n_pos=3, n_boot=300, seed=0):
     return res
 
 
-def groove_spectrum(obs, px_mm, groove_mm, sigma, mu, fps, min_len=32):
+def groove_spectrum(obs, px_mm, groove_mm, sigma, mu, fps, H_mm=1.0, min_len=32):
     """트랙마다 v(t)의 스펙트럼에서 V̄/λ_g 근처 진폭 δV(봉우리 주변 ±1칸의 최대)와 이웃 칸 대비 비."""
     by = defaultdict(list)
     for t in obs:
@@ -159,11 +161,14 @@ def groove_spectrum(obs, px_mm, groove_mm, sigma, mu, fps, min_len=32):
         bgn = np.median(np.concatenate([spec[max(k - 8, 1):max(k - 2, 1)], spec[k + 3:k + 9]])) if len(spec) > k + 3 else float("nan")
         d_px = float(np.mean([t[2] for t in ts]))
         a_m = d_px / 2 * px_mm * 1e-3
-        Ca = mu * vb * px_mm * 1e-3 * fps / sigma
-        D = 17.0 * sigma * a_m * Ca ** (2 / 3)
+        V_ms = vb * px_mm * 1e-3 * fps
+        Ca = mu * V_ms / sigma
+        D = 16.85 * sigma * a_m * Ca ** (2 / 3)
+        H = H_mm * 1e-3
+        Delta = H * H / (12 * mu) * D / (V_ms * math.pi * a_m * a_m * H)
         res.append(dict(track=tr, frames=len(v), d_px=d_px, V_px_per_frame=vb, f_groove=f_g, dV_over_V=amp / vb,
                         peak_to_background=amp / bgn if bgn and bgn == bgn else float("nan"),
-                        F_pin_N=(2 / 3) * D * amp / vb))
+                        Delta=Delta, F_pin_N=D * amp / vb * (2 / 3 + 1 / Delta)))
     return res
 
 
@@ -219,6 +224,7 @@ def main():
     ap.add_argument("--px_mm", type=float); ap.add_argument("--fps", type=float, default=500.0)
     ap.add_argument("--flow", default="right"); ap.add_argument("--groove_mm", type=float, default=float("nan"))
     ap.add_argument("--sigma", type=float, default=0.072); ap.add_argument("--mu", type=float, default=1.0e-3)
+    ap.add_argument("--H_mm", type=float, default=1.0)
     ap.add_argument("--out", default="sv_out"); ap.add_argument("--demo", action="store_true")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
@@ -239,13 +245,14 @@ def main():
               f"95% 구간이 0을 빼는 칸 {sum(1 for r in bv if r['ci_lo'] > 0 or r['ci_hi'] < 0)}개. "
               "0에 가까우면 갇힌 빛, 크기 칸마다 같은 부호의 매끈한 기울기면 막 광학, 느린 쪽에서만 꺾이면 마른 자리 쪽(I98).")
     if a.groove_mm == a.groove_mm:
-        gs = groove_spectrum(obs, a.px_mm, a.groove_mm, a.sigma, a.mu, a.fps)
+        gs = groove_spectrum(obs, a.px_mm, a.groove_mm, a.sigma, a.mu, a.fps, a.H_mm)
         if gs:
             with open(os.path.join(a.out, "groove_spectrum.csv"), "w", encoding="utf-8", newline="") as fh:
                 w = csv.DictWriter(fh, fieldnames=list(gs[0].keys())); w.writeheader(); w.writerows(gs)
             r = np.array([g["dV_over_V"] for g in gs]); pb = np.array([g["peak_to_background"] for g in gs])
             print(f"I96 홈 변조: 트랙 {len(gs)}개, δV/V̄ 중앙값 {np.median(r):.3f}, 봉우리/주변 중앙값 {np.nanmedian(pb):.1f}, "
-                  f"F_pin 중앙값 {np.median([g['F_pin_N'] for g in gs]):.2e} N(D = 17σaCa^(2/3) 가정)")
+                  f"Δ 중앙값 {np.median([g['Delta'] for g in gs]):.2f}, "
+                  f"F_pin 중앙값 {np.median([g['F_pin_N'] for g in gs]):.2e} N(D = 16.85σaCa^(2/3), F_pin = D·(δV/V̄)·(2/3 + 1/Δ) 가정)")
         else:
             print("I96: 조건(연속 프레임 ≥ 32, 2/N < V̄/λ_g < 0.45)을 만족하는 트랙이 없다.")
 

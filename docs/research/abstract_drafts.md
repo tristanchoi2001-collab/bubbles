@@ -29,20 +29,24 @@ Two-phase pressure-drop correlations for narrow rectangular channels fit a Chish
 ## 논문 1 — 속도 중심판 (2026-10-24, 사용자 방향 "공극률이 아니라 추적 속도로 연결", I89~I91·I95)
 
 **제목 후보**
-- Tracked bubble velocities close the pressure drop of confined bubbly flow in narrow gaps
+- Tracked bubble velocities close the time-averaged pressure drop of pancake-bubble flow in narrow gaps
 - The excess pressure drop of pancake bubbles is the sum of their friction forces: a velocity-based test with image tracking
 
-**초록 (영문 초안)**
-In narrow horizontal gaps, gap-spanning (pancake) bubbles move through liquid in Darcy flow. The wall friction of the liquid is linear in its local velocity, so its integral depends only on the superficial liquid velocity. The excess two-phase pressure drop is therefore exactly the sum of the friction forces on the bubble footprints, and each of these depends only on that bubble's own speed and shape. We test this force balance in gaps of 0.3, 0.7 and 1 mm using deep-learning detection and tracking of [N] bubbles with synchronised differential pressure, without using void fraction, bubble layout or a mean-field assumption. With the meniscus friction of clean interfaces (D ≈ 17σaCa^(2/3)), the tracked velocities predict the excess pressure drop within [..]% at [..] operating points. Regressing the pressure on the tracked velocities gives the friction coefficient and its velocity exponent [m = ..], which separate clean films (2/3), rigid interfaces (≈ 1/2) and dry footprints (≈ 0). Dividing each bubble's speed by the mean of the pressure-implied Darcy velocity and the total flux collapses all operating points onto one single-bubble mobility curve, as the two-dimensional local-field theory predicts. The classical void-fraction closure follows as the mean-field limit, and we show where it fails ([α ≳ 0.2], aligned layouts). The same capillary number sets the film thickness that governs footprint heat transfer and dryout, which links the adiabatic friction measurement to heated operation. The velocity–size curve also shows directly where bubbles stop spanning the gap at 3 and 7 mm.
+**초록 (영문 초안, 독립 검토 6 반영판)**
+In narrow horizontal gaps, gap-spanning (pancake) bubbles move through liquid in Darcy flow. Because the wall friction of the liquid is linear in its local velocity, its integral is fixed by the superficial liquid velocity, and the time-averaged excess two-phase pressure drop equals the sum of the friction forces on the moving bubbles, plus a Darcy term for bubbles held by the wall. The balance needs no void fraction, bubble layout or mean-field assumption, only that all gas is in tracked bubbles. We test it in gaps of 0.3, 0.7 and 1 mm with deep-learning detection and tracking of [N] bubbles and synchronised differential pressure. With the meniscus friction of clean interfaces (D = 16.85σaCa^(2/3), the planar Bretherton coefficients integrated round the rim), the tracked velocities predict the excess pressure drop within [..]% at [..] operating points. Read the other way, the pressure gives the friction law of the bubbles: a soluble surfactant raises the coefficient 1.3–2.5-fold at the same capillary exponent, an insoluble one changes the size dependence from perimeter to area and nearly immobilises the bubbles, and dry footprints show a threshold force. Divided by the mean of the pressure-implied Darcy velocity and the total flux, the speeds from all operating points fall on one single-bubble mobility curve in the Booth coordinate δ_B = 1.12Ca^(1/3)d/H. The classical void-fraction closure follows as the mean-field limit of the balance, and we show where it fails ([α ≳ 0.2], aligned layouts). Because tracking and imaging measure velocity and area separately, the two closures together also check gas conservation. The same capillary number sets the film thickness that governs footprint heat transfer and dryout, which links the adiabatic friction measurement to heated operation.
 
 **초록 (한국어 대역)**
-좁은 수평 갭에서 갭을 채운 팬케이크 기포는 Darcy 흐름의 액체 속을 움직인다. 액체의 벽 마찰은 국소 속도에 선형이라 그 합이 겉보기 액체 속도로만 정해진다. 그래서 이상류의 초과 압력 강하는 정확히 기포 발자국에 걸리는 마찰력의 합이고, 각 마찰력은 그 기포 자신의 속도와 모양에만 달린다. 우리는 0.3, 0.7, 1 mm 갭에서 딥러닝 검출·추적한 기포 [N]개와 동기화한 차압으로, 공극률·배치·평균장 가정 없이 이 힘 균형을 시험한다. 깨끗한 계면의 메니스커스 마찰(D ≈ 17σaCa^(2/3))을 쓰면 추적 속도가 [..]개 운전점의 초과 압력 강하를 [..]% 안으로 예측한다. 압력을 추적 속도에 회귀하면 마찰 계수와 속도 지수 [m = ..]가 나오고, 이것이 깨끗한 막(2/3), 굳은 계면(약 1/2), 마른 발자국(약 0)을 가른다. 각 기포의 속도를 압력이 말하는 Darcy 속도와 전체 유량의 평균으로 나누면, 2차원 국소장 이론의 예측대로 모든 운전점이 단일 기포 이동도 곡선 하나에 모인다. 고전적 공극률 폐합은 그 평균장 극한으로 나오고, 어디서 깨지는지([α ≳ 0.2], 정렬된 배치) 보인다. 같은 모세관 수가 발자국 열전달과 마름을 정하는 막 두께를 정하므로, 단열 마찰 측정이 가열 운전으로 이어진다. 속도–크기 곡선은 3·7 mm에서 기포가 갭을 채우지 않게 되는 곳도 바로 보여 준다.
+좁은 수평 갭에서 갭을 채운 팬케이크 기포는 Darcy 흐름의 액체 속을 움직인다. 액체의 벽 마찰은 국소 속도에 선형이라 그 합이 겉보기 액체 속도로 정해진다. 그래서 시간 평균한 이상류의 초과 압력 강하는 움직이는 기포에 걸리는 마찰력의 합과 같고, 벽에 걸린 기포가 있으면 그 Darcy 힘이 더해진다. 이 힘 균형에는 공극률·배치·평균장 가정이 필요 없고, 모든 기체가 추적한 기포 안에 있으면 된다. 우리는 0.3, 0.7, 1 mm 갭에서 딥러닝으로 검출·추적한 기포 [N]개와 동기화한 차압으로 이것을 시험한다. 깨끗한 계면의 메니스커스 마찰(D = 16.85σaCa^(2/3), 평면 Bretherton 계수를 둘레로 적분한 값)을 쓰면 추적 속도가 [..]개 운전점의 초과 압력 강하를 [..]% 안으로 예측한다. 거꾸로 읽으면 압력이 기포의 마찰 법칙을 알려 준다. 잘 녹는 계면활성제는 같은 모세관 지수에서 계수를 1.3~2.5배로 올리고, 녹지 않는 계면활성제는 크기 의존을 둘레에서 면적으로 바꾸고 기포를 거의 멈추게 하며, 마른 발자국은 문턱 힘으로 보인다. 각 기포의 속도를 압력이 말하는 Darcy 속도와 전체 유량의 평균으로 나누면, 모든 운전점이 Booth 좌표 δ_B = 1.12Ca^(1/3)d/H 위의 단일 기포 이동도 곡선 하나에 모인다. 고전적 공극률 폐합은 이 힘 균형의 평균장 극한으로 나오고, 어디서 깨지는지([α ≳ 0.2], 정렬된 배치) 보인다. 추적은 속도를, 영상은 면적을 따로 재므로 두 폐합을 함께 쓰면 기체 보존도 점검된다. 같은 모세관 수가 발자국 열전달과 마름을 정하는 막 두께를 정하므로, 단열 마찰 측정이 가열 운전으로 이어진다.
 
-**심사자 관점에서 새것 (초안)**
-1. 2차원 Darcy 기포 흐름의 정확한 힘 균형(초과 ΔP = Σ 기포 마찰)과, 그것을 기포 수천 개의 추적 속도로 닫는 시험. 1차원 Taylor 흐름의 합 모델과 2차원 거품의 판 마찰을 잇는 중간 영역(묽은~중간 기공률, 크기가 섞임)이다.
-2. 압력으로 기포 마찰 법칙(계수, 지수, 크기별)을 재서 발자국 젖음 상태를 읽는 방법.
-3. 이동도 붕괴 정규화 (U_P + J)/2와, 공극률 폐합이 "힘 균형 + 평균장"이라는 분해. 수치 확인(I82): 힘 균형은 모든 α에서 0.1~0.3%, 공극률 폐합은 α 0.4에서 7% 벗어난다.
-4. 공극률 대신 속도를 쓰므로 윤곽 규약 오차에 강하다(위치의 차).
+**심사자 관점에서 새것 (초안, 검토 6 반영)**
+1. 2차원 Darcy 기포 흐름의 시간 평균 힘 균형(초과 ΔP = 움직이는 기포의 마찰 합 + 멈춘 기포의 Darcy 힘)을 기포 수천 개의 추적 속도로 닫는 시험.
+   - 식 자체는 Taylor 흐름의 합 모델, Hirasaki & Lawson 1985, 2차원 거품의 판 마찰과 같은 계열이라 이론으로서 새로움은 낮다. 추적 속도로 닫는 실험으로서는 중이다.
+   - 1차원 Taylor 흐름과 2차원 거품 사이(묽은~중간 기공률, 크기가 섞임)의 자료다.
+2. 압력과 추적으로 기포 마찰 법칙(계수, 크기 의존, 이동도 곡선)을 재서 계면 상태(깨끗, 잘 녹는 계면활성제, 굳은 막, 마른 발자국)를 읽는 방법.
+   - 신호는 지수가 아니라 계수(1.26~2.52배)와 크기 의존(둘레 → 면적)이다. 지수 m은 k와 거의 완전히 상관하므로(corr > 0.99) 차압 ±2~5 Pa에서만 판정한다.
+3. 이동도 붕괴 정규화 (U_P + J)/2(모양이면 (U_P + CJ)/(1 + C))와 Booth 좌표 δ_B, 그리고 공극률 폐합이 "힘 균형 + 평균장"이라는 분해.
+   - 원판 계산(I82)은 평균장 쪽 오차(α 0.4에서 7%)를 보여 준다. 힘 균형 쪽 수치는 그 모형의 대수 항등식이라 근거로 쓰지 않는다(검토 6).
+4. 공극률 대신 속도를 쓰므로 윤곽 규약 오차에 강하다(위치의 차). 추적 V와 영상 α를 따로 재므로 두 폐합의 차이가 기체 보존 점검이 된다.
 
 ## 논문 2 (가열): 갭에 따른 공기 주입 열전달을 접촉·갱신·증발로 설명
 

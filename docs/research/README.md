@@ -5,7 +5,7 @@
 ## 먼저 볼 것 (10분)
 1. 보고서 ① 결론 요약(`../research_microgap_paper.md`).
 2. 아래 "핵심 결과".
-3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83), `fig/fig_r13_closure_alpha_limit.png`(무작위 원판 수치 실험: 폐합은 α 0.2까지 ±0.02, 그 위의 흩어짐은 배치 Q로 설명, I82), `fig/fig_r14_velocity_closure.png`(예상: 단분산 기포의 E/B = 마찰 매개변수 Δ의 크기 의존, 계면 상태 셋. 검토 6으로 앞 판의 "정확 대 근사" 패널을 지움, I89·I90), `fig/fig_r15_mobility_collapse.png`(r13과 같은 계산을 속도로 본 것: V/J는 α에 따라 퍼지고 국소장 정규화는 거의 일정. 독립 확인이 아니라 정규화 선택의 실용적 경고, I91).
+3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83), `fig/fig_r13_closure_alpha_limit.png`(무작위 원판 수치 실험: 폐합은 α 0.2까지 ±0.02, 그 위의 흩어짐은 배치 Q로 설명, I82), `fig/fig_r14_velocity_closure.png`(예상: 계면 상태 셋(깨끗·녹는 계면활성제·굳은 막 미끄럼)의 두 판독. (a) 압력: 단분산 E/B = Δ(d/H), (b) 추적만: 이동도 s(d/H). 굳은 막 미끄럼은 우리 유속에서 s 약 6×10⁻⁴로 사실상 멈춤. 검토 6으로 앞 판의 "정확 대 근사" 패널을 지움, I89~I91), `fig/fig_r15_mobility_collapse.png`(r13과 같은 계산을 속도로 본 것: V/J는 α에 따라 퍼지고 국소장 정규화는 거의 일정. 독립 확인이 아니라 정규화 선택의 실용적 경고, I91).
 
 ## 핵심 결과
 1. **어디가 비어 있나**
@@ -22,7 +22,7 @@
      - 압력의 마찰 계수와 추적 이동도 곡선으로 계면 상태를 읽는다.
        - 깨끗하면 k 17이다.
        - 잘 녹는 계면활성제는 같은 지수 2/3에서 계수가 1.26~2.52배다.
-       - 녹지 않는 계면활성제(굳은 막 미끄럼)는 마찰이 a²Ca^(1/3)를 따라 이동도가 크기와 무관하게 0.02~0.1이다.
+       - 녹지 않는 계면활성제(굳은 막 미끄럼)는 마찰이 a²Ca^(1/3)를 따라 이동도가 크기와 무관하게 s ≈ 1300·Ca_loc²로 떨어진다(물 0.05 m/s에서 약 6×10⁻⁴, 사실상 멈춤. 검토 6의 0.02~0.1은 0.3~0.6 m/s의 값).
        - 마른 발자국은 문턱 힘이다.
        - "굳은 계면 = 지수 1/2"은 근거가 없어 지웠다.
      - 추적 속도를 국소장(원형 (U_P + J)/2, 모양 C면 (U_P + CJ)/(1 + C), U_P = H²ΔP/(12μL))으로 나누면, Booth 매개변수 축에서 모든 운전점이 이동도 곡선 하나에 모일 것이다.
@@ -53,16 +53,16 @@
 
 ## 기존 0.3·0.7 mm 자료로 바로 해 볼 첫 단계 (2026-10-24)
 1. 운전점마다 한 줄씩 `points.csv`를 만든다: name, H_mm(단상 ΔP로 정한 유효 갭), jL, jG(m/s), dp_tp, dp_l(같은 탭·같은 j_L의 단상 ΔP, Pa), tracking_csv(result_tracking.csv 경로), roi_area_px, px_mm, fps, flow(투명 채널은 up), (선택) T_tp·T_l(두 측정 때 수온 °C — 1 K 차이가 E 0.024라 꼭 적는다), wall_lo_px·wall_hi_px(두 측벽의 가로 좌표, 배치 Q의 거울상에 필요. 비우면 기포 끝으로 추정), masks_dir(추적 때 `SAVE_INSTANCE_MASKS = True`로 저장한 `OUTPUT_FOLDER/instances` 폴더. 있으면 윤곽마다 경계요소 C_A를 구해 기울기에 쓴다 — b/a 추정기는 D형 기포에서 C_A를 17~40% 작게 낸다).
-2. `python docs/research/tools/plane_from_csv.py points.csv --out plane_out` → `plane_out/plane.png`(판별 평면), `plane_points.csv`(α, b/a, s̄, s̄_T, x, y, 예측 y, 배치 Q·예측 기울기(정확식), Re_B, Λ, 속도 중심의 힘 균형 예측 E_vel과 압력이 말하는 마찰 계수 k_fit, d/H 구간별 이동도 붕괴 s* = 2u/(U_P + J)). 처음에는 `--demo`와 `--selftest-q`(격자·무작위 배치에서 Q 점검)로 동작을 확인한다. 선택 열 dp_tp_se·dp_l_se(Pa)·T_se(K)·B_rel_se를 넣으면 E·x·y 오차 막대를 그린다(α·B_f·Q는 프레임 블록 부트스트랩). y 오차는 E 오차의 (1 − α)/α배라 α ≳ 0.15 점이 판별에 쓸모 있다.
+2. `python docs/research/tools/plane_from_csv.py points.csv --out plane_out` → `plane_out/plane.png`(판별 평면), `plane_points.csv`(α, b/a, s̄, s̄_T, x, y, 예측 y, 배치 Q·예측 기울기(정확식), Re_B, Λ, 속도 중심의 힘 균형 예측 E_vel과 압력이 말하는 마찰 계수 k_fit, d/H 구간별 이동도 붕괴 s* = 2u/(U_P + J)). 처음에는 `--demo`, `--selftest-q`(격자·무작위 배치에서 Q 점검), `--selftest-vel`(정답을 아는 합성 6점으로 속도 경로 점검: 잘린·멈춘·작은 기포, 빈 프레임, 순간 식, k·m·2항 되돌리기)로 동작을 확인한다. 선택 열 dp_tp_se·dp_l_se(Pa)·T_se(K)·B_rel_se를 넣으면 E·x·y 오차 막대를 그린다(α·B_f·Q는 프레임 블록 부트스트랩). y 오차는 E 오차의 (1 − α)/α배라 α ≳ 0.15 점이 판별에 쓸모 있다.
 3. **먼저 읽을 것 — 속도 중심(I89~I91, 공극률 불필요)**
-   - `E_vel` 대 측정 `E`: 깨끗한 막(k = 17)이면 비슷해야 한다. `k_fit` = 압력이 말하는 마찰 계수다.
+   - `E_vel`(움직이는 기포 `E_vel_moving` + 멈춘 기포 `E_stuck`) 대 측정 `E`: 깨끗한 막(k = 16.85)이면 비슷해야 한다. `k_fit` = (E − E_stuck)/P_2/3 = 압력이 말하는 마찰 계수다.
      - 17 근처: 깨끗한 Bretherton 막.
      - 21~43: 잘 녹는 계면활성제(같은 지수, 계수 1.26~2.52배).
-     - 훨씬 크고 이동도가 크기와 무관하게 0.02~0.1: 녹지 않는 오염으로 굳은 막(미끄럼).
+     - 훨씬 크고 기포가 크기와 무관하게 거의 멈춤(s ≈ 1300·Ca_loc², 물 0.05 m/s에서 약 6×10⁻⁴): 녹지 않는 오염으로 굳은 막(미끄럼).
      - 운전점마다 크게 흔들림: 오염 상태가 바뀌거나 마른 발자국이 섞인 것이다.
      - k를 오염으로 읽기 전에 계통을 먼저 뺀다(검토 6): 멈춘 기포(`alpha_stuck`, 보정 `E_stuck`), 잘린 기포(도구가 같은 트랙의 온전한 크기로 보정), 갭보다 작은 기포(`alpha_subgap`), 쐐기 3~5%, 기울기.
-   - `friction_fit.csv`: 운전점 5개 이상이면 m을 로그 공간에서 맞추고 구간을 낸다. m은 작은~중간 기포·넓은 j_L·차압 ±2~5 Pa에서만 판정한다(±13 Pa·d/H 10이면 sd 0.22, k와 m의 상관 > 0.99). 둘레 항(a·Ca^(2/3))과 면적 항(a²/H·Ca^(1/3))의 2항 맞춤으로 굳은 막을 가른다.
-   - `s_star_dH_*`(2u/(U_P + J))가 운전점과 무관하게 같으면 이동도 붕괴(평균장 국소장)가 성립한다. 같은 구간의 `V_over_J_dH_*`는 운전점마다 퍼질 것이다.
+   - `friction_fit.csv`(m 격자별 로그 잔차)와 `friction_fit_summary.csv`: m = 2/3 고정 k는 2점부터, 운전점 5개 이상이면 m을 로그 공간에서 맞추고 부트스트랩 95% 구간을 낸다. m은 작은~중간 기포·넓은 j_L·차압 ±2~5 Pa에서만 판정한다(±13 Pa·d/H 10이면 sd 0.22, k와 m의 상관 > 0.99). 둘레 항(a·Ca^(2/3))과 면적 항(a²/H·Ca^(1/3))의 2항 맞춤으로 굳은 막을 가른다.
+   - `s_star_dH_*`(2u/(U_P + J))가 운전점과 무관하게 같으면 이동도 붕괴(평균장 국소장)가 성립한다. 같은 구간의 `V_over_J_dH_*`는 운전점마다 퍼질 것이다. 납작한 기포는 모양 국소장 `s_starC_dH_*` = u(1 + C)/(U_P + C·J)를 본다. 운전점끼리 Ca가 다르면 `deltaB_dH_*`(Booth 좌표 δ_B) 축에 s를 그린다(깨끗하면 s^(2/3)/(2 − s) = δ_B).
    - ΔP 시계열이 있으면 `frames_<이름>.csv`를 쓴다. 순간식에는 영상 기체 유량 j_G,inst(t)의 요동 항이 들어간다. 그래서 `E_vel_frame` = (마찰 몫) + (j_G − j_G,inst(t))/j_L이다(검토 6). 기체 공급 맥동이 없어 J가 일정해야 하고, 시야가 두 탭 양쪽으로 약 W씩 넉넉해야 한다. 그렇지 않으면 기포 통과 시간보다 긴 블록 평균으로 한다.
 4. 공극률 쪽 읽는 법(판별 평면): 점이 y ≈ 1이면 분리류(쌍극자 없음), 영상 b/a로 그린 직선 y = 1 + (b/a)x 근처면 폐합 성립, y ≈ 0.1~0.2면 마찰이 거의 없는 납작·D형 기포(Moriyama형, C_A 1.3~2.3), y ≫ 1이면 입구·탭·단상 기준의 배율 문제(Fourar 1993 자료는 k_rL 배율 하나로 설명됨)나 관성(Λ 확인). 기울기가 b/a 예측과 다르면 배치 Q(I74)를 먼저 확인한다. 예상 위치는 설계 17장 "첫 그림에서 점이 놓일 곳".
 5. 그다음: 같은 유량에서 주입기만 바꾼 점(I54·I79)으로 기울기를 본다. 예측 기울기는 점마다 b/a와 Q로 다르므로, 주입기끼리 Q가 비슷한지 먼저 확인한다.

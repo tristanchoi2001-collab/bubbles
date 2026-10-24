@@ -1,4 +1,8 @@
-"""이동도 붕괴(I91)의 수치 확인, 그림 r15.
+"""이동도 붕괴(I91)를 r13의 원판 계산으로 다시 본 그림 r15. 독립 검토 6 #9 반영판.
+
+원판 모형에서는 V = j_G/α이고 E = B/ε가 항등식이라 2V/(U_P + J) = 2εE/(α(2 + (1 + ε)E))가 (α, E)로 정해진다.
+그래서 이 그림은 r13 폐합 잔차를 속도로 다시 쓴 것이고, 독립 확인이 아니다. V/J ≈ s(1 + α − B)가 퍼지는 것도 대수다.
+실험에서는 V(추적)와 α(영상)를 따로 재므로 두 시험이 다르고, 둘의 차이가 기체 보존 점검이 된다.
 
 I82 원판 계산(전도 원판 = 국소장의 s배로 움직이는 원)에서 원판 속도 V = j_G/α를 두 가지로 정규화한다.
 - 드리프트 플럭스 꼴 V/J(J = j_L + j_G): 기공률에 따라 퍼질 것.
@@ -49,14 +53,17 @@ ax.set_xlabel("void fraction α")
 ax.set_ylabel("normalised bubble (disc) speed")
 ax.set_xlim(0, 0.43); ax.set_ylim(0.2, 1.8)
 ax.grid(color=GRID, lw=0.8); ax.set_axisbelow(True)
-ax.legend(frameon=False, fontsize=7.6, loc="lower left", ncol=2)
-ax.set_title("Dividing by the mean of the pressure-implied Darcy velocity and the total flux keeps each\n"
-             "mobility constant from α = 0.05 to 0.4; dividing by the total flux does not (random discs)",
+ax.legend(frameon=False, fontsize=7.6, loc="center left", bbox_to_anchor=(0.01, 0.6), ncol=2)
+ax.set_title("The random-disc runs of r13 read as velocities: dividing by (U_P + J)/2 keeps each mobility constant,\n"
+             "dividing by J does not. Same information as the r13 closure residual, not an independent check",
              fontsize=10, color=INK, loc="left")
-fig.text(0.01, -0.06, "Same random-disc computations as figure r13 (conducting discs ε = s/(2 − s), 512² periodic grid, two layouts per α). "
+fig.text(0.01, -0.035, "Same random-disc computations as figure r13 (conducting discs ε = s/(2 − s), 512² periodic grid, two layouts per α). "
          "V = j_G/α, U_P = K·ΔP/L, J = j_L + j_G.\nThe 2–5% offset from the nominal s at small α is the single-disc grid constant. "
-         "Layout correction: multiply by (1 − λQ), λ = s − 1. Numerical check only — no data.",
-         fontsize=7.0, color=MUTED)
+         "Layout correction: multiply by (1 − λQ), λ = s − 1.\n"
+         "In the disc model V = j_G/α and E = B/ε hold exactly, so 2V/(U_P + J) = 2εE/(α(2 + (1 + ε)E)) is fixed by (α, E) (review 6). "
+         "In an experiment V (tracking) and α (images) are measured\nseparately, so the two tests differ and their disagreement checks gas conservation ⟨ΣV_iA_i⟩ = j_G·W·L. "
+         "V/J ≈ s(1 + α − B) spreads by algebra. Model computation only — no data.",
+         fontsize=7.0, color=MUTED, va="top")
 fig.tight_layout()
 fig.savefig(f"{HERE}/fig_r15_mobility_collapse.png", dpi=170, bbox_inches="tight")
 plt.close(fig)
