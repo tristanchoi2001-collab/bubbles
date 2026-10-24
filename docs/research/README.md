@@ -5,7 +5,7 @@
 ## 먼저 볼 것 (10분)
 1. 보고서 ① 결론 요약(`../research_microgap_paper.md`).
 2. 아래 "핵심 결과".
-3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83).
+3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 구조 모델은 (0, 1)을 지나는 직선, 배치가 기울기를 돌림), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에: Moriyama 점별 판독, Fourar 판정 불가), `fig/fig_r11_lambda_map.png`(갭·유속별 관성 비 Λ: 깨끗한 시험 범위), `fig/fig_r12_layout_crossover.png`(배치 효과의 부호 교차 예상, I83), `fig/fig_r13_closure_alpha_limit.png`(무작위 원판 수치 실험: 폐합은 α 0.2까지 ±0.02, 그 위의 흩어짐은 배치 Q로 설명, I82).
 
 ## 핵심 결과
 1. **어디가 비어 있나**
@@ -14,7 +14,7 @@
    - 비어 있는 곳: **영상 운동학으로 압력 강하를 맞춤 없이 예측**하는 것(논문 1), 그리고 그 갭 범위에서 ΔP·h·추적 통계를 함께 잰 자료.
 2. **논문 1의 식(팬케이크 영역)**
    - E = φ_L² − 1 = 2α/(1 − α) − β/(1 − β) = B·(2 − s̄)/s̄. 여기서 B = j_G/j_L, s̄ = B(1 − α)/α(평균 기포 이동도).
-   - 마찰 기구와 맞춘 상수가 들어가지 않는다. 크기는 기포 가장자리 쐐기 보정(β_f ≈ β/(1 − 0.43H/d))으로만 들어간다. 원형·α ≲ 0.3·Darcy(Re_H·H/d ≪ 1) 범위의 식이다.
+   - 마찰 기구와 맞춘 상수가 들어가지 않는다. 크기는 기포 가장자리 쐐기 보정(β_f ≈ β/(1 − 0.43H/d))으로만 들어간다. 원형·α ≲ 0.2·Darcy(Re_H·H/d ≪ 1) 범위의 식이다. 원판 수치 실험(I82, 그림 r13)에서 α 0.2까지 ±0.02 안이었다. 그 위의 흩어짐은 배치 Q로 설명되고, 남는 양의 잔차(α 0.3에서 +0.005~0.04, λ²에 비례)는 계통적이다.
    - 고립된 멈춘 기포는 섞여 있어도 성립한다. 기체가 멈춘 통로로 흐르면(채널링) E = 2α/(1 − α)로 B만큼 커진다 → 그 차로 채널링을 판별한다.
    - Lockhart–Martinelli로 쓰면 C ≈ 7.45·√B·(2 − s̄)/s̄. C가 미끄럼에 달렸다는 생각은 Chisholm 1967 분리류 이론에 이미 있다. C의 크기는 기존 상관식(Mishima–Hibiki 3.6~9.6, C_vv 5)과 같은 자릿수라 판별력이 없다 → 판별은 주입기만 바꿀 때 C(또는 E/B = (2 − s̄)/s̄)가 바뀌는지다(그림 r7).
    - **모양 가족과 판별 평면(2026-10-24)**: E = c·α/(1 − α) − (c − 1)·B, c = 1 + b/a. y = E(1 − α)/α 대 x = 1 − s̄에서 α를 쓰는 구조 모델은 (0, 1)을 지나는 직선이다: 폐합 y = 1 + (b/a)x, 분리류(측정 α 모델, Sadatomi 1992·Chierici 1974, 층류) y = 1, 균질류 y = 1 − x. 유량 상관식은 (1, 0)을 지난다. 같은 유량에서 주입기만 바꾼 점들의 기울기로 가른다(그림 r9, `tools/plane_from_csv.py`). 독립 검토 3: 기포 배치도 기울기를 바꾼다(기울기 = b/a − 2Q/(1 − α), Q = 측벽 거울상을 넣은 배치 비등방, I74) → 주입기마다 Q를 영상에서 잰다. 윤곽 테두리 오차는 크기별로 달라 기울기를 바꾸므로 기체 유량 폐합으로 먼저 보정한다.
@@ -49,7 +49,7 @@
 | `../research_microgap_paper.md` | 보고서 ①~⑥(결론, 유사 논문, 아이디어 평가, 논문 구성, 실험 조건, 질문) |
 | `design_predictions.md` | 실험 A~J별 가설·식·설계·예상 결과·반증, 시나리오 표, 논문 1·2 실행 순서(17·18장) |
 | `estimates_microgap.md` | 크기 추정. 5.4절 유효 매질 폐합(+ L–M 연결), 5.5절 거대 기포 1차원 폐합, 14장 유량 정밀도 |
-| `idea_log.md` | 아이디어 I1~I72(착안·식·설계·예상·반증·비용, 점검·검토 정정 포함) |
+| `idea_log.md` | 아이디어 I1~I88(착안·식·설계·예상·반증·비용, 점검·검토 정정 포함) |
 | `idea_checks.md`, `idea_checks_2.md`, `idea_checks_3.md` | 서브 에이전트의 신규성·물리 점검 |
 | `review_2.md` | 독립 검토 2(식·숫자·과장 점검 16건). 첫 검토 16건은 파일 없이 각 문서에 바로 반영했다 |
 | `novelty_analysis.md`, `lit_7_closest_novelty.md` | 신규성 분석, 가장 가까운 선행 |
@@ -62,6 +62,7 @@
 | `fig/`, `fig/src/` | 그림 r1~r11과 생성 스크립트 |
 | `tools/plane_from_csv.py` | 운전점 표(유량·차압·화소 크기·측벽 위치·마스크 폴더) + 추적 CSV → α, 종횡비 b/a, 윤곽 C_A(경계요소, I81), s̄(유량계·추적), 배치 계수 Q(측벽 거울상, I74), 예측 기울기, Re_B, Λ, 판별 평면 좌표와 그림. `--demo`, `--selftest-q`로 점검 |
 | `tools/added_mass_bem.py` | 기포 윤곽 또는 마스크 → 2차원 부가질량 계수 C_A(폐합 모양 인자 c = 1 + C_A, I81). 원·타원·45° 타원 이론과 일치. 마스크는 marching squares + 푸리에 평활(화소 원판 R ≥ 10 px에서 0.4% 안), 흐름 방향 회전(flow) |
+| `tools/darcy_disks.py` | 주기 상자 속 무작위 원판(국소장의 s배로 움직이는 원 = 전도도 s/(2 − s) 원판)의 2차원 Darcy 계산 → E, B, 배치마다 Q(주기 상). `--sweep out.json`이 α 0.05~0.4 × s 3개 × 배치 2개(약 9분). 그림 r13(I82)의 계산 |
 | `../refs_microgap.bib`, `refs_check.tsv`, `make_bib.py` | 참고문헌(Crossref·DataCite·doi.org 대조) |
 | `PROGRESS.md` | 작업 기록, 비용 규칙, 접속 상태 |
 
