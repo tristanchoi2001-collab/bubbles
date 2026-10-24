@@ -2,7 +2,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1002/9781119417989	OK	coleman	2018	Experimentation, Validation, and Uncertainty Analysis for Engineers		6_measurement,check
 10.1002/9781119840220	OK	woodbury	2023	Inverse Heat Conduction		6_measurement,check
 10.1002/aic.10495	OK	kreutzer	2005	Inertial and interfacial effects on pressure drop of Taylor flow in capillaries	AIChE Journal	0_estimates,12_ideas3,3_pressure_drop,7_closest_novelty,check
-10.1002/aic.690350606	OK	patel	1989	Holdup and interfacial area measurements using dynamic gas disengagement	AIChE Journal	12_ideas3
+10.1002/aic.690350606	OK	patel	1989	Holdup and interfacial area measurements using dynamic gas disengagement	AIChE Journal	12_ideas3,check
 10.1002/aic.690361004	OK	prince	1990	Bubble coalescence and break‐up in air‐sparged bubble columns	AIChE Journal	8_iate_coalescence,check
 10.1002/cjce.25458	OK	hlawitschka	2025	Coalescence investigations in a small‐scale continuously operated setup for bubble column design	The Canadian Journal of Chemical Engineering	8_iate_coalescence,check
 10.1002/cjce.5450590322	OK	weber	1981	Drift in intermittent two‐phase flow in horizontal pipes	The Canadian Journal of Chemical Engineering	1_adiabatic_gap,check
@@ -42,9 +42,9 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1007/s12217-019-09747-1	OK	ronshin	2019	Experimental Investigation of Adiabatic Gas-Liquid Flow Regimes and Pressure Drop in Slit Microchannel	Microgravity Science and Technology	3_pressure_drop,9_data,check
 10.1007/s40430-020-2223-8	OK	nunes	2020	Influence of coated surfaces and gap size on boiling heat transfer of deionized water	Journal of the Brazilian Society of Mechanical Sciences and Engineering	2_boiling_gap,check
 10.1007/s42757-019-0009-y	OK	hibiki	2019	One-dimensional drift-flux correlations for two-phase flow in medium-size channels	Experimental and Computational Multiphase Flow	1_adiabatic_gap,check
-10.1016/0009-2509(77)80222-4	OK	sriram	1977	Dynamic gas disengagement: A new technique for assessing the behaviour of bubble columns	Chemical Engineering Science	12_ideas3
+10.1016/0009-2509(77)80222-4	OK	sriram	1977	Dynamic gas disengagement: A new technique for assessing the behaviour of bubble columns	Chemical Engineering Science	12_ideas3,check
 10.1016/0009-2509(80)85127-x	OK	deckwer	1980	On the mechanism of heat transfer in bubble column reactors	Chemical Engineering Science	4_heat_transfer,check
-10.1016/0009-2509(89)85008-0	OK	taitel	1989	Simplified transient solution and simulation of two-phase flow in pipelines	Chemical Engineering Science	12_ideas3
+10.1016/0009-2509(89)85008-0	OK	taitel	1989	Simplified transient solution and simulation of two-phase flow in pipelines	Chemical Engineering Science	12_ideas3,check
 10.1016/0009-2509(95)00199-f	OK	kovscek	1995	A mechanistic population balance model for transient and steady-state foam flow in Boise sandstone	Chemical Engineering Science	3_pressure_drop,check
 10.1016/0017-9310(67)90047-6	OK	chisholm	1967	A theoretical basis for the Lockhart-Martinelli correlation for two-phase flow	International Journal of Heat and Mass Transfer	3_pressure_drop,check
 10.1016/0017-9310(69)90153-7	OK	ishibashi	1969	Saturated boiling heat transfer in narrow spaces	International Journal of Heat and Mass Transfer	2_boiling_gap,4_heat_transfer,7_closest_novelty,9_data,check
@@ -58,7 +58,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/0017-9310(96)00006-3	OK	kenning	1996	Pool boiling heat transfer on a thin plate: features revealed by liquid crystal thermography	International Journal of Heat and Mass Transfer	2_boiling_gap,check
 10.1016/0098-1354(92)80021-z	OK	wright	1992	Solutions of inverse problems in population balances—I. Aggregation kinetics	Computers & Chemical Engineering	10_ideas,11_ideas2,check
 10.1016/0098-1354(94)00062-s	OK	sathyagal	1995	Solution of inverse problems in population balances-II. Particle break-up	Computers & Chemical Engineering	11_ideas2,check
-10.1016/0169-5983(95)00053-g	OK	chen	1995	Experimental study of plane turbulent wakes in a shallow water layer	Fluid Dynamics Research	12_ideas3
+10.1016/0169-5983(95)00053-g	OK	chen	1995	Experimental study of plane turbulent wakes in a shallow water layer	Fluid Dynamics Research	12_ideas3,check
 10.1016/0255-2701(89)90007-x	OK	drahos	1989	Diagnostics of gas—liquid flow patterns in chemical engineering systems	Chemical Engineering and Processing: Process Intensification	6_measurement,check
 10.1016/0301-9322(75)90015-4	OK	jones	1975	The interrelation between void fraction fluctuations and flow patterns in two-phase flow	International Journal of Multiphase Flow	1_adiabatic_gap,check
 10.1016/0301-9322(81)90003-3	OK	sato	1981	Momentum and heat transfer in two-phase bubble flow—I. Theory	International Journal of Multiphase Flow	4_heat_transfer,check
@@ -131,7 +131,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.expthermflusci.2021.110380	OK	buscher	2021	Two-phase pressure drop and void fraction in a cross-corrugated plate heat exchanger channel: Impact of flow direction a	Experimental Thermal and Fluid Science	9_data,check
 10.1016/j.expthermflusci.2024.111153	OK	dementyev	2024	An experimental investigation of adiabatic two-phase flow patterns in a slit microchannel with 1:800 aspect ratio	Experimental Thermal and Fluid Science	9_data,check
 10.1016/j.flowmeasinst.2011.06.001	OK	ito	2011	Micro wire-mesh sensor for two-phase flow measurement in a rectangular narrow channel	Flow Measurement and Instrumentation	1_adiabatic_gap,check
-10.1016/j.flowmeasinst.2021.102080	OK	tait	2022	Determination of void fraction in wet-gas vertical flows via differential pressure measurement	Flow Measurement and Instrumentation	12_ideas3
+10.1016/j.flowmeasinst.2021.102080	OK	tait	2022	Determination of void fraction in wet-gas vertical flows via differential pressure measurement	Flow Measurement and Instrumentation	12_ideas3,check
 10.1016/j.icheatmasstransfer.2026.110611	OK	sun	2026	Deep learning-enhanced investigation of R134a/R245fa flow boiling in microchannels	International Communications in Heat and Mass Transfer	5_ai_image,check
 10.1016/j.ijheatfluidflow.2003.11.016	OK	passos	2004	Confined boiling of FC72 and FC87 on a downward facing heating copper disk	International Journal of Heat and Fluid Flow	2_boiling_gap,check
 10.1016/j.ijheatfluidflow.2006.06.004	OK	tadrist	2007	Review on two-phase flow instabilities in narrow spaces	International Journal of Heat and Fluid Flow	2_boiling_gap,check
@@ -250,7 +250,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/j.ijthermalsci.2023.108333	OK	soffer	2023	Experimental investigation on incipient boiling in narrow closed gaps with water	International Journal of Thermal Sciences	2_boiling_gap,check
 10.1016/j.ijthermalsci.2024.109086	OK	shen	2024	A full-flow-range drift-flux model for adiabatic and boiling two-phase flows in vertical narrow rectangular flow channel	International Journal of Thermal Sciences	1_adiabatic_gap,7_closest_novelty,9_data,check
 10.1016/j.jcis.2015.10.017	OK	osei-bonsu	2016	Fundamental investigation of foam flow in a liquid-filled Hele-Shaw cell	Journal of Colloid and Interface Science	7_closest_novelty,check
-10.1016/j.jcis.2019.09.072	OK	roman	2020	Pore-scale visualization and characterization of viscous dissipation in porous media	Journal of Colloid and Interface Science	12_ideas3
+10.1016/j.jcis.2019.09.072	OK	roman	2020	Pore-scale visualization and characterization of viscous dissipation in porous media	Journal of Colloid and Interface Science	12_ideas3,check
 10.1016/j.meaene.2025.100066	OK	liu	2025	Review of flow regime transition criteria for adiabatic co-current upward gas-liquid flow in vertical multi-scale channe	Measurement: Energy	7_closest_novelty,check
 10.1016/j.nucengdes.2003.10.008	OK	sun	2004	Modeling of bubble coalescence and disintegration in confined upward two-phase flow	Nuclear Engineering and Design	1_adiabatic_gap,7_closest_novelty,8_iate_coalescence,check
 10.1016/j.nucengdes.2003.10.014	OK	sun	2004	Model evaluation of two-group interfacial area transport equation for confined upward flow	Nuclear Engineering and Design	1_adiabatic_gap,8_iate_coalescence,check
@@ -282,7 +282,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1016/s0029-5493(99)00078-3	OK	ekberg	1999	Gas–liquid two-phase flow in narrow horizontal annuli	Nuclear Engineering and Design	9_data,check
 10.1016/s0065-2717(08)70205-3	OK	cooper	1984	Heat Flow Rates in Saturated Nucleate Pool Boiling-A Wide-Ranging Examination Using Reduced Properties	Advances in Heat Transfer	0_estimates,check
 10.1016/s0142-727x(99)00002-8	OK	xu	1999	Experimental study on gas–liquid two-phase flow regimes in rectangular channels with mini gaps	International Journal of Heat and Fluid Flow	1_adiabatic_gap,7_closest_novelty,9_data,check
-10.1016/s0255-2701(02)00208-8	OK	malayeri	2003	Neural network analysis of void fraction in air/water two-phase flows at elevated temperatures	Chemical Engineering and Processing: Process Intensification	12_ideas3
+10.1016/s0255-2701(02)00208-8	OK	malayeri	2003	Neural network analysis of void fraction in air/water two-phase flows at elevated temperatures	Chemical Engineering and Processing: Process Intensification	12_ideas3,check
 10.1016/s0301-9322(00)00050-1	OK	ju lee	2001	Pressure drop correlations for two-phase flow within horizontal rectangular channels with small heights	International Journal of Multiphase Flow	1_adiabatic_gap,3_pressure_drop,7_closest_novelty,9_data,check
 10.1016/s0301-9322(01)00054-4	OK	lee	2001	Heat transfer correlation for boiling flows in small rectangular horizontal channels with low aspect ratios	International Journal of Multiphase Flow	2_boiling_gap,4_heat_transfer,7_closest_novelty,9_data,check
 10.1016/s0301-9322(02)00037-x	OK	kawahara	2002	Investigation of two-phase flow pattern, void fraction and pressure drop in a microchannel	International Journal of Multiphase Flow	1_adiabatic_gap,3_pressure_drop,6_measurement,check
@@ -309,7 +309,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2018.213	OK	gvozdic	2018	Experimental investigation of heat transport in homogeneous bubbly flow	Journal of Fluid Mechanics	4_heat_transfer,check
 10.1017/jfm.2018.240	OK	keiser	2018	Dynamics of non-wetting drops confined in a Hele-Shaw cell	Journal of Fluid Mechanics	9_data,check
 10.1017/jfm.2018.457	OK	reichert	2018	Topography of the lubrication film under a pancake droplet travelling in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,3_pressure_drop,6_measurement,9_data,check
-10.1017/jfm.2019.453	OK	shukla	2019	Film thickness distribution in gravity-driven pancake-shaped droplets rising in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3
+10.1017/jfm.2019.453	OK	shukla	2019	Film thickness distribution in gravity-driven pancake-shaped droplets rising in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,check
 10.1017/jfm.2020.4	OK	filella	2020	Interaction of two oscillating bubbles rising in a thin-gap cell: vertical entrainment and interaction with vortices	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/jfm.2020.844	OK	gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,9_data,check
 10.1017/jfm.2022.1008	OK	booth	2023	Circular bubbles in a Hele-Shaw channel: a Hele-Shaw Newton's cradle	Journal of Fluid Mechanics	0_estimates,10_ideas,12_ideas3,3_pressure_drop,9_data,check
@@ -320,7 +320,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2025.167	OK	baue	2025	Droplet velocity in both limits of low and high soluble surfactants in a Hele-Shaw cell: experimental and analytical res	Journal of Fluid Mechanics	10_ideas,1_adiabatic_gap,3_pressure_drop,9_data,check
 10.1017/jfm.2025.322	OK	booth	2025	Bubble racing in a Hele-Shaw cell	Journal of Fluid Mechanics	3_pressure_drop,7_closest_novelty,9_data,check
 10.1017/s0022112002001830	OK	hazel	2002	The steady propagation of a semi-infinite bubble into a tube of elliptical or rectangular cross-section	Journal of Fluid Mechanics	3_pressure_drop,check
-10.1017/s0022112008003029	OK	elbing	2008	Bubble-induced skin-friction drag reduction and the abrupt transition to air-layer drag reduction	Journal of Fluid Mechanics	12_ideas3
+10.1017/s0022112008003029	OK	elbing	2008	Bubble-induced skin-friction drag reduction and the abrupt transition to air-layer drag reduction	Journal of Fluid Mechanics	12_ideas3,check
 10.1017/s0022112008003455	OK	de lozar	2008	The steady propagation of an air finger into a rectangular tube	Journal of Fluid Mechanics	3_pressure_drop,9_data,check
 10.1017/s0022112009007320	OK	lai	2009	Separation-driven coalescence of droplets: an analytical criterion for the approach to contact	Journal of Fluid Mechanics	8_iate_coalescence,check
 10.1017/s0022112010000935	OK	dollet	2010	Deformation of soap films pushed through tubes at high velocity	Journal of Fluid Mechanics	3_pressure_drop,check
@@ -332,20 +332,20 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/s0022112087002787	OK	couet	1987	The effects of surface tension and tube inclination on a two-dimensional rising bubble	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/s0022112090001306	OK	ratulowski	1990	Marangoni effects of trace impurities on the motion of long gas bubbles in capillaries	Journal of Fluid Mechanics	3_pressure_drop,check
 10.1017/s0022112095001455	OK	wong	1995	The motion of long bubbles in polygonal capillaries. Part 2. Drag, fluid pressure and fluid flow	Journal of Fluid Mechanics	3_pressure_drop,check
-10.1017/s095679250500625x	OK	howell	2005	On the absence of marginal pinching in thin free films	European Journal of Applied Mathematics	12_ideas3
+10.1017/s095679250500625x	OK	howell	2005	On the absence of marginal pinching in thin free films	European Journal of Applied Mathematics	12_ideas3,check
 10.1021/acs.iecr.3c01121	OK	yin	2023	Data-Driven Bubble Tracking DMD Method for Predicting Bubble Rising Behaviors in a Hele-Shaw Cell	Industrial & Engineering Chemistry Research	9_data,check
 10.1021/acs.iecr.5b01368	OK	chakraborty	2015	Inverse Problems in Population Balances. Determination of Aggregation Kernel by Weighted Residuals	Industrial & Engineering Chemistry Research	10_ideas,check
-10.1021/acs.langmuir.7b03839	OK	khodaparast	2018	Dewetting of Thin Liquid Films Surrounding Air Bubbles in Microchannels	Langmuir	12_ideas3
-10.1021/i160056a011	OK	dukler	1975	A Model for Gas-Liquid Slug Flow in Horizontal and Near Horizontal Tubes	Industrial & Engineering Chemistry Fundamentals	12_ideas3
+10.1021/acs.langmuir.7b03839	OK	khodaparast	2018	Dewetting of Thin Liquid Films Surrounding Air Bubbles in Microchannels	Langmuir	12_ideas3,check
+10.1021/i160056a011	OK	dukler	1975	A Model for Gas-Liquid Slug Flow in Horizontal and Near Horizontal Tubes	Industrial & Engineering Chemistry Fundamentals	12_ideas3,check
 10.1021/ie200610k	OK	leung	2012	Effect of Flow Characteristics on Taylor Flow Heat Transfer	Industrial & Engineering Chemistry Research	0_estimates,4_heat_transfer,check
 10.1021/ie50498a055	OK	danckwerts	1951	Significance of Liquid-Film Coefficients in Gas Absorption	Industrial & Engineering Chemistry	4_heat_transfer,check
-10.1021/j100807a513	OK	frankel	1962	ON THE “DIMPLING” DURING THE APPROACH OF TWO INTERFACES1	The Journal of Physical Chemistry	12_ideas3
+10.1021/j100807a513	OK	frankel	1962	ON THE “DIMPLING” DURING THE APPROACH OF TWO INTERFACES1	The Journal of Physical Chemistry	12_ideas3,check
 10.1021/jp901801k	OK	francis	2009	Application of a Bubble Column for Evaporative Cooling and a Simple Procedure for Determining the Latent Heat of Vaporiz	The Journal of Physical Chemistry B	11_ideas2,check
 10.1029/2004wr003837	OK	chen	2006	Two‐phase flow in rough‐walled fractures: Experiments and a flow structure model	Water Resources Research	0_estimates,10_ideas,9_data,check
-10.1029/93wr01529	OK	fourar	1993	Two‐phase flow in smooth and rough fractures: Measurement and correlation by porous‐medium and pipe flow models	Water Resources Research	0_estimates,9_data,check
+10.1029/93wr01529	OK	fourar	1993	Two‐phase flow in smooth and rough fractures: Measurement and correlation by porous‐medium and pipe flow models	Water Resources Research	0_estimates,13_plane,9_data,check
 10.1029/95wr00171	OK	persoff	1995	Two‐Phase Flow Visualization and Relative Permeability Measurement in Natural Rough‐Walled Rock Fractures	Water Resources Research	0_estimates,9_data,check
 10.1038/nmat1962	OK	steinberger	2007	High friction on a bubble mattress	Nature Materials	10_ideas,check
-10.1038/nmat3025	OK	tambe	2011	Collective cell guidance by cooperative intercellular forces	Nature Materials	12_ideas3
+10.1038/nmat3025	OK	tambe	2011	Collective cell guidance by cooperative intercellular forces	Nature Materials	12_ideas3,check
 10.1038/nmeth.1237	OK	jaqaman	2008	Robust single-particle tracking in live-cell time-lapse sequences	Nature Methods	5_ai_image,8_iate_coalescence,check
 10.1038/s41467-022-35084-w	OK	xie	2022	Data-driven discovery of dimensionless numbers and governing laws from scarce measurements	Nature Communications	5_ai_image,check
 10.1038/s41467-023-37899-7	OK	zhang	2023	A unifying criterion of the boiling crisis	Nature Communications	5_ai_image,check
@@ -366,14 +366,14 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1039/b815002h	OK	vanapalli	2009	Hydrodynamic resistance of single confined moving drops in rectangular microchannels	Lab Chip	10_ideas,1_adiabatic_gap,3_pressure_drop,7_closest_novelty,check
 10.1039/b903276b	OK	marmottant	2009	Microfluidics with foams	Soft Matter	3_pressure_drop,check
 10.1039/b918933e	OK	chan	2010	Dynamic interactions between deformable drops in the Hele–Shaw geometry	Soft Matter	12_ideas3,8_iate_coalescence,check
-10.1039/c0lc00104j	OK	abbyad	2011	Rails and anchors: guiding and trapping droplet microreactors in two dimensions	Lab Chip	12_ideas3
+10.1039/c0lc00104j	OK	abbyad	2011	Rails and anchors: guiding and trapping droplet microreactors in two dimensions	Lab Chip	12_ideas3,check
 10.1039/c0lc00478b	OK	molla	2011	Pressure drop of slug flow in microchannels with increasing void fraction: experiment and modeling	Lab on a Chip	10_ideas,11_ideas2,check
-10.1039/c0sm00812e	OK	chan	2011	Film drainage and coalescence between deformable drops and bubbles	Soft Matter	12_ideas3
+10.1039/c0sm00812e	OK	chan	2011	Film drainage and coalescence between deformable drops and bubbles	Soft Matter	12_ideas3,check
 10.1039/c0sm01535k	OK	eri	2011	Viscous drag friction acting on a fluid drop confined in between two plates	Soft Matter	3_pressure_drop,check
 10.1039/c1lc20534j	OK	jakiela	2011	Speed of flow of individual droplets in microfluidic channels as a function of the capillary number, volume of droplets 	Lab on a Chip	1_adiabatic_gap,3_pressure_drop,check
 10.1039/c3lc00013c	OK	fisher	2013	Equilibrium gas–oil ratio measurements using a microfluidic technique	Lab on a Chip	11_ideas2,check
 10.1039/c4ra15163a	OK	musterd	2015	Calculating the volume of elongated bubbles and droplets in microchannels from a top view image	RSC Advances	11_ideas2,6_measurement,check
-10.1039/c5lc01417d	OK	huerre	2016	Absolute 3D reconstruction of thin films topography in microfluidic channels by interference reflection microscopy	Lab on a Chip	12_ideas3
+10.1039/c5lc01417d	OK	huerre	2016	Absolute 3D reconstruction of thin films topography in microfluidic channels by interference reflection microscopy	Lab on a Chip	12_ideas3,check
 10.1039/c7sm01478c	OK	franco-gomez	2017	Bubble propagation on a rail: a concept for sorting bubbles by size	Soft Matter	10_ideas,12_ideas3,check
 10.1051/e3sconf/202345904005	OK	dementyev	2023	Two-phase flow patterns investigation in large aspect ratio microchannel with T-mixer	E3S Web of Conferences	9_data,check
 10.1051/matecconf/20167201023	OK	ronshin	2016	Investigation of Two-Phase Flow in Short Horizontal Mini Channel Height of 1 MM	MATEC Web of Conferences	9_data,check
@@ -381,6 +381,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1063/1.1149232	OK	shedd	1998	Automated optical liquid film thickness measurement method	Review of Scientific Instruments	6_measurement,check
 10.1063/1.1289396	OK	aussillous	2000	Quick deposition of a fluid on the wall of a tube	Physics of Fluids	0_estimates,3_pressure_drop,6_measurement,check
 10.1063/1.1389861	OK	heil	2001	Finite Reynolds number effects in the Bretherton problem	Physics of Fluids	3_pressure_drop,check
+10.1063/1.1728579	OK	hashin	1962	A Variational Approach to the Theory of the Effective Magnetic Permeability of Multiphase Materials	Journal of Applied Physics	13_plane
 10.1063/1.1813871	OK	cubaud	2004	Transport of bubbles in square microchannels	Physics of Fluids	1_adiabatic_gap,check
 10.1063/1.2976306	OK	bławzdziewicz	2008	An analysis of the far-field response to external forcing of a suspension in the Stokes flow in a parallel-wall channel	Physics of Fluids	0_estimates,10_ideas,12_ideas3,check
 10.1063/1.3109686	OK	labrot	2009	Extracting the hydrodynamic resistance of droplets from their behavior in microchannel networks	Biomicrofluidics	10_ideas,3_pressure_drop,7_closest_novelty,check
@@ -389,7 +390,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1063/1.4878095	OK	gallaire	2014	Marangoni induced force on a drop in a Hele Shaw cell	Physics of Fluids	1_adiabatic_gap,3_pressure_drop,check
 10.1063/1.4903488	OK	wang	2014	Experimental and numerical study of buoyancy-driven single bubble dynamics in a vertical Hele-Shaw cell	Physics of Fluids	1_adiabatic_gap,check
 10.1063/1.4952398	OK	ling	2016	Droplet migration in a Hele–Shaw cell: Effect of the lubrication film on the droplet dynamics	Physics of Fluids	1_adiabatic_gap,3_pressure_drop,check
-10.1063/1.5051057	OK	atasi	2018	How to measure the thickness of a lubrication film in a pancake bubble with a single snapshot?	Applied Physics Letters	12_ideas3
+10.1063/1.5051057	OK	atasi	2018	How to measure the thickness of a lubrication film in a pancake bubble with a single snapshot?	Applied Physics Letters	12_ideas3,check
 10.1063/1.5141357	OK	chauhan	2020	Transforming pool boiling into self-sustained flow boiling through bubble squeezing mechanism in tapered microgaps	Applied Physics Letters	2_boiling_gap,check
 10.1063/1.857404	OK	meiburg	1989	Bubbles in a Hele–Shaw cell: Numerical simulation of three-dimensional effects	Physics of Fluids A: Fluid Dynamics	1_adiabatic_gap,check
 10.1063/1.857492	OK	saffman	1989	Prediction of bubble velocity in a Hele–Shaw cell: Thin film and contact angle effects	Physics of Fluids A: Fluid Dynamics	10_ideas,1_adiabatic_gap,9_data,check
@@ -409,9 +410,9 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1063/5.0336482	OK	zhang	2026	A computer-vision approach for bulk flow parameters and Lagrangian bubble motion in millimeter-scale tubes	Physics of Fluids	5_ai_image,check
 10.1063/5.0342482	OK	zhang	2026	Single bubble rising behavior in narrow rectangular channels with finite channel width	Physics of Fluids	1_adiabatic_gap,7_closest_novelty,check
 10.1073/pnas.1017112108	OK	yokota	2011	Dimensional crossover in the coalescence dynamics of viscous drops confined in between two plates	Proceedings of the National Academy of Sciences	8_iate_coalescence,check
-10.1073/pnas.1209186110	OK	dangla	2013	Droplet microfluidics driven by gradients of confinement	Proceedings of the National Academy of Sciences	12_ideas3
+10.1073/pnas.1209186110	OK	dangla	2013	Droplet microfluidics driven by gradients of confinement	Proceedings of the National Academy of Sciences	12_ideas3,check
 10.1073/pnas.1517384113	OK	brunton	2016	Discovering governing equations from data by sparse identification of nonlinear dynamical systems	Proceedings of the National Academy of Sciences	5_ai_image,check
-10.1080/00221681003726262	OK	pozos	2010	Experimental investigation of air pockets in pumping pipeline systems	Journal of Hydraulic Research	12_ideas3
+10.1080/00221681003726262	OK	pozos	2010	Experimental investigation of air pockets in pumping pipeline systems	Journal of Hydraulic Research	12_ideas3,check
 10.1080/00295450.2026.2619821	OK	khandelwal	2026	Two Phase Flows in Narrow Rectangular Channels	Nuclear Technology	7_closest_novelty,check
 10.1080/01457630500523980	OK	english	2006	An Experimental Investigation into the Effect of Surfactants on Air-Water Two-Phase Flow in Minichannels	Heat Transfer Engineering	3_pressure_drop,check
 10.1080/01457630802656678	OK	bar-cohen	2009	Modeling and Prediction of Two-Phase Microgap Channel Heat Transfer Characteristics	Heat Transfer Engineering	7_closest_novelty,9_data,check
@@ -419,7 +420,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1080/014576399271691	OK	dongwoo kim, afshin j. ghajar, rona	1999	Comparison of 20 Two-Phase Heat Transfer Correlations with Seven Sets of Experimental Data, Including Flow Pattern and T	Heat Transfer Engineering	4_heat_transfer,check
 10.1080/01621459.1927.10502953	OK	wilson	1927	Probable Inference, the Law of Succession, and Statistical Inference	Journal of the American Statistical Association	5_ai_image,check
 10.1088/0957-0233/16/10/009	OK	ryu	2005	Use of bubble image velocimetry for measurement of plunging wave impinging on structure and associated greenwater	Measurement Science and Technology	10_ideas,11_ideas2,check
-10.1088/0957-0233/24/3/032001	OK	van oudheusden	2013	PIV-based pressure measurement	Measurement Science and Technology	12_ideas3
+10.1088/0957-0233/24/3/032001	OK	van oudheusden	2013	PIV-based pressure measurement	Measurement Science and Technology	12_ideas3,check
 10.1088/0957-0233/6/6/013	OK	keane	1995	Super-resolution particle imaging velocimetry	Measurement Science and Technology	5_ai_image,check
 10.1088/0960-1317/16/1/019	OK	chio	2006	Transient pressure drops of gas bubbles passing through liquid-filled microchannel contractions: an experimental study	Journal of Micromechanics and Microengineering	11_ideas2,check
 10.1088/1361-6501/ab1db8	OK	sciacchitano	2019	Uncertainty quantification in particle image velocimetry	Measurement Science and Technology	5_ai_image,7_closest_novelty,check
@@ -429,27 +430,28 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1093/qjmam/12.3.265	OK	taylor	1959	A NOTE ON THE MOTION OF BUBBLES IN A HELE-SHAW CELL AND POROUS MEDIUM	The Quarterly Journal of Mechanics and Applied Mathematics	0_estimates,1_adiabatic_gap,3_pressure_drop,7_closest_novelty,9_data,check
 10.1098/rsos.252426	OK	booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	Royal Society Open Science	10_ideas,3_pressure_drop,9_data,check
 10.1098/rspa.1932.0169	OK	taylor	1932	The viscosity of a fluid containing small drops of another fluid	Proceedings of the Royal Society of London. Series A, Containing Papers of a Mathematical and Physical Character	10_ideas,check
+10.1098/rspa.1979.0160	OK	perrins	1979	Transport properties of regular arrays of cylinders	Proceedings of the Royal Society of London. A. Mathematical and Physical Sciences	13_plane
 10.1098/rspa.2024.0613	OK	booth	2025	The motion of a bubble in a non-uniform Hele-Shaw flow	Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences	3_pressure_drop,9_data,check
 10.1103/7z3l-zpzy	OK	botticini	2026	Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle	Physical Review Fluids	3_pressure_drop,check
 10.1103/physreva.35.2221	OK	jensen	1987	Effect of gravity on the Saffman-Taylor meniscus: Theory and experiment	Physical Review A	0_estimates,check
 10.1103/physrevb.9.5056	OK	johnson	1974	Optical constants of transition metals: Ti, V, Cr, Mn, Fe, Co, Ni, and Pd	Physical Review B	10_ideas,6_measurement,check
 10.1103/physreve.70.041411	OK	kern	2004	Two-dimensional viscous froth model for foam dynamics	Physical Review E	3_pressure_drop,check
 10.1103/physreve.73.011505	OK	cantat	2006	Experimental evidence of flow destabilization in a two-dimensional bidisperse foam	Physical Review E	1_adiabatic_gap,9_data,check
-10.1103/physreve.78.051504	OK	krishan	2008	Viscous shear banding in foam	Physical Review E	12_ideas3
+10.1103/physreve.78.051504	OK	krishan	2008	Viscous shear banding in foam	Physical Review E	12_ideas3,check
 10.1103/physreve.80.016317	OK	sessoms	2009	Droplet motion in microfluidic networks: Hydrodynamic interactions and pressure-drop measurements	Physical Review E	1_adiabatic_gap,3_pressure_drop,7_closest_novelty,check
 10.1103/physreve.85.027302	OK	huisman	2012	Interaction and coalescence of large bubbles rising in a thin gap	Physical Review E	1_adiabatic_gap,7_closest_novelty,check
 10.1103/physreve.91.063013	OK	piedra	2015	Dynamics of two-dimensional bubbles	Physical Review E	1_adiabatic_gap,check
 10.1103/physrevfluids.10.023301	OK	raufaste	2025	Friction-induced bubble edge curvature in flowing two-dimensional confined foams	Physical Review Fluids	10_ideas,12_ideas3,5_ai_image,7_closest_novelty,check
 10.1103/physrevfluids.4.113602	OK	reichert	2019	Predicting droplet velocity in a Hele-Shaw cell	Physical Review Fluids	10_ideas,1_adiabatic_gap,3_pressure_drop,9_data,check
-10.1103/physrevfluids.5.093301	OK	shmakova	2020	Quasi-two-dimensional foam flow through and around a permeable obstacle	Physical Review Fluids	12_ideas3
+10.1103/physrevfluids.5.093301	OK	shmakova	2020	Quasi-two-dimensional foam flow through and around a permeable obstacle	Physical Review Fluids	12_ideas3,check
 10.1103/physrevfluids.6.093605	OK	pavlov	2021	Kinematics of a bubble freely rising in a thin-gap cell with additional in-plane confinement	Physical Review Fluids	1_adiabatic_gap,check
 10.1103/physrevfluids.9.073601	OK	monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	Physical Review Fluids	10_ideas,1_adiabatic_gap,7_closest_novelty,check
 10.1103/physrevfluids.9.093605	OK	lawless	2024	Stable bubble formations in a depth-perturbed Hele-Shaw channel	Physical Review Fluids	10_ideas,12_ideas3,1_adiabatic_gap,8_iate_coalescence,9_data,check
 10.1103/physrevfluids.9.123603	OK	wu	2024	Motion and deformation of a bubble in a Hele-Shaw cell	Physical Review Fluids	10_ideas,3_pressure_drop,7_closest_novelty,9_data,check
 10.1103/physrevlett.100.024501	OK	bremond	2008	Decompressing Emulsion Droplets Favors Coalescence	Physical Review Letters	8_iate_coalescence,check
-10.1103/physrevlett.100.044501	OK	schindler	2008	Droplet Traffic in Microfluidic Networks: A Simple Model for Understanding and Designing	Physical Review Letters	12_ideas3
+10.1103/physrevlett.100.044501	OK	schindler	2008	Droplet Traffic in Microfluidic Networks: A Simple Model for Understanding and Designing	Physical Review Letters	12_ideas3,check
 10.1103/physrevlett.106.068301	OK	biance	2011	How Topological Rearrangements and Liquid Fraction Control Liquid Foam Stability	Physical Review Letters	8_iate_coalescence,check
-10.1103/physrevlett.107.124501	OK	dangla	2011	Trapping Microfluidic Drops in Wells of Surface Energy	Physical Review Letters	12_ideas3
+10.1103/physrevlett.107.124501	OK	dangla	2011	Trapping Microfluidic Drops in Wells of Surface Energy	Physical Review Letters	12_ideas3,check
 10.1103/physrevlett.115.064501	OK	huerre	2015	Droplets in Microchannels: Dynamical Properties of the Lubrication Film	Physical Review Letters	12_ideas3,1_adiabatic_gap,check
 10.1103/physrevlett.79.1265	OK	kelley	1997	Path Instabilities of Rising Air Bubbles in a Hele-Shaw Cell	Physical Review Letters	9_data,check
 10.1103/physrevlett.98.244501	OK	ritacco	2007	Lifetime of Bubble Rafts: Cooperativity and Avalanches	Physical Review Letters	8_iate_coalescence,check
@@ -474,7 +476,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1115/1.2830039	OK	kattan	1998	Flow Boiling in Horizontal Tubes: Part 3—Development of a New Heat Transfer Model Based on Flow Pattern	Journal of Heat Transfer	4_heat_transfer,check
 10.1115/1.2909076	OK	narayanan	2008	Two-Phase Convective Heat Transfer in Miniature Pipes Under Normal and Microgravity Conditions	Journal of Heat Transfer	4_heat_transfer,check
 10.1115/1.2910357	OK	monde	1990	Measurement of Liquid Film Thickness During Passage of Bubbles in a Vertical Rectangular Channel	Journal of Heat Transfer	4_heat_transfer,check
-10.1115/1.3089543	OK	kawaji	2009	The Effects of Inlet Geometry and Gas-Liquid Mixing on Two-Phase Flow in Microchannels	Journal of Fluids Engineering	12_ideas3
+10.1115/1.3089543	OK	kawaji	2009	The Effects of Inlet Geometry and Gas-Liquid Mixing on Two-Phase Flow in Microchannels	Journal of Fluids Engineering	12_ideas3,check
 10.1115/1.3216039	OK	hollingsworth	2009	Enhancement of Heat Transfer Behind Sliding Bubbles	Journal of Heat Transfer	4_heat_transfer,7_closest_novelty,check
 10.1115/1.3247474	OK	hung	1985	Pool Boiling Heat Transfer in Narrow Horizontal Annular Crevices	Journal of Heat Transfer	2_boiling_gap,check
 10.1115/1.3250576	OK	monde	1988	Characteristic of Heat Transfer Enhancement Due to Bubbles Passing Through a Narrow Vertical Channel	Journal of Heat Transfer	4_heat_transfer,check
@@ -522,7 +524,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1143/jpsj.78.114604	OK	kozuka	2009	Path Instabilities of Bubble Rising in Polymer Solutions of Hele–Shaw Cell	Journal of the Physical Society of Japan	9_data,check
 10.1155/2008/246309	OK	bernardin	2008	Evaluating Multiple Object Tracking Performance: The CLEAR MOT Metrics	EURASIP Journal on Image and Video Processing	5_ai_image,check
 10.1205/026387601750282553	OK	kenning	2001	Saturated Flow Boiling of Water in a Narrow Channel: Experimental Investigation of Local Phenomena	Chemical Engineering Research and Design	9_data,check
-10.1209/epl/i2001-00356-y	OK	aradian	2001	“Marginal pinching” in soap films	Europhysics Letters (EPL)	12_ideas3
+10.1209/epl/i2001-00356-y	OK	aradian	2001	“Marginal pinching” in soap films	Europhysics Letters (EPL)	12_ideas3,check
 10.1209/epl/i2002-00204-2	OK	aussillous	2002	Bubbles creeping in a viscous liquid along a slightly inclined plane	Europhysics Letters (EPL)	10_ideas,3_pressure_drop,check
 10.1209/epl/i2003-10169-0	OK	cantat	2004	Dissipation in foam flowing through narrow channels	Europhysics Letters (EPL)	3_pressure_drop,7_closest_novelty,check
 10.1209/epl/i2005-10583-2	OK	terriac	2006	Viscous force exerted on a foam at a solid boundary: Influence of the liquid fraction and of the bubble size	Europhysics Letters (EPL)	3_pressure_drop,check
@@ -541,7 +543,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1299/kikaib.55.483	OK	monde	1989	Enhancement of heat transfer due to a bubble passing through a narrow vertical rectangular channel. Effect of subcooling	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	10_ideas,4_heat_transfer,check
 10.1299/kikaib.57.3499	OK	monde	1991	Measurement of Liquid Film Thickness during Pass of Bubble in a Vertical Rectangular Channel.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	4_heat_transfer,check
 10.1299/kikaib.58.401	OK	moriyama	1992	The Thermohydraulic Characteristics of Two-Phase Flow in Extremely Narrow Channels. The Frictional Pressure Drop and Voi	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	3_pressure_drop,check
-10.1299/kikaib.58.408	OK	sadatomi	1992	Effects of Gap Width and Orientation on Two-Phase Flow in a Narrow Passage between Two-Flat Plates.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	1_adiabatic_gap,6_measurement,9_data,check
+10.1299/kikaib.58.408	OK	sadatomi	1992	Effects of Gap Width and Orientation on Two-Phase Flow in a Narrow Passage between Two-Flat Plates.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	13_plane,1_adiabatic_gap,6_measurement,9_data,check
 10.1299/kikaib.61.201	OK	ohta	1995	Experiments on Bubble Behavior in a Horizontal Narrow Divergent Passage.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	9_data,check
 10.1299/kikaib.61.4412	OK	fujita	1995	Gas-Liquid Flows in Narrow Flat Channels. Influences of Liquid Properties.	TRANSACTIONS OF THE JAPAN SOCIETY OF MECHANICAL ENGINEERS Series B	9_data,check
 10.13182/nt95-a35111	OK	hibiki	1995	Application of High-Frame-Rate Neutron Radiography with a Steady Thermal Neutron Beam to Two-Phase Flow Measurements in 	Nuclear Technology	6_measurement,check
@@ -558,7 +560,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.15377/2409-5826.2018.05.5	OK	guangfei wang	2018	An Evaluation of Correlations for Predicting Pressure Drop of Air-Water Flow in Narrow Rectangular Duct	Journal of Advanced Thermal Science Research	0_estimates,check
 10.1590/s1678-58782005000100004	OK	ghajar	2005	Non-boiling heat transfer in gas-liquid flow in pipes: a tutorial	Journal of the Brazilian Society of Mechanical Sciences and Engineering	4_heat_transfer,check
 10.1615/0-8493-9925-4.70	OK	mishima	2023	A STUDY OF AIR-WATER FLOW IN A NARROW RECTANGULAR DUCT USING AN IMAGE PROCESSING TECHNIQUE	Proceeding of Dynamics of Two-Phase Flows	6_measurement,check
-10.1615/ihtc12.1010	OK	malayeri	2002	Prediction of void fraction in air/water two-phase flows at elevated temperatures	Proceeding of International Heat Transfer Conference 12	12_ideas3
+10.1615/ihtc12.1010	OK	malayeri	2002	Prediction of void fraction in air/water two-phase flows at elevated temperatures	Proceeding of International Heat Transfer Conference 12	12_ideas3,check
 10.1615/ihtc15.fbl.009930	OK	kawanami	2014	Experimental Investigations of Flow Boiling Heat Transfer and Flow Behaviors in Microgap Channel	Proceedings of the 15th International Heat Transfer Conference	9_data,check
 10.1615/ihtc17.150-60	OK	ronshin	2023	FLOW BOILING OF FC-72 IN A FLAT MICROCHANNEL	Proceeding of International Heat Transfer Conference 17	9_data,check
 10.1615/ihtc5.430	OK	saha	1974	POINT OF NET VAPOR GENERATION AND VAPOR VOID FRACTION IN SUBCOOLED BOILING	Proceeding of International Heat Transfer Conference 5	11_ideas2,check
@@ -570,9 +572,10 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.17632/nxncbzzz38	OK	manikonda	2025	Vertical Two-Phase Flow Regimes in an Annulus Image Dataset - Texas A&M University		9_data,check
 10.17632/p5zskggvwx	OK	zhou	2024	subcooled flow boiling AI model and dataset		9_data,check
 10.18141/1967315	OK	weber	2023	2D Fluid bed bubble segmentation and bed height tracking		9_data,check
-10.2118/1204-pa	OK	bernard	1965	Effect of Foam on Trapped Gas Saturation and on Permeability of Porous Media to Water	Society of Petroleum Engineers Journal	12_ideas3
+10.2118/1204-pa	OK	bernard	1965	Effect of Foam on Trapped Gas Saturation and on Permeability of Porous Media to Water	Society of Petroleum Engineers Journal	12_ideas3,check
 10.2118/12129-pa	OK	hirasaki	1985	Mechanisms of Foam Flow in Porous Media: Apparent Viscosity in Smooth Capillaries	Society of Petroleum Engineers Journal	3_pressure_drop,check
 10.2118/170910-pa	OK	molla	2017	Microfluidic PVT--Saturation Pressure and Phase-Volume Measurement of Black Oils	SPE Reservoir Evaluation & Engineering	11_ideas2,check
+10.2118/4316-pa	OK	chierici	1974	Two-Phase Vertical Flow in Oil Wells - Prediction of Pressure Drop	Journal of Petroleum Technology	13_plane
 10.2139/ssrn.5914773	OK	kharangate	2025	Applying Computer Vision to Flow Boiling Analysis: Feature Extraction and Data-Driven Heat Transfer Coefficient Predicti		0_estimates,5_ai_image,check
 10.2139/ssrn.6505385	OK	kharangate	2026	Large-Scale Vision-Based Characterization of Flow Regimes and Interfacial Distributions for Heat Transfer Prediction in 		0_estimates,check
 10.2139/ssrn.6753968	OK	liu	2026	Void Fraction of Subcooled Flow Boiling within Horizontal Narrow Channel Measured by Capacitance Sensor		2_boiling_gap,6_measurement,7_closest_novelty,9_data,check
