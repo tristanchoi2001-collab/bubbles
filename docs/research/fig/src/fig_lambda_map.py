@@ -32,7 +32,7 @@ for H_mm, col in GAPS.items():
     ax.text(jl[-1] * 1.05, lam(10)[-1], f"{H_mm:g} mm", color=INK2, fontsize=8, va="center")
 ax.axhline(0.1, color=MUTED, lw=1); ax.axhline(1.0, color=MUTED, lw=1)
 ax.text(0.0052, 0.06, "clean Darcy test (Λ < 0.1, i.e. Klettner & Smith Λ_KS < 0.75)", color=INK2, fontsize=8, va="top")
-ax.text(0.0052, 1.6, "Λ > 1: wakes may add form drag (hypothesis, I75, I87); solid cylinders separate at Λ ≈ 1.8 for d/H = 10", color=INK2, fontsize=8, va="bottom")
+ax.text(0.0052, 1.6, "Λ > 1: wakes may add form drag (hypothesis, I75, I87);\nsolid cylinders separate at Λ ≈ 1.8 for d/H = 10 (Klettner & Smith)", color=INK2, fontsize=8, va="bottom")
 ax.set_xscale("log"); ax.set_yscale("log")
 ax.set_xlim(0.005, 0.75); ax.set_ylim(3e-3, 300)
 ax.grid(color=GRID, lw=0.8, which="major"); ax.set_axisbelow(True)
