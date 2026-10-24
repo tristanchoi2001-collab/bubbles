@@ -29,7 +29,7 @@ rows = [  # (label, gives set, needs set, tool)
     ("I110 void-wave speed vs bubble speed", {0, 2}, set(), "void_waves.py"),
     ("I111 regression on unit dipole fields", {0, 2, 3, 8}, set(), "velocity_fluctuations.py"),
     ("I112 drying boundary from mobility kinks", {8}, {1}, "mobility_kink.py"),
-    ("I113 pressure drop without taps", {7}, set(), "(from I111 output)"),
+    ("I113 pressure drop without taps", {7}, set(), "velocity_fluctuations.py --jL --jG"),
     ("I114 stick–slip intermittency", {8}, set(), "mobility_kink.py"),
 ]
 ncol = len(gives) + len(needs)
@@ -62,10 +62,10 @@ ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(0.0, 1.0), fontsize=8
 ax.set_title("What each tracked-velocity readout gives and what it needs (velocity-first program, I89–I114)",
              fontsize=10, color=INK, loc="left", pad=2)
 fig.text(0.01, 0.01, "U_loc can come from ΔP + flow rates ((U_P + J)/2), from imaged α and flowmeters (j_L/(1 − α), mean-field closure) or from a lateral tilt (I102). "
-         "Readouts that need neither pressure nor U_loc: I99, I101 (sign of λ), I107, I109, I110 (signed λ), I111 (signed λ and U_loc = V̄/(1 + λ) itself), I113 (E from I111), I114.\n"
+         "Readouts that need neither pressure nor U_loc: I99, I101 (sign of λ), I107, I109, I110 (signed λ), I111 (signed λ(d), its zero d*, and U_loc read at d*), I113 (E from I111), I114.\n"
          "f is read five ways and m eight ways; agreement between them is the main test (velocity_links.md section 3). I110: pattern speed needs no track IDs, "
          "the reference V̄ does; current fields of view reach only small bubbles at 0.3 mm.\n"
-         "Independent reviews 6–9 corrected I90–I110 (review 9: I108 recast as a two-view local mass balance; liquid inertia dominates the single-point phase).",
+         "Independent reviews 6–10 corrected I90–I113 (review 9: I108 recast as a two-view local mass balance; review 10: I111 fixed-effect regression, class U_loc amplifies contour error by |1 − 1/s| → read U_loc at d*, fig. r22).",
          fontsize=7.2, color=MUTED, va="bottom")
 fig.savefig(f"{HERE}/fig_r19_readout_map.png", dpi=170, bbox_inches="tight")
 plt.close(fig)
