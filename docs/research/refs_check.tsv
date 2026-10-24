@@ -331,6 +331,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2018.457	OK	reichert	2018	Topography of the lubrication film under a pancake droplet travelling in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,3_pressure_drop,6_measurement,9_data,check
 10.1017/jfm.2018.575	OK	green	2018	Approximate solutions to droplet dynamics in Hele-Shaw flows	Journal of Fluid Mechanics	20_review10,check
 10.1017/jfm.2018.834	OK	gao	2019	Forced dewetting in a capillary tube	Journal of Fluid Mechanics	19_review9,check
+10.1017/jfm.2018.835	OK	yu	2018	Time-dependent motion of a confined bubble in a tube: transition between two steady states	Journal of Fluid Mechanics	22_review11
 10.1017/jfm.2019.453	OK	shukla	2019	Film thickness distribution in gravity-driven pancake-shaped droplets rising in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,check
 10.1017/jfm.2020.4	OK	filella	2020	Interaction of two oscillating bubbles rising in a thin-gap cell: vertical entrainment and interaction with vortices	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/jfm.2020.844	OK	gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,9_data,check
@@ -473,23 +474,23 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/7z3l-zpzy	OK	botticini	2026	Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle	Physical Review Fluids	3_pressure_drop,check
 10.1103/physreva.35.2221	OK	jensen	1987	Effect of gravity on the Saffman-Taylor meniscus: Theory and experiment	Physical Review A	0_estimates,check
 10.1103/physrevb.9.5056	OK	johnson	1974	Optical constants of transition metals: Ti, V, Cr, Mn, Fe, Co, Ni, and Pd	Physical Review B	10_ideas,6_measurement,check
-10.1103/physreve.51.1291	OK	paterson	1995	Wetting on heterogeneous surfaces: Experiments in an imperfect Hele-Shaw cell	Physical Review E	22_review11
+10.1103/physreve.51.1291	OK	paterson	1995	Wetting on heterogeneous surfaces: Experiments in an imperfect Hele-Shaw cell	Physical Review E	22_review11,check
 10.1103/physreve.70.041411	OK	kern	2004	Two-dimensional viscous froth model for foam dynamics	Physical Review E	3_pressure_drop,check
 10.1103/physreve.73.011505	OK	cantat	2006	Experimental evidence of flow destabilization in a two-dimensional bidisperse foam	Physical Review E	1_adiabatic_gap,9_data,check
 10.1103/physreve.75.046302	OK	baroud	2007	Thermocapillary valve for droplet production and sorting	Physical Review E	16_drift,check
 10.1103/physreve.78.051504	OK	krishan	2008	Viscous shear banding in foam	Physical Review E	12_ideas3,check
 10.1103/physreve.80.016317	OK	sessoms	2009	Droplet motion in microfluidic networks: Hydrodynamic interactions and pressure-drop measurements	Physical Review E	1_adiabatic_gap,3_pressure_drop,7_closest_novelty,check
 10.1103/physreve.85.027302	OK	huisman	2012	Interaction and coalescence of large bubbles rising in a thin gap	Physical Review E	1_adiabatic_gap,7_closest_novelty,check
-10.1103/physreve.89.012406	OK	sbragaglia	2014	Sliding drops across alternating hydrophobic and hydrophilic stripes	Physical Review E	22_review11
+10.1103/physreve.89.012406	OK	sbragaglia	2014	Sliding drops across alternating hydrophobic and hydrophilic stripes	Physical Review E	22_review11,check
 10.1103/physreve.91.042301	OK	yazhgur	2015	Electrical conductivity of quasi-two-dimensional foams	Physical Review E	13_plane,check
 10.1103/physreve.91.063013	OK	piedra	2015	Dynamics of two-dimensional bubbles	Physical Review E	1_adiabatic_gap,check
 10.1103/physreve.94.033101	OK	chinaud	2016	Surfactant effects on the coalescence of a drop in a Hele-Shaw cell	Physical Review E	17_relax,check
 10.1103/physrevfluids.10.023301	OK	raufaste	2025	Friction-induced bubble edge curvature in flowing two-dimensional confined foams	Physical Review Fluids	10_ideas,12_ideas3,5_ai_image,7_closest_novelty,check
-10.1103/physrevfluids.4.044008	OK	hatipogullari	2019	Contact angle hysteresis in a microchannel: Statics	Physical Review Fluids	22_review11
+10.1103/physrevfluids.4.044008	OK	hatipogullari	2019	Contact angle hysteresis in a microchannel: Statics	Physical Review Fluids	22_review11,check
 10.1103/physrevfluids.4.113602	OK	reichert	2019	Predicting droplet velocity in a Hele-Shaw cell	Physical Review Fluids	10_ideas,1_adiabatic_gap,3_pressure_drop,9_data,check
 10.1103/physrevfluids.5.093301	OK	shmakova	2020	Quasi-two-dimensional foam flow through and around a permeable obstacle	Physical Review Fluids	12_ideas3,check
 10.1103/physrevfluids.6.093605	OK	pavlov	2021	Kinematics of a bubble freely rising in a thin-gap cell with additional in-plane confinement	Physical Review Fluids	1_adiabatic_gap,check
-10.1103/physrevfluids.9.053902	OK	gowen	2024	Measurement of pressure gradients near the interface in the viscous fingering instability	Physical Review Fluids	22_review11
+10.1103/physrevfluids.9.053902	OK	gowen	2024	Measurement of pressure gradients near the interface in the viscous fingering instability	Physical Review Fluids	22_review11,check
 10.1103/physrevfluids.9.073601	OK	monnet	2024	Bubble dynamics in an inclined Hele-Shaw cell	Physical Review Fluids	10_ideas,15_velocity,1_adiabatic_gap,7_closest_novelty,check
 10.1103/physrevfluids.9.093605	OK	lawless	2024	Stable bubble formations in a depth-perturbed Hele-Shaw channel	Physical Review Fluids	10_ideas,12_ideas3,1_adiabatic_gap,8_iate_coalescence,9_data,check
 10.1103/physrevfluids.9.123603	OK	wu	2024	Motion and deformation of a bubble in a Hele-Shaw cell	Physical Review Fluids	10_ideas,17_relax,3_pressure_drop,7_closest_novelty,9_data,check
@@ -498,7 +499,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevlett.103.114502	OK	beatus	2009	Burgers Shock Waves and Sound in a 2D Microfluidic Droplets Ensemble	Physical Review Letters	18_waves,check
 10.1103/physrevlett.106.068301	OK	biance	2011	How Topological Rearrangements and Liquid Fraction Control Liquid Foam Stability	Physical Review Letters	8_iate_coalescence,check
 10.1103/physrevlett.107.124501	OK	dangla	2011	Trapping Microfluidic Drops in Wells of Surface Energy	Physical Review Letters	12_ideas3,check
-10.1103/physrevlett.111.066101	OK	varagnolo	2013	Stick-Slip Sliding of Water Drops on Chemically Heterogeneous Surfaces	Physical Review Letters	22_review11
+10.1103/physrevlett.111.066101	OK	varagnolo	2013	Stick-Slip Sliding of Water Drops on Chemically Heterogeneous Surfaces	Physical Review Letters	22_review11,check
 10.1103/physrevlett.111.118301	OK	desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	Physical Review Letters	15_velocity,18_waves,check
 10.1103/physrevlett.112.238302	OK	miralles	2014	Foam Drainage Control Using Thermocapillary Stress in a Two-Dimensional Microchamber	Physical Review Letters	16_drift,check
 10.1103/physrevlett.115.064501	OK	huerre	2015	Droplets in Microchannels: Dynamical Properties of the Lubrication Film	Physical Review Letters	12_ideas3,1_adiabatic_gap,check
