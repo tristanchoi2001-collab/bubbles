@@ -388,6 +388,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1063/1.2976306	OK	bławzdziewicz	2008	An analysis of the far-field response to external forcing of a suspension in the Stokes flow in a parallel-wall channel	Physics of Fluids	0_estimates,10_ideas,12_ideas3,check
 10.1063/1.3109686	OK	labrot	2009	Extracting the hydrodynamic resistance of droplets from their behavior in microchannel networks	Biomicrofluidics	10_ideas,3_pressure_drop,7_closest_novelty,check
 10.1063/1.3142502	OK	raufaste	2009	Dissipation in quasi-two-dimensional flowing foams	Physics of Fluids	3_pressure_drop,5_ai_image,7_closest_novelty,check
+10.1063/1.346276	OK	kim	1990	Determination of the effective conductivity of heterogeneous media by Brownian motion simulation	Journal of Applied Physics	13_plane
 10.1063/1.4793544	OK	cantat	2013	Liquid meniscus friction on a wet plate: Bubbles, lamellae, and foams	Physics of Fluids	0_estimates,3_pressure_drop,7_closest_novelty,check
 10.1063/1.4878095	OK	gallaire	2014	Marangoni induced force on a drop in a Hele Shaw cell	Physics of Fluids	1_adiabatic_gap,3_pressure_drop,check
 10.1063/1.4903488	OK	wang	2014	Experimental and numerical study of buoyancy-driven single bubble dynamics in a vertical Hele-Shaw cell	Physics of Fluids	1_adiabatic_gap,check
@@ -434,7 +435,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1098/rsos.252426	OK	booth	2026	Dipole and pairwise models for the motion of bubbles in a Hele-Shaw cell	Royal Society Open Science	10_ideas,3_pressure_drop,9_data,check
 10.1098/rspa.1932.0169	OK	taylor	1932	The viscosity of a fluid containing small drops of another fluid	Proceedings of the Royal Society of London. Series A, Containing Papers of a Mathematical and Physical Character	10_ideas,check
 10.1098/rspa.1979.0160	OK	perrins	1979	Transport properties of regular arrays of cylinders	Proceedings of the Royal Society of London. A. Mathematical and Physical Sciences	13_plane,check
-10.1098/rspa.2024.0613	OK	booth	2025	The motion of a bubble in a non-uniform Hele-Shaw flow	Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences	3_pressure_drop,9_data,check
+10.1098/rspa.2024.0613	OK	booth	2025	The motion of a bubble in a non-uniform Hele-Shaw flow	Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences	13_plane,3_pressure_drop,9_data,check
 10.1103/7z3l-zpzy	OK	botticini	2026	Pressure drop-flow rate nonlinearity in bubble trains through a capillary bundle	Physical Review Fluids	3_pressure_drop,check
 10.1103/physreva.35.2221	OK	jensen	1987	Effect of gravity on the Saffman-Taylor meniscus: Theory and experiment	Physical Review A	0_estimates,check
 10.1103/physrevb.9.5056	OK	johnson	1974	Optical constants of transition metals: Ti, V, Cr, Mn, Fe, Co, Ni, and Pd	Physical Review B	10_ideas,6_measurement,check
