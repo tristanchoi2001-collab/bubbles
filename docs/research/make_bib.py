@@ -1,6 +1,7 @@
 """refs_*.tsv의 DOI를 Crossref로 다시 대조하고 docs/refs_microgap.bib를 만든다.
 
 쓰는 것: Crossref 공개 API(무료, 키 없음, mailto 없음). 요청 사이 0.35 s 쉰다.
+Crossref에 없는 DOI는 DataCite 공개 API(데이터셋), 그다음 doi.org 내용 협상(JaLC 등)으로 대조한다. 모두 무료·키 없음.
 응답은 --cache 파일에 저장해 다시 묻지 않는다.
 
 대조 규칙
@@ -33,12 +34,15 @@ ACCEPT = {
     "10.2172/60784": "OSTI 보고서라 Crossref 저자가 기관(LBL). 실제 저자 Zimmerman & Bodvarsson",
     "10.1103/pm4m-18nt": "PRF 2026 게재 예정판이라 Crossref 저자가 'Anonymous'. 제목·학술지는 일치. 저자는 미확인(arXiv 1910.04327로 추정)",
     "10.2172/10180933": "OSTI 보고서라 Crossref 저자가 기관(Purdue Univ.). 개인 저자는 미확인(점검 에이전트 I1 근거, 원문 미확인)",
+    "10.5281/zenodo.15636832": "데이터셋 저자가 기관(중국과학원 과정공정연구소 State Key Lab. of Mesoscience and Engineering). TSV의 IPE CAS와 같은 기관",
+    "10.5281/zenodo.8208530": "DataCite creator의 성·이름 칸이 뒤바뀜(Giovanni Iacobello)",
+    "10.25824/redu/qhg1fs": "DataCite 첫 creator는 Bueno. TSV의 Araujo는 같은 데이터셋의 다른 저자이거나 관련 논문 저자로 보임(미확인, 인용 전 확인)",
 }
 
 
 def fold(s):
-    s = unicodedata.normalize("NFKD", s or "")
-    return "".join(c for c in s if not unicodedata.combining(c)).lower()
+    s = unicodedata.normalize("NFKD", (s or "").replace("ß", "ss"))
+    return "".join(c for c in s if not unicodedata.combining(c) and c not in "'’`").lower()
 
 
 def norm_doi(d):
@@ -70,6 +74,33 @@ def fetch_datacite(doi):
             "type": "dataset", "_source": "datacite"}
 
 
+def fetch_csl(doi):
+    """Crossref·DataCite에 없는 DOI(JaLC 등)를 doi.org 내용 협상(CSL JSON, 무료)으로 대조한다."""
+    url = "https://doi.org/" + urllib.parse.quote(doi, safe="/()")
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/vnd.citationstyles.csl+json"})
+    try:
+        with urllib.request.urlopen(req, timeout=40) as r:
+            c = json.load(r)
+    except Exception:
+        return None
+    ra = ""
+    try:
+        with urllib.request.urlopen(urllib.request.Request("https://doi.org/ra/" + urllib.parse.quote(doi, safe="/()"),
+                                                           headers={"User-Agent": UA}), timeout=40) as r:
+            ra = (json.load(r) or [{}])[0].get("RA", "")
+    except Exception:
+        pass
+    as_list = lambda v: v if isinstance(v, list) else ([v] if v else [""])
+    typ = {"article-journal": "journal-article", "paper-conference": "proceedings-article",
+           "chapter": "book-chapter", "dataset": "dataset", "report": "report", "thesis": "dissertation"}.get(c.get("type"), c.get("type"))
+    if not typ and c.get("container-title"):
+        typ = "journal-article"  # JaLC의 CSL에는 type이 없을 때가 있다
+    return {"DOI": doi, "title": as_list(c.get("title")), "author": c.get("author") or [],
+            "container-title": as_list(c.get("container-title")), "issued": c.get("issued") or {},
+            "volume": c.get("volume"), "issue": c.get("issue") or c.get("number"), "page": c.get("page"),
+            "publisher": c.get("publisher", ""), "type": typ, "_source": "doi.org", "_ra": ra}
+
+
 def fetch(doi, cache):
     if doi in cache:
         return cache[doi]
@@ -83,7 +114,7 @@ def fetch(doi, cache):
             break
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                msg = fetch_datacite(doi) or {"_error": 404}
+                msg = fetch_datacite(doi) or fetch_csl(doi) or {"_error": 404}
                 break
             time.sleep(2 + 3 * attempt)
         except Exception:
@@ -235,7 +266,8 @@ def main():
         check.append([d, st, cfa, str(cy or ""), title[:120],
                       clean((m.get("container-title") or [""])[0]), topics + (" | " + "; ".join(probs) if probs else "")])
         key = make_key(m, used)
-        note = f"Crossref 대조 2026-10; 확인 수준 {levels or '?'}; 주제 {topics}"
+        src = {"datacite": "DataCite", "doi.org": "doi.org(" + (m.get("_ra") or "등록 기관 미상") + ")"}.get(m.get("_source"), "Crossref")
+        note = f"{src} 대조 2026-10; 확인 수준 {levels or '?'}; 주제 {topics}"
         if probs:
             note += "; 확인 필요: " + "; ".join(probs)
         (ok_entries if st == "OK" else warn_entries).append(bib_entry(m, key, tex(note)))
