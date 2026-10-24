@@ -5,7 +5,7 @@
 ## 먼저 볼 것 (10분)
 1. 보고서 ① 결론 요약(`../research_microgap_paper.md`).
 2. 아래 "핵심 결과".
-3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 모든 모델이 한 점을 지나는 직선).
+3. 그림: `fig/fig_r4_gap_range_positioning.png`(선행 대비 위치), `fig/fig_r5_mg_closure.png`(폐합 판별력), `fig/fig_r6_step_response.png`(계단 응답의 예상 모양), `fig/fig_r7_chisholm_c_mobility.png`(Chisholm C 예상), `fig/fig_r8_thermal_em.png`(공기 주입 열전달 예상), `fig/fig_r9_discrimination_plane.png`(판별 평면: 모든 모델이 한 점을 지나는 직선), `fig/fig_r10_plane_literature.png`(문헌 자료를 판별 평면에).
 
 ## 핵심 결과
 1. **어디가 비어 있나**
@@ -58,7 +58,7 @@
 | `reading_list.md` | 먼저 읽을 논문(무료 원문 위치 포함), 공개 데이터 |
 | `abstract_drafts.md` | 논문 1·2 초록 초안(실험 전 가안, 숫자는 빈칸) |
 | `data_paper_plan.md` | 데이터 논문 설계(담을 것, 지금 CSV로 바로 계산되는 양, 분할·과제, 용량) |
-| `fig/`, `fig/src/` | 그림 r1~r9와 생성 스크립트 |
+| `fig/`, `fig/src/` | 그림 r1~r10과 생성 스크립트 |
 | `tools/plane_from_csv.py` | 운전점 표(유량·차압·화소 크기) + 추적 CSV → α, 종횡비 b/a, s̄(유량계·추적), Re_B, Λ, 판별 평면 좌표와 그림. `--demo`로 합성 자료 점검 |
 | `tools/added_mass_bem.py` | 기포 윤곽 → 2차원 부가질량 계수 C_A(폐합 모양 인자 c = 1 + C_A, I81). 원·타원 이론과 일치 |
 | `../refs_microgap.bib`, `refs_check.tsv`, `make_bib.py` | 참고문헌(Crossref·DataCite·doi.org 대조) |

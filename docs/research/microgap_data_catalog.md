@@ -354,4 +354,5 @@
 | Fujita 외 1995 (T2) | 0.2~2 mm, 질소-물·에탄올, 수평 폭 10 mm | 1차원(폭을 채운 기포) | 평면 밖 | 거대 기포 1차원 폐합(5.5절) 쪽 | 경향 세 가지의 부호가 맞음 |
 | Chen & Horne 2004·2006, Chen 2005 박사논문 | 매끈한 유리 균열(약 0.1 mm), 공기·질소-물 | Darcy | 미확인 | 원문 못 받음(TLS·Cloudflare) | 영상 포화도 + ΔP + 유량 → 가장 좋은 문헌 시험 후보. 보고서 ⑥ 11번 요청 |
 
+- 그림 `fig/fig_r10_plane_literature.png`(스크립트 `fig/src/fig_plane_literature.py`): Moriyama 1992 띠, Fourar 1993 판독 3점, Iida·Mishima의 x 범위, 우리 0.3 mm 예상 상자. Fourar 값은 독립 점검(review_3) 뒤 확정.
 - **정리**: Darcy 영역 자료(Moriyama 1992)는 모양을 넣은 폐합과 정합하고, 관성 영역 자료(Fourar 1993, Sadatomi 1992, Iida 1976)는 그렇지 않다(분리류가 맞거나 그보다 크다). 이것이 Λ에 따른 전이(I75)의 문헌 근거다. 문헌만으로는 원형·작은 Λ·기포류를 함께 만족하는 점별 자료가 없다 → 우리 0.3 mm 실험이 그 빈칸이다.
