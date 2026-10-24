@@ -327,7 +327,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2018.213	OK	gvozdic	2018	Experimental investigation of heat transport in homogeneous bubbly flow	Journal of Fluid Mechanics	4_heat_transfer,check
 10.1017/jfm.2018.240	OK	keiser	2018	Dynamics of non-wetting drops confined in a Hele-Shaw cell	Journal of Fluid Mechanics	9_data,check
 10.1017/jfm.2018.457	OK	reichert	2018	Topography of the lubrication film under a pancake droplet travelling in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,3_pressure_drop,6_measurement,9_data,check
-10.1017/jfm.2018.834	OK	gao	2019	Forced dewetting in a capillary tube	Journal of Fluid Mechanics	19_review9
+10.1017/jfm.2018.834	OK	gao	2019	Forced dewetting in a capillary tube	Journal of Fluid Mechanics	19_review9,check
 10.1017/jfm.2019.453	OK	shukla	2019	Film thickness distribution in gravity-driven pancake-shaped droplets rising in a Hele-Shaw cell	Journal of Fluid Mechanics	12_ideas3,check
 10.1017/jfm.2020.4	OK	filella	2020	Interaction of two oscillating bubbles rising in a thin-gap cell: vertical entrainment and interaction with vortices	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/jfm.2020.844	OK	gaillard	2021	The life and fate of a bubble in a geometrically perturbed Hele-Shaw channel	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,9_data,check
@@ -337,6 +337,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/jfm.2022.492	OK	ruiz-rus	2022	Coalescence of bubbles in a high Reynolds number confined swarm	Journal of Fluid Mechanics	10_ideas,8_iate_coalescence,9_data,check
 10.1017/jfm.2022.618	OK	keeler	2022	The interaction of multiple bubbles in a Hele-Shaw channel	Journal of Fluid Mechanics	10_ideas,1_adiabatic_gap,8_iate_coalescence,9_data,check
 10.1017/jfm.2023.527	OK	klettner	2023	On the flow past ellipses in a Hele-Shaw cell	Journal of Fluid Mechanics	13_plane,check
+10.1017/jfm.2023.718	OK	primkulov	2023	Motion of a viscous slug on heterogeneous surfaces: crossover from stick–slip to steady sliding	Journal of Fluid Mechanics	19_review9
 10.1017/jfm.2025.10951	OK	booth	2025	The motion of a surfactant-laden bubble in a channel or a Hele-Shaw cell	Journal of Fluid Mechanics	3_pressure_drop,9_data,check
 10.1017/jfm.2025.167	OK	baue	2025	Droplet velocity in both limits of low and high soluble surfactants in a Hele-Shaw cell: experimental and analytical res	Journal of Fluid Mechanics	10_ideas,1_adiabatic_gap,3_pressure_drop,9_data,check
 10.1017/jfm.2025.322	OK	booth	2025	Bubble racing in a Hele-Shaw cell	Journal of Fluid Mechanics	3_pressure_drop,7_closest_novelty,9_data,check
@@ -345,7 +346,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1017/s0022112008003455	OK	de lozar	2008	The steady propagation of an air finger into a rectangular tube	Journal of Fluid Mechanics	3_pressure_drop,9_data,check
 10.1017/s0022112009007320	OK	lai	2009	Separation-driven coalescence of droplets: an analytical criterion for the approach to contact	Journal of Fluid Mechanics	8_iate_coalescence,check
 10.1017/s0022112010000935	OK	dollet	2010	Deformation of soap films pushed through tubes at high velocity	Journal of Fluid Mechanics	3_pressure_drop,check
-10.1017/s0022112010005951	OK	seiwert	2011	Coating of a textured solid	Journal of Fluid Mechanics	19_review9
+10.1017/s0022112010005951	OK	seiwert	2011	Coating of a textured solid	Journal of Fluid Mechanics	19_review9,check
 10.1017/s0022112061000160	OK	bretherton	1961	The motion of long bubbles in tubes	Journal of Fluid Mechanics	0_estimates,1_adiabatic_gap,3_pressure_drop,check
 10.1017/s0022112066000442	OK	zukoski	1966	Influence of viscosity, surface tension, and inclination angle on motion of long bubbles in closed tubes	Journal of Fluid Mechanics	1_adiabatic_gap,check
 10.1017/s0022112068000133	OK	benjamin	1968	Gravity currents and related phenomena	Journal of Fluid Mechanics	12_ideas3,1_adiabatic_gap,check
@@ -449,7 +450,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1080/01457630903500833	OK	ghajar	2010	Importance of Non-Boiling Two-Phase Flow Heat Transfer in Pipes for Industrial Applications	Heat Transfer Engineering	4_heat_transfer,7_closest_novelty,check
 10.1080/014576399271691	OK	dongwoo kim, afshin j. ghajar, rona	1999	Comparison of 20 Two-Phase Heat Transfer Correlations with Seven Sets of Experimental Data, Including Flow Pattern and T	Heat Transfer Engineering	4_heat_transfer,check
 10.1080/01621459.1927.10502953	OK	wilson	1927	Probable Inference, the Law of Succession, and Statistical Inference	Journal of the American Statistical Association	5_ai_image,check
-10.1088/0953-8984/17/49/003	OK	diamant	2005	Correlated particle dynamics in concentrated quasi-two-dimensional suspensions	Journal of Physics: Condensed Matter	19_review9
+10.1088/0953-8984/17/49/003	OK	diamant	2005	Correlated particle dynamics in concentrated quasi-two-dimensional suspensions	Journal of Physics: Condensed Matter	19_review9,check
 10.1088/0957-0233/16/10/009	OK	ryu	2005	Use of bubble image velocimetry for measurement of plunging wave impinging on structure and associated greenwater	Measurement Science and Technology	10_ideas,11_ideas2,check
 10.1088/0957-0233/24/3/032001	OK	van oudheusden	2013	PIV-based pressure measurement	Measurement Science and Technology	12_ideas3,check
 10.1088/0957-0233/25/9/095301	OK	valiorgue	2014	Design of a non-intrusive electrical impedance-based void fraction sensor for microchannel two-phase flows	Measurement Science and Technology	13_plane,check
@@ -492,12 +493,12 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1103/physrevlett.111.118301	OK	desreumaux	2013	Hydrodynamic Fluctuations in Confined Particle-Laden Fluids	Physical Review Letters	15_velocity,18_waves,check
 10.1103/physrevlett.112.238302	OK	miralles	2014	Foam Drainage Control Using Thermocapillary Stress in a Two-Dimensional Microchamber	Physical Review Letters	16_drift,check
 10.1103/physrevlett.115.064501	OK	huerre	2015	Droplets in Microchannels: Dynamical Properties of the Lubrication Film	Physical Review Letters	12_ideas3,1_adiabatic_gap,check
-10.1103/physrevlett.116.048101	OK	tsang	2016	Density Shock Waves in Confined Microswimmers	Physical Review Letters	19_review9
-10.1103/physrevlett.120.084501	OK	zhao	2018	Forced Wetting Transition and Bubble Pinch-Off in a Capillary Tube	Physical Review Letters	19_review9
+10.1103/physrevlett.116.048101	OK	tsang	2016	Density Shock Waves in Confined Microswimmers	Physical Review Letters	19_review9,check
+10.1103/physrevlett.120.084501	OK	zhao	2018	Forced Wetting Transition and Bubble Pinch-Off in a Capillary Tube	Physical Review Letters	19_review9,check
 10.1103/physrevlett.79.1265	OK	kelley	1997	Path Instabilities of Rising Air Bubbles in a Hele-Shaw Cell	Physical Review Letters	9_data,check
-10.1103/physrevlett.92.258301	OK	cui	2004	Anomalous Hydrodynamic Interaction in a Quasi-Two-Dimensional Suspension	Physical Review Letters	19_review9
+10.1103/physrevlett.92.258301	OK	cui	2004	Anomalous Hydrodynamic Interaction in a Quasi-Two-Dimensional Suspension	Physical Review Letters	19_review9,check
 10.1103/physrevlett.96.044504	OK	vilenkin	2006	Scaling and Self-Similarity in an Unforced Flow of Inviscid Fluid Trapped Inside a Viscous Fluid in a Hele-Shaw Cell	Physical Review Letters	17_relax,check
-10.1103/physrevlett.96.174504	OK	snoeijer	2006	Avoided Critical Behavior in Dynamically Forced Wetting	Physical Review Letters	19_review9
+10.1103/physrevlett.96.174504	OK	snoeijer	2006	Avoided Critical Behavior in Dynamically Forced Wetting	Physical Review Letters	19_review9,check
 10.1103/physrevlett.97.226101	OK	durand	2006	Relaxation Time of the TopologicalT1Process in a Two-Dimensional Foam	Physical Review Letters	17_relax,check
 10.1103/physrevlett.98.244501	OK	ritacco	2007	Lifetime of Bubble Rafts: Cooperativity and Avalanches	Physical Review Letters	8_iate_coalescence,check
 10.1103/pm4m-18nt	OK	anonymous	2026	Bubble dynamics in a Hele-Shaw channel and velocity selection without surface tension	Physical Review Fluids	1_adiabatic_gap,check
@@ -530,6 +531,7 @@ doi	status	crossref_first_author	crossref_year	crossref_title	journal	topics_and
 10.1115/1.3580198	OK	snyder	1969	Mass-Transfer Model in Subcooled Nucleate Boiling	Journal of Heat Transfer	11_ideas2,check
 10.1115/1.3684310	OK	beck	1962	Thermocouple Temperature Disturbances in Low Conductivity Materials	Journal of Heat Transfer	6_measurement,check
 10.1115/1.4002807	OK	muzychka	2011	Heat Transfer Enhancement Using Laminar Gas-Liquid Segmented Plug Flows	Journal of Heat Transfer	10_ideas,4_heat_transfer,check
+10.1115/1.4029033	OK	mohammadi	2015	The Role of Contact Line (Pinning) Forces on Bubble Blockage in Microchannels	Journal of Fluids Engineering	19_review9
 10.1115/1.4034317	OK	han	2016	Flow Boiling in Microgaps for Thermal Management of High Heat Flux Microsystems	Journal of Electronic Packaging	2_boiling_gap,7_closest_novelty,check
 10.1115/1.4035387	OK	nasr	2017	Hotspot Thermal Management With Flow Boiling of Refrigerant in Ultrasmall Microgaps	Journal of Electronic Packaging	2_boiling_gap,check
 10.1115/1.4036653	OK	raghupathi	2017	Effect of Thermophysical Properties of the Heater Substrate on Critical Heat Flux in Pool Boiling	Journal of Heat Transfer	2_boiling_gap,check

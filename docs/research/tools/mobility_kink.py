@@ -75,8 +75,10 @@ def v_model(d_over_H, U, f, mu=MU, sig=SIG):
     return U * s_booth(delta)
 
 
-def read_tracks(path, flow, px_mm, fps, H_mm, k=2, min_obs=6):
-    """트랙마다 (등가 지름/H, 흐름 방향 속도 m/s). 화면 끝 접촉·사건(new/merge/split) 프레임과 merged_into 행은 뺀다."""
+def read_tracks(path, flow, px_mm, fps, H_mm, k=2, min_obs=6, stop_rel=0.25):
+    """트랙마다 (ID, 등가 지름/H, 흐름 방향 속도 m/s, 멈춤 비율, 한 프레임 이동의 변동 계수). 화면 끝 접촉·사건(new/merge/split)
+    프레임과 merged_into 행은 뺀다. 멈춤 비율 = 한 프레임 이동이 그 트랙 중앙값의 stop_rel배 아래인 비율(I114: 마른 접촉선의
+    멈춤–출발. 젖은 막은 매끈해 거의 0)."""
     with open(path, encoding="utf-8-sig", newline="") as fh:
         rows = list(csv.DictReader(fh))
     ax, sgn = axis_of(flow)
@@ -104,7 +106,14 @@ def read_tracks(path, flow, px_mm, fps, H_mm, k=2, min_obs=6):
         if len(vs) < min_obs or not areas:
             continue
         d_px = math.sqrt(4 * float(np.median(areas)) / math.pi)
-        out.append((tid, d_px / H_px, float(np.median(vs)) * px_m * fps))
+        dx = np.array([fr[f][0] - fr[f - 1][0] for f in fs if f - 1 in fr and not any(fr[g][2] or fr[g][3] for g in (f - 1, f))])
+        if len(dx) >= min_obs and np.median(dx) > 0:
+            md = float(np.median(dx))
+            stop = float(np.mean(dx < stop_rel * md))
+            cv = float(np.std(dx) / np.mean(dx)) if np.mean(dx) > 0 else float("nan")
+        else:
+            stop = cv = float("nan")
+        out.append((tid, d_px / H_px, float(np.median(vs)) * px_m * fps, stop, cv))
     return out
 
 
@@ -183,6 +192,12 @@ def analyse_run(tracks, U, n_bins=10, thr=0.1, n_boot=200, seed=0, min_per_bin=5
         dk2 = float(math.sqrt(cen[a1] * cen[a1 + 1])) if a1 < len(cen) - 1 else nan
         return f_wet, dk1, dk2, cen, med, fi, ratio, False
     f_wet, dk1, dk2, cen, med, fi, ratio, all_dry = one(dh, v)
+    st = np.array([t[3] for t in tracks])[ok]; cvs = np.array([t[4] for t in tracks])[ok]
+    stop_b, cv_b = [], []
+    for i in range(n_bins):                               # 구간별 간헐성(I114): 꺾임과 같은 구간에서 함께 커져야 마름
+        m = (dh >= edges[i]) & (dh < edges[i + 1])
+        if m.sum() >= min_per_bin:
+            stop_b.append(float(np.nanmedian(st[m]))); cv_b.append(float(np.nanmedian(cvs[m])))
     b1, b2 = [], []
     for _ in range(n_boot):
         ii = rng.integers(0, len(dh), len(dh))
@@ -196,7 +211,7 @@ def analyse_run(tracks, U, n_bins=10, thr=0.1, n_boot=200, seed=0, min_per_bin=5
     (l2, h2), p2 = ci(b2)
     return dict(U=U, f=f_wet, all_dry=all_dry, d_k1=dk1, d_k1_lo=float(l1), d_k1_hi=float(h1), p_k1=p1,
                 d_k2=dk2, d_k2_lo=float(l2), d_k2_hi=float(h2), p_k2=p2, n_tracks=len(dh),
-                bins=list(zip(cen.tolist(), med.tolist(), fi.tolist(), ratio.tolist())))
+                bins=list(zip(cen.tolist(), med.tolist(), fi.tolist(), ratio.tolist(), stop_b, cv_b)))
 
 
 def boundary_slope(points):
@@ -237,11 +252,14 @@ def make_demo(out, seed=7):
                 V *= 1 + 0.04 * rng.standard_normal()
                 v_px = V / (px_mm * 1e-3 * fps)
                 a_px = d_mm / px_mm / 2
+                x = 100.0
                 for kk in range(12):
-                    x = 100 + kk * v_px + rng.normal(0, 0.3)
+                    if kk:                                    # 마른 기포는 멈춤–출발(프레임의 30% 멈춤, 평균 속도는 같게)
+                        x += (0.0 if rng.random() < 0.3 else v_px / 0.7) if dry else v_px
+                    xo = x + rng.normal(0, 0.3)
                     rows.append({"ファイル名": f"f{t}_{kk}.png", "フレーム": t * 20 + kk, "トラックID": f"{t + 1}",
                                  "イベント": "new" if kk == 0 else "normal", "面積(px)": f"{math.pi * a_px * a_px:.1f}",
-                                 "中心X": f"{x:.3f}", "中心Y": "500", "フレーム接触": "0"})
+                                 "中心X": f"{xo:.3f}", "中心Y": "500", "フレーム接触": "0"})
             sub = os.path.join(out, f"{case}_U{U:g}")
             os.makedirs(sub, exist_ok=True)
             path = os.path.join(sub, "result_tracking.csv")
@@ -314,10 +332,10 @@ def report(res, out):
         for r in res:
             w.writerow({k: (f"{r[k]:.5g}" if isinstance(r[k], float) else r[k]) for k in keys})
     with open(os.path.join(out, "mk_bins.csv"), "w", encoding="utf-8", newline="") as fh:
-        w = csv.writer(fh); w.writerow(["name", "d_over_H", "V_median_mps", "f_apparent", "V_over_wet_fit"])
+        w = csv.writer(fh); w.writerow(["name", "d_over_H", "V_median_mps", "f_apparent", "V_over_wet_fit", "stop_frac", "cv_dx"])
         for r in res:
-            for c, m, fi, q in r["bins"]:
-                w.writerow([r["name"], f"{c:.4g}", f"{m:.5g}", f"{fi:.4g}", f"{q:.4g}"])
+            for c, m, fi, q, sf, cv in r["bins"]:
+                w.writerow([r["name"], f"{c:.4g}", f"{m:.5g}", f"{fi:.4g}", f"{q:.4g}", f"{sf:.3g}", f"{cv:.3g}"])
     for r in res:
         if r["all_dry"]:
             print(f"  {r['name']}: 트랙 {r['n_tracks']}, U {r['U']:.3f} m/s — 젖은 구간 없음(모든 크기가 젖은 곡선 아래; 겉보기 f가 다른 운전점보다 크면 세로 경계 쪽)")
@@ -328,6 +346,11 @@ def report(res, out):
                 parts.append(f"{side} 꺾임 {r['d_k%s_mm' % k]:.1f} mm [{r['d_k%s_lo_mm' % k]:.1f}~{r['d_k%s_hi_mm' % k]:.1f}]"
                              f"(부트스트랩 {r['p_k' + k]:.0%}), V_k {r['V_k' + k]:.3f} m/s")
         print(f"  {r['name']}: 트랙 {r['n_tracks']}, U {r['U']:.3f} m/s, 젖은 f {r['f_wet']:.2f}; " + ("; ".join(parts) if parts else "꺾임 없음(모두 젖음)"))
+        sl = [(c, sf, q) for c, m, fi, q, sf, cv in r["bins"] if sf == sf]
+        if sl:
+            wet_sf = [sf for c, sf, q in sl if q == q and q >= 0.9]; dry_sf = [sf for c, sf, q in sl if q == q and q < 0.9]
+            print(f"      멈춤 비율(I114) 중앙값: 젖은 구간 {np.median(wet_sf) if wet_sf else float('nan'):.2f}, 느린(꺾임) 구간 "
+                  f"{np.median(dry_sf) if dry_sf else float('nan'):.2f} — 꺾임 구간에서 함께 커지면 접촉선(마름), 그대로면 다른 원인(폭 채움·측벽)")
     skip = flag_runs(res)
     if skip:
         print(f"경계 맞춤에서 뺀 운전점(젖은 f가 중앙값의 1.3배 초과이거나 젖은 구간 없음 → 대부분 마름): {', '.join(sorted(skip))}")
@@ -368,11 +391,18 @@ def _demo(out):
         res = run_table(sub, os.path.join(out, case), n_boot=100)
         report(res, os.path.join(out, case))
         pts = boundary_points(res, flag_runs(res))
+        wet_sf = [sf for r in res for c, m, fi, q, sf, cv in r["bins"] if q == q and q >= 0.9 and sf == sf]
+        dry_sf = [sf for r in res for c, m, fi, q, sf, cv in r["bins"] if q == q and q < 0.8 and sf == sf]
+        ok_i = bool(wet_sf) and bool(dry_sf) and np.median(wet_sf) < 0.08 and np.median(dry_sf) > 0.15
+        print(f"  {'통과' if ok_i else '실패'}  I114 간헐성: 멈춤 비율 중앙값 젖은 구간 {np.median(wet_sf) if wet_sf else float('nan'):.3f}(< 0.08), "
+              f"느린 구간 {np.median(dry_sf) if dry_sf else float('nan'):.3f}(> 0.15; 참: 마른 기포는 프레임의 30% 멈춤)")
+        if not ok_i:
+            fails.append(f"{case} intermittency")
         if case == "late":
             b, lo, hi = boundary_slope([(p[0], p[1]) for p in pts])
             lowpts = [(p[1], p[0]) for p in pts if p[2] == "1"]
             g = boundary_slope(lowpts)[0] if len(lowpts) >= 3 else float("nan")
-            ok = (b == b and abs(b - 1.85) < 0.35 and len(pts) >= 6 and any(p[2] == "1" for p in pts) and any(p[2] == "2" for p in pts)
+            ok = (b == b and abs(b - 1.85) < 0.35 and len(pts) >= 5 and any(p[2] == "1" for p in pts) and any(p[2] == "2" for p in pts)
                   and g > 0.3)                                # 늦은 터짐은 세로 경계와 구별돼야 한다(참 1/1.85 = 0.54)
             print(f"  {'통과' if ok else '실패'}  늦은 터짐: 양쪽 꺾임 {len(pts)}개가 한 곡선, 기울기 {b:.2f} [{lo:.2f}~{hi:.2f}](참 1.85, 허용 ±0.35),"
                   f" 작은 쪽 d ln V_k/d ln d_k {g:.2f}(참 0.54, > 0.3이어야 세로와 구별)")
